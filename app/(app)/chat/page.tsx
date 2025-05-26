@@ -1,16 +1,14 @@
-import { redirect } from 'next/navigation';
-import { currentUser, getUserByRefId, getUsers } from '@/resource/db/user/get-accounts';
-import { EmptyRoomChat } from '@/resource/client/components/chat/chat-room';
+import { cookies } from 'next/headers';
+import { currentUser, getUsers } from '@/resource/db/user/get-accounts';
 import { getChats } from '@/resource/server/messages/get-chats';
 import { ChatContainer } from '@/resource/client/components/chat/component';
+// import { EmptyRoomChat } from '@/resource/client/components/chat/chat-room';
+// import { redirect } from 'next/navigation';
 
-import type { Metadata, ResolvingMetadata } from 'next';
-import { cookies } from 'next/headers';
+import type { Metadata } from 'next';
 
-export async function generateMetadata(parent: ResolvingMetadata): Promise<Metadata> {
-  const [session, { openGraph }] = await Promise.all([currentUser(), parent]);
-
-  const previousImages = openGraph?.images || [];
+export async function generateMetadata(): Promise<Metadata> {
+  const [session] = await Promise.all([currentUser()]);
 
   const url = process.env.NEXT_PUBLIC_SITE_URL;
   const slug = `/chat/`;
@@ -28,8 +26,7 @@ export async function generateMetadata(parent: ResolvingMetadata): Promise<Metad
           url: session?.image || '',
           width: 800,
           height: 800
-        },
-        ...previousImages
+        }
       ],
       url: url + slug,
       locale: 'en_US',
