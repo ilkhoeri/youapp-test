@@ -1,0 +1,543 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+// prisma/schema.prisma
+datasource db {
+  provider = "mongodb"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  DEVELOPER  // → For App Developers
+  SUPERADMIN
+  ADMIN
+  USER       // → Default
+}
+
+enum AccountStatus {
+  ACTIVE
+  INACTIVE
+  PENDING
+  SUSPENDED
+  BANNED
+}
+
+enum Visibility {
+  PUBLIC
+  PRIVATE
+  CONNECTIONS_ONLY
+}
+
+model Team {
+  id                    String   @id @default(auto()) @map("_id") @db.ObjectId
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+  name                  String
+  imageUrl              String?
+  description           String?
+  notes                 String[]
+  // Relasi ke user pembuat Team
+  ownerId               String   @db.ObjectId
+  owner                 User     @relation("TeamCreators", fields: [ownerId], references: [id], onDelete: Cascade)
+  // Daftar user yang berada didalam Team
+  memberIDs             String[] @db.ObjectId
+  members               User[]   @relation("TeamMembers", fields: [memberIDs], references: [id])
+}
+
+model User {
+  id                    String         @id @default(auto()) @map("_id") @db.ObjectId
+  createdAt             DateTime       @default(now())
+  updatedAt             DateTime       @updatedAt
+  /* Reference ID / External ID / Public ID, `harus dibuat Manual`
+  - id yang di ekspose, biasa untuk melakukan posting
+  */
+  refId                 String         @unique
+  firstName             String
+  lastName              String?        @default("")
+  name                  String         // dibutuhkan ketika menggunakan provider (eg, Google, Github) / jika tidak = firstName + lastName
+  email                 String         @unique
+  emailVerified         DateTime?
+  password              String?       // opsional for auth provider
+  image                 String?
+  banner                String?
+  phone                 String?
+
+  about                 About?         @relation("AboutUser")
+  address               Address?       @relation("UserAddress")
+
+  chatIds               String[]       @db.ObjectId
+  chats                 Chat[] @relation(fields: [chatIds], references: [id])
+
+  seenMessageIds        String[]       @db.ObjectId
+  seenMessages          Message[]      @relation("Seen", fields: [seenMessageIds], references: [id])
+
+  messages              Message[]
+
+  isTwoFactorEnabled    Boolean        @default(false)
+  role                  UserRole       @default(USER)
+  accountStatus         AccountStatus  @default(ACTIVE)
+  twoFactorConfirmation TwoFactorConfirmation?
+  accounts              Account[]
+
+  likeIds               String[]
+  favoriteIds           String[]
+  saveIds               String[]
+  links                 Link[]         @relation("UserLinks")
+  testimony             Testimony[]    @relation("UserTestimony")
+
+  ownedTeams            Team[]         @relation("TeamCreators")
+  teamIDs               String[]       @db.ObjectId
+  teams                 Team[]         @relation("TeamMembers", fields: [teamIDs], references: [id])
+
+  followedBy            User[]         @relation("UserFollows", fields: [followedByIDs], references: [id])
+  followedByIDs         String[]       @db.ObjectId // diikuti oleh id
+  following             User[]         @relation("UserFollows", fields: [followingIDs], references: [id])
+  followingIDs          String[]       @db.ObjectId // mengikuti id
+
+  notifications         Notification[]
+  notificationSettings  UserNotificationSetting?
+  transactionAccount    TransactionAccount[]
+  // Relasi untuk token yang dibuat oleh user
+  createdTokens         InvitationToken[]       @relation("CreatedTokens")
+  // Relasi untuk token yang digunakan oleh user - relasi one-to-many sebagai workaround
+  usedToken             InvitationToken[]       @relation("UsedTokens")
+}
+
+/*
+  **Int**: Cocok untuk data bilangan bulat, misal tinggi dalam sentimeter (cm) atau berat dalam kilogram (kg) tanpa pecahan. Prisma memetakan Int ke tipe integer di PostgreSQL, yang cukup untuk rentang nilai tinggi/berat manusia pada umumnya Type mapping between PostgreSQL and Prisma schema.
+
+  **Float**: Digunakan jika Anda ingin menyimpan nilai dengan pecahan/desimal, misal tinggi 170.5 cm atau berat 65.3 kg. Prisma memetakan Float ke double precision di PostgreSQL.
+
+  **Decimal**: Digunakan untuk presisi tinggi pada angka desimal, misal untuk aplikasi medis atau keuangan. Prisma memetakan Decimal ke decimal(p,s) di PostgreSQL, dan diakses di Prisma Client sebagai objek Decimal.js.
+
+  **BigInt** tidak diperlukan untuk data tinggi/berat karena nilainya tidak akan melebihi batas tipe Int biasa BigInt mapping.
+  */
+model About {
+  id                    String        @id @default(auto()) @map("_id") @db.ObjectId
+  userId                String?       @db.ObjectId // Foreign Key
+  user                  User?         @relation("AboutUser", fields: [userId], references: [id], onDelete: Cascade)
+
+  birthDay              DateTime?
+  birthPlace            String?
+  bio                   String?
+  resume                String?
+  nationalId            String?       // Nomor KTP / SIM
+  taxId                 String?       // NPWP
+  gender                String?
+  horoscope             String?
+  zodiac                String?
+  height                Int?
+  weight                Int?
+  goals                 String[]
+  hobby                 String[]
+  interests             String[]
+  languages             String[]      // Bahasa yang dikuasai
+  skills                String[]      // Keterampilan utama
+  notes                 String[]
+  identifiers           Json?         // [UserIdentifiersType]
+
+  educations            Education[]   @relation("UserEducations")
+  references            Reference[]     // Referensi profesional
+  careers               Career[]      @relation("UserCareers")
+  currentCompany        Company?      @relation(fields: [currentCompanyId], references: [id], onDelete: SetNull)
+  currentCompanyId      String?       @db.ObjectId // Foreign Key
+
+  @@unique([userId])
+}
+
+model InvitationToken {
+  id             String    @id @default(auto()) @map("_id") @db.ObjectId
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  token          String    @unique
+  expires        DateTime  // Masa berlaku token
+  used           DateTime? // Tanggal digunakannya token
+
+  assignedRole   UserRole     // Role yang diberikan kepada user baru
+
+  maxUsageCount  Int       @default(1) // default 1 = once-only
+  usageCount     Int       @default(0)
+
+  // Relasi ke user yang membuat token
+  createdById    String    @db.ObjectId // Foreign Key
+  createdBy      User      @relation("CreatedTokens", fields: [createdById], references: [id], onDelete: Cascade)
+
+  /* Relasi ke user yang menggunakan token (opsional)
+  - field boolean `isUsed` menunjukkan apakah token sudah digunakan, ini untuk mengakali constraint unique dari `usedById`
+  - Dengan pendekatan ini, token yang belum digunakan akan memiliki `isUsed = false` dan `usedById = null`, sementara token yang sudah digunakan akan memiliki `isUsed = true` dan `usedById = [id user]`.
+  */
+  isUsed         Boolean   @default(false)
+  usedById       String?   @db.ObjectId // Foreign Key
+  usedBy         User?     @relation("UsedTokens", fields: [usedById], references: [id], onDelete: SetNull)
+
+  @@index([isUsed])
+}
+
+model Account {
+  id                 String    @id @default(auto()) @map("_id") @db.ObjectId
+  userId             String    @db.ObjectId // Foreign Key
+  user               User      @relation( fields: [userId], references: [id], onDelete: Cascade)
+  type               String
+  provider           String
+  providerAccountId  String
+  refresh_token      String?   @db.String
+  access_token       String?   @db.String
+  expires_at         Int?
+  token_type         String?
+  scope              String?
+  id_token           String?   @db.String
+  session_state      String?
+
+  @@unique([userId])
+  @@unique([provider, providerAccountId])
+}
+
+model VerificationToken {
+  id                 String        @id @default(auto()) @map("_id") @db.ObjectId
+  email              String
+  token              String        @unique
+  expires            DateTime
+
+  @@unique([email, token])
+}
+
+model PasswordResetToken {
+  id                 String        @id @default(auto()) @map("_id") @db.ObjectId
+  email              String
+  token              String        @unique
+  expires            DateTime
+
+  @@unique([email, token])
+}
+
+model TwoFactorToken {
+  id                String         @id @default(auto()) @map("_id") @db.ObjectId
+  email             String
+  token             String         @unique
+  expires           DateTime
+  @@unique([email, token])
+}
+
+model TwoFactorConfirmation {
+  id               String          @id @default(auto()) @map("_id") @db.ObjectId
+  userId           String          @db.ObjectId // Foreign Key
+  user             User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  @@unique([userId])
+}
+
+model Address {
+  id              String   @id @default(auto()) @map("_id") @db.ObjectId
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  userId          String?  @unique @db.ObjectId // Foreign Key
+  user            User?    @relation("UserAddress", fields: [userId], references: [id], onDelete: Cascade)
+
+  country         String?  // negara
+  state           String?  // provinsi/Negara Bagian
+  postalcode      String?  // kode pos
+  street          String?  // jalan
+  city            String?  // kota
+  regency         String?  // kabupaten
+  district        String?  // kecamatan
+  subdistrict     String?  // kelurahan
+  village         String?  // desa
+  notes           String[]
+  visibility      Visibility? // Pengaturan visibilitas profile
+}
+
+model Education {
+  id              String   @id @default(auto()) @map("_id") @db.ObjectId
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  degree          String    // tingkat atau jenjang
+  institution     String    // nama sekolah
+  field           String?   // Jurusan
+  registeredDate  DateTime  // Tanggal terdaftar
+  isCurrent       Boolean?
+  graduatedDate   DateTime? // Tanggal lulus
+  notes           String[]
+  siteUrl         String   @default("")
+  imageUrl        String
+
+  userId          String    @db.ObjectId // Foreign Key
+  user            About     @relation("UserEducations", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model Reference {
+  id              String   @id @default(auto()) @map("_id") @db.ObjectId
+  careerId        String?
+  name            String?
+  contact         String?
+  relation        String?
+
+  userId          String    @db.ObjectId // Foreign Key
+  user            About     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+enum CareerType {
+  FULL_TIME
+  PART_TIME
+  FREELANCE
+  REMOTE
+}
+
+enum CareerLevels {
+  ENTRY
+  JUNIOR
+  MID
+  SENIOR
+  EXECUTIVE
+}
+
+model Career {
+  id           String    @id @default(auto()) @map("_id") @db.ObjectId
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  name         String?
+  field        String?   // Bidang pekerjaan
+  position     String?   // Driver
+  department   String?   // -
+  startDate    DateTime? // Tanggal mulai bekerja
+  isCurrent    Boolean?  // (Sampai saat ini?) Jika isCurrent={true}, maka field endDate dihilangkan
+  endDate      DateTime? // Ditampilkan hanya ketika isCurrent={false}
+  employeeId   String?   // Ditampilkan hanya ketika isCurrent={true}
+  level        CareerLevels?
+  type         CareerType?
+  salary       Float?
+  requirements String[]
+  skills       String[]
+  description  String?
+  notes        String[]
+  visibility   Visibility? // Pengaturan visibilitas profil
+
+  // Relasi ke perusahaan tempat karir ini berlangsung
+  companyId    String?      @db.ObjectId // Foreign Key
+  company      Company?     @relation(fields: [companyId], references: [id], onDelete: NoAction)
+
+  // Relasi ke user yang memiliki karir ini
+  userId       String        @db.ObjectId // Foreign Key
+  user         About         @relation("UserCareers", fields: [userId], references: [id], onDelete: Cascade)
+
+  // testimony      Testimony?
+
+  @@index([userId])
+  @@index([companyId])
+}
+
+model Company {
+  id           String    @id @default(auto()) @map("_id") @db.ObjectId
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  name         String
+  entity       String?   // Bidang spesialisasi (misalnya, Simpan Pinjam, Jasa, Marketing, Kesehtan, Pendidikan, dll)
+  description  String?
+  notes        String[]
+  websiteUrl   String?
+  imageUrl     String?   // logo / gambar institusi atau perusahaan
+  location     String
+
+  // Karir yang terkait dengan perusahaan ini
+  careers        Career[]
+  // User yang saat ini bekerja di perusahaan ini
+  currentEmployees About[]
+}
+
+enum PublishedStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+model Testimony {
+  id              String  @id @default(auto()) @map("_id") @db.ObjectId
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  content         String  // Isi testimony
+  rating           Float? // Skor rating (misalnya dari 1-5)
+
+  // Ketika diisi manual oleh Admin (bukan user sendiri / userId & user = null), gunakan field berikut
+  name            String? // Nama pemberi testimony
+  imageUrl        String? // URL foto pemberi testimony (jika tersedia)
+  // Detail pekerjaan yang ingin dicantumkan (jika ada), (detail pekerjaan difilter berdasarkan userId)
+
+  // Sebaliknya, ketika user sendiri yang mengisi, hapus field sebelumnya dan ganti dg field berikut
+  userId          String? @db.ObjectId // Foreign Key
+  user              User? @relation("UserTestimony", fields: [userId], references: [id], onDelete: Cascade)
+
+  companyId       String? @db.ObjectId // Foreign Key
+  careerId        String? @db.ObjectId // Foreign Key
+
+  // Metadata tambahan
+  status  PublishedStatus  @default(PENDING)
+  approvedBy      String? // ID yang menyetujui untuk di publish
+  approvalDate  DateTime?
+  isPublished    Boolean? @default(false)
+  isFeatured     Boolean? @default(false) // Apakah testimony ini ditampilkan sebagai unggulan?
+
+  // Metadata tambahan (opsional)
+  mediaUrls String[] // URL gambar atau video pendukung
+  tags      String[] // Tag untuk kategorisasi
+}
+
+model Link {
+  id              String  @id @default(auto()) @map("_id") @db.ObjectId
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  name            String
+  url             String  @unique
+  imageUrl        String?
+  userId          String? @db.ObjectId // Foreign Key
+  user              User? @relation("UserLinks", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+enum ProviderType {
+  BANK
+  E_WALLET
+  CREDIT_CARD
+  DEBIT_CARD
+  CASH
+  OTHER
+}
+
+enum CardType {
+  VISA
+  MASTERCARD
+  GPN         // Gerbang Pembayaran Nasional
+  AMEX        // American Express
+  JCB         // Japan Credit Bureau
+  UNIONPAY    // Jaringan kartu dari Tiongkok
+  OTHER
+}
+
+model TransactionAccount {
+  id                    String  @id @default(auto()) @map("_id") @db.ObjectId
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+  currency              String  @default("IDR") // Mata uang (contoh: "IDR", "USD")
+
+  providerType          ProviderType
+  // Field provider (optional, ketika tidak menggunakan bank tapi menggunakan e-wallet)
+  providerName          String? // Nama provider (Contoh: BCA, BNI, OVO, Dana, PayPal, Saweria, dll)
+  providerAccountId     String? // ID akun e-wallet atau nomor rekening bank
+  // providerAccountToken      String?   // Token provider ketika pembayaran hanya bisa menggunakan token, sebagiknya atur sisi aplikasi saat akan transaksi
+  providerAccountHolder String?   // Nama pemilik akun bank atau e-wallet (opsional)
+
+  // Kartu (opsional, hanya jika ProviderType = BANK, dan untuk kartu kredit/debit)
+  cardId                String? @db.ObjectId // Foreign Key
+  card                    Card? @relation(fields: [cardId], references: [id], onDelete: SetNull) // VISA, MASTERCARD, dsb.
+
+  userId                String? @db.ObjectId // Foreign Key
+  user                    User? @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([cardId])
+  @@unique([userId, providerType, cardId]) // Setiap pengguna hanya bisa punya 1 akun per providerType
+}
+
+model Card {
+  id              String          @id @default(auto()) @map("_id") @db.ObjectId
+  type           CardType?
+  holder         String?   // Nama pemegang kartu
+  number         String?   // Nomor kartu
+  expiryMonth    Int?      // Bulan kedaluwarsa
+  expiryYear     Int?      // Tahun kedaluwarsa
+  /*
+  Kode CVV/CVC (opsional, sebaiknya jangan disimpan dalam database, hanya digunakan saat transaksi langsung)
+  Menyimpan cvv Bisa Berisiko, sebagiknya atur sisi aplikasi saat akan transaksi
+  🔹 Meski cvv dibuat opsional, menyimpannya dalam database tidak disarankan karena alasan keamanan & kepatuhan regulasi (PCI DSS).
+  */
+  // cvv            String?
+  transactionAccount TransactionAccount?
+}
+
+enum NotificationMethod {
+  PUSH
+  EMAIL
+  INTERNAL
+}
+
+enum NotificationType {
+  ACADEMIC
+  FINANCIAL
+  ANNOUNCEMENT
+  SECURITY
+  EVENT
+  INFO
+  ALERT
+  SYSTEM
+}
+
+enum NotificationStatus {
+  PENDING
+  SENT
+  READ
+  FAILED
+}
+
+model Notification {
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  title       String   // Judul notifikasi
+  message     String   // Isi notifikasi
+  channels    Json     // Menyimpan daftar kanal yang digunakan: ["inApp", "email", "push"]
+  isRead      Boolean  @default(false) // Apakah sudah dibaca?
+  type        NotificationType         // Jenis notifikasi
+  status      NotificationStatus       // PENDING, SENT, READ, FAILED
+  deliveredBy NotificationMethod[]     // Media pengiriman
+
+  recipientId     String? @db.ObjectId // Foreign Key // Bisa user atau general
+  recipient         User? @relation(fields: [recipientId], references: [id], onDelete: Cascade)
+}
+
+model UserNotificationSetting {
+  id         String   @id @default(auto()) @map("_id") @db.ObjectId
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  allowEmail Boolean  @default(true)
+  allowPush  Boolean  @default(true)
+  allowInApp Boolean  @default(true)
+
+  userId     String   @db.ObjectId // Foreign Key
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId])
+}
+
+model Chat {
+  id              String       @id @default(auto()) @map("_id") @db.ObjectId
+  createdAt       DateTime     @default(now())
+  lastMessageAt   DateTime     @default(now())
+  name            String?
+  isGroup         Boolean?
+
+  messagesIds     String[]     @db.ObjectId
+  messages        Message[]
+
+  userIds         String[]     @db.ObjectId
+  users           User[]                 @relation(fields: [userIds], references: [id])
+}
+
+model Message {
+  id              String       @id @default(auto()) @map("_id") @db.ObjectId
+  body            String?
+  image           String?
+  createdAt       DateTime     @default(now())
+
+  seenIds         String[]     @db.ObjectId
+  seen            User[]       @relation("Seen", fields: [seenIds], references: [id])
+
+  chatId          String       @db.ObjectId
+  chat            Chat         @relation(fields: [chatId], references: [id], onDelete: Cascade)
+
+  senderId        String       @db.ObjectId
+  sender          User         @relation(fields: [senderId], references: [id], onDelete: Cascade)
+}

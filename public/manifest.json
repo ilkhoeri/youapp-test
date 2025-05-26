@@ -1,0 +1,137 @@
+{
+  "name": "YouApp - Social Moment Matching",
+  "short_name": "YouApp",
+  "description": "Connect with like-minded Buddies who share your passions and interests. Be the real YOU!",
+  "prefer_related_applications": false,
+  "lang": "en-US",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "categories": ["web", "application"],
+  "display_override": ["window-controls-overlay"],
+  "background_color": "#ffffff",
+  "theme_color": "#ffffff",
+  "start_url": "/",
+  "id": "/",
+  "icons": [
+    {
+      "src": "/icons/web-app-manifest-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/icons/web-app-manifest-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "\/icons/android-icon-36x36.png",
+      "sizes": "36x36",
+      "type": "image\/png",
+      "density": "0.75"
+    },
+    {
+      "src": "\/icons/android-icon-48x48.png",
+      "sizes": "48x48",
+      "type": "image\/png",
+      "density": "1.0"
+    },
+    {
+      "src": "\/icons/android-icon-72x72.png",
+      "sizes": "72x72",
+      "type": "image\/png",
+      "density": "1.5"
+    },
+    {
+      "src": "\/icons/android-icon-96x96.png",
+      "sizes": "96x96",
+      "type": "image\/png",
+      "density": "2.0"
+    },
+    {
+      "src": "\/icons/android-icon-144x144.png",
+      "sizes": "144x144",
+      "type": "image\/png",
+      "density": "3.0"
+    },
+    {
+      "src": "\/icons/android-icon-192x192.png",
+      "sizes": "192x192",
+      "type": "image\/png",
+      "density": "4.0"
+    }
+  ],
+  "screenshots": [
+    {
+      "platform": "wide",
+      "form_factor": "wide",
+      "sizes": "830x498",
+      "src": "/images/screenshoot-app.webp",
+      "description": "Connect with like-minded Buddies who share your passions and interests. Be the real YOU!"
+    },
+    {
+      "sizes": "830x498",
+      "src": "/images/screenshoot-app.webp",
+      "label": "Connect with like-minded Buddies who share your passions and interests. Be the real YOU!"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Open",
+      "url": "/?blank=false",
+      "description": "YouApp",
+      "icons": [{ "src": "/icons/android-icon-96x96.png", "sizes": "96x96" }]
+    }
+  ],
+  "related_applications": [
+    {
+      "platform": "play",
+      "url": "https://play.google.com/store/apps/details?id=com.youapp.you_app"
+    },
+    {
+      "platform": "itunes",
+      "url": "https://apps.apple.com/app/id6444595490"
+    }
+  ],
+  "widgets": [
+    {
+      "name": "YouApp",
+      "short_name": "YouApp",
+      "description": "Widget to control the PWA",
+      "tag": "pwa",
+      "screenshots": [
+        {
+          "src": "/images/screenshoot-app.webp",
+          "sizes": "830x498",
+          "label": "The PWA widget"
+        }
+      ],
+      "icons": [
+        {
+          "src": "/icons/android-icon-48x48.png",
+          "sizes": "48x48"
+        },
+        {
+          "src": "/icons/android-icon-96x96.png",
+          "sizes": "96x96"
+        }
+      ],
+      "backgrounds": [
+        {
+          "src": "/images/screenshoot-app.webp",
+          "sizes": "830x498"
+        }
+      ]
+    }
+  ],
+  "protocol_handlers": [
+    {
+      "protocol": "mailto",
+      "url": "/newEmail?to=%s"
+    }
+  ],
+  "edge_side_panel": {
+    "preferred_width": 420
+  }
+}

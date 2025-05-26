@@ -1,0 +1,230 @@
+/* progressbar - loading */
+.progress {
+  --progress-color: hsl(var(--color));
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  z-index: 9999;
+  height: 0.5rem;
+  width: 60%;
+  max-width: 350px;
+  border-radius: 6px;
+  outline: 0.5px solid hsl(var(--background));
+  border: 2px solid transparent;
+  overflow: hidden;
+  transition: all 125ms ease;
+  background-color: hsl(var(--background));
+  box-shadow:
+    inset 0.2rem 0.2rem 0.5rem #b8b8b985,
+    inset -0.2rem -0.2rem 0.5rem #7c7c7c7c;
+}
+.progress::before {
+  content: '';
+  position: absolute;
+  font-weight: 600;
+  font-size: 14px;
+  z-index: 9;
+  animation: colors 4s ease infinite;
+}
+.progress_bar {
+  position: absolute;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  transform-origin: left center;
+  animation: progress 4s ease both;
+}
+.progress_bar::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  height: 100%;
+  width: 100%;
+  border-radius: 6px;
+  transform-origin: left center;
+  transition: all 125ms ease;
+  background-size: 1.25rem 1.25rem;
+  box-shadow:
+    inset 0.3rem 0.3rem 0.6rem #d1d502bf,
+    inset -0.2rem -0.2rem 0.5rem #b3e50177;
+  background-image: linear-gradient(45deg, #fff70045 25%, transparent 0, transparent 50%, #fff70045 0, #fff70045 75%, transparent 0, transparent);
+  animation: bar 1s linear infinite;
+}
+.progress_bar::after {
+  content: '';
+  inset: 0;
+  height: 100%;
+  width: 100%;
+  border-radius: 4px;
+  background-color: var(--progress-color);
+  background: linear-gradient(90deg, #03d206 0%, #3c7402 100%);
+}
+@keyframes colors {
+  from {
+    color: hsl(var(--background));
+  }
+  to {
+    color: hsl(var(--color));
+  }
+}
+@keyframes progress {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(0%);
+  }
+}
+@keyframes bar {
+  from {
+    background-position: 0 0;
+  }
+  to {
+    background-position: 2.5rem 0;
+  }
+}
+
+/* logo - loading */
+.logoloadRoot {
+  right: 0px;
+  width: 100%;
+  bottom: 0px;
+  height: 100%;
+  z-index: 9998;
+  display: flex;
+  position: fixed;
+  -webkit-box-align: center;
+  align-items: center;
+  -webkit-box-pack: center;
+  justify-content: center;
+}
+
+.logoloadWrap {
+  width: 120px;
+  height: 120px;
+  -webkit-box-align: center;
+  align-items: center;
+  position: relative;
+  display: inline-flex;
+  -webkit-box-pack: center;
+  justify-content: center;
+}
+
+.logoloadS {
+  will-change: transform, opacity;
+  transform: scale(0.75);
+  opacity: 1;
+  animation: logoload 4s linear infinite;
+}
+.boxloadX {
+  position: absolute;
+  width: calc(100% - 20px);
+  height: calc(100% - 20px);
+  border: solid 3px green;
+  will-change: transform, opacity;
+  animation: boxload 4s ease-in infinite;
+  -webkit-animation: boxload 4s ease-in infinite;
+}
+.boxloadY {
+  position: absolute;
+  width: calc(100% - 0px);
+  height: calc(100% - 0px);
+  border: solid 8px #fabd0f;
+  will-change: transform, opacity;
+  transform: scale(1) rotate(0turn);
+  border-radius: 50%;
+  opacity: 1;
+  animation: boxload 4s ease-out infinite 2s;
+  -webkit-animation: boxload 4s ease-out infinite 2s;
+}
+@-moz-keyframes logoload {
+  100%,
+  0% {
+    transform: scale(0.65);
+  }
+  50% {
+    transform: scale(0.75);
+  }
+}
+@-webkit-keyframes logoload {
+  100%,
+  0% {
+    transform: scale(0.65);
+  }
+  50% {
+    transform: scale(0.75);
+  }
+}
+@keyframes logoload {
+  100%,
+  0% {
+    transform: scale(0.65);
+  }
+  50% {
+    transform: scale(0.75);
+  }
+}
+@-moz-keyframes boxload {
+  100%,
+  0% {
+    transform: scale(1) rotate(0turn);
+    border-radius: 50%;
+    opacity: 1;
+  }
+  90%,
+  10% {
+    transform: scale(1) rotate(0turn);
+    border-radius: 25%;
+    opacity: 0.5;
+  }
+  45%,
+  55% {
+    transform: scale(1.5) rotate(1turn);
+    border-radius: 50%;
+    opacity: 1;
+  }
+}
+@-webkit-keyframes boxload {
+  100%,
+  0% {
+    transform: scale(1) rotate(0turn);
+    border-radius: 50%;
+    opacity: 1;
+  }
+  90%,
+  10% {
+    transform: scale(1) rotate(0turn);
+    border-radius: 25%;
+    opacity: 0.5;
+  }
+  45%,
+  55% {
+    transform: scale(1.5) rotate(1turn);
+    border-radius: 50%;
+    opacity: 1;
+  }
+}
+@keyframes boxload {
+  100%,
+  0% {
+    transform: scale(1) rotate(0turn);
+    border-radius: 50%;
+    opacity: 1;
+  }
+  90%,
+  10% {
+    transform: scale(1) rotate(0turn);
+    border-radius: 25%;
+    opacity: 0.5;
+  }
+  45%,
+  55% {
+    transform: scale(1.5) rotate(1turn);
+    border-radius: 50%;
+    opacity: 1;
+  }
+}
