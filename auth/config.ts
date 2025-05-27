@@ -1,6 +1,7 @@
 import user_db from '@/resource/db/user';
 import bcrypt from 'bcryptjs';
 import Github from 'next-auth/providers/github';
+import Passkey from 'next-auth/providers/passkey';
 // import Google from 'next-auth/providers/google';
 import Credentials from 'next-auth/providers/credentials';
 
@@ -21,6 +22,15 @@ export default {
     // Google({
     //   clientId: process.env.GOOGLE_CLIENT_ID as string,
     //   clientSecret: process.env.GOOGLE_CLIENT_SECRET as string
+    // }),
+    // Passkey({
+    //   formFields: {
+    //     email: {
+    //       label: 'Username',
+    //       required: true,
+    //       autocomplete: 'username webauthn'
+    //     }
+    //   }
     // }),
     Github({
       clientId: process.env.AUTH_GITHUB_ID as string,

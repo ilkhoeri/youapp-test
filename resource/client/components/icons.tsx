@@ -256,6 +256,14 @@ export function GripVerticalIcon(props: SvgProps) {
   );
 }
 
+export function CheckIcon(props: SvgProps) {
+  return (
+    <Svg {...props}>
+      <path d="m6 12l4.243 4.243l8.484-8.486" />
+    </Svg>
+  );
+}
+
 export function DoubleCheckIcon(props: SvgProps) {
   return (
     <Svg {...props}>
@@ -375,14 +383,6 @@ export function LogoIcon({ fill = undefined, ...props }: SvgProps) {
       <polygon points="13.36 14.05 8.26 14.05 21.29 6.46 18.94 3.99 16.09 5.65 16.29 6 5.48 12.29 9.27 16.89 14.16 16.89 17.02 13.65 13.36 13.65 13.36 14.05" fill={fill || '#284e83'} />
       <polygon points="13.77 3.61 8.59 3.61 1.65 7.64 3.33 9.68 13.77 3.61 13.77 3.61" fill={fill || '#284e83'} />
       <path d="m19.09,2.4H5.11L0,7.52l11.6,14.08.93-1.05,11.48-12.98-4.91-5.17Zm-7.46,17.35L1.62,7.6l3.98-3.99h12.98l3.79,3.99-10.74,12.15Z" fill={fill || '#3569b2'} />
-    </Svg>
-  );
-}
-
-export function CheckIcon(props: SvgProps) {
-  return (
-    <Svg {...props}>
-      <path d="M5 12l5 5l10 -10" />
     </Svg>
   );
 }

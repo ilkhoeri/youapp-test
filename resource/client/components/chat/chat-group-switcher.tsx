@@ -1,15 +1,15 @@
 'use client';
 import * as React from 'react';
 import { Account, AllChatProps } from '@/resource/types/user';
-import { classesSelectItem, Select } from '../ui/select';
-import { cn } from 'cn';
-import { NoFieldResult } from '../fields/form';
-import { ChevronIcon } from '../icons';
-import { Button } from '../ui/button';
 import { MotionButton, MotionButtonModal } from '../motion/motion-button';
-import { ActionBack } from '../actions';
-import { ChatGroup } from './chat-group';
 import { Portal } from '@/resource/hooks/use-open-state';
+import { ChatGroup } from './chat-group';
+import { ActionBack } from '../actions';
+import { ChevronIcon } from '../icons';
+import { Select } from '../ui/select';
+import { Button } from '../ui/button';
+import { cn } from 'cn';
+import { ChatSquareCallFillIcon, User3FillIcon } from '../icons-fill';
 
 interface ChatGroupSwitcherProps {
   accounts: Account[];
@@ -19,20 +19,19 @@ interface ChatGroupSwitcherProps {
 export function ChatGroupSwitcher(_props: ChatGroupSwitcherProps) {
   const { chats, isCollapsed, accounts } = _props;
   const [selectedChat, setSelectedChat] = React.useState<string | undefined>(chats?.[0]?.id);
-  const [isModalOpen, setIsModalOpen] = React.useState(false);
 
   return (
     <>
       <Select defaultValue={selectedChat} onValueChange={setSelectedChat}>
         <Select.Trigger
-          chevronIcon={<ChevronIcon chevron="down" />}
+          chevronIcon={<User3FillIcon size={24} />}
           className={cn(
-            'flex items-center gap-2 [&>span]:line-clamp-1 [&>span]:flex [&>span]:w-full [&>span]:items-center [&>span]:gap-1 [&>span]:truncate [&_svg]:h-4 [&_svg]:w-4 [&_svg]:shrink-0 bg-background-theme',
-            isCollapsed && 'flex h-9 w-9 shrink-0 items-center justify-center p-0 [&>span]:w-auto [&>svg]:hidden'
+            'flex items-center gap-2 [&>span]:line-clamp-1 [&>span]:flex [&>span]:w-full [&>span]:items-center [&>span]:gap-1 [&>span]:truncate [&_svg]:shrink-0 bg-background-theme',
+            isCollapsed && 'flex size-9 shrink-0 items-center justify-center p-0 [&>span]:w-auto [&>span]:hidden'
           )}
           aria-label="Select group"
         >
-          <Select.Value placeholder="Select an group">{chats ? chats?.find(chat => chat?.id === selectedChat)?.name : '0'}</Select.Value>
+          {!isCollapsed && <Select.Value placeholder="Select an group">{chats ? chats?.find(chat => chat?.id === selectedChat)?.name : '0'}</Select.Value>}
         </Select.Trigger>
         <Select.Content>
           {chats &&
@@ -44,12 +43,24 @@ export function ChatGroupSwitcher(_props: ChatGroupSwitcherProps) {
                 </div>
               </Select.Item>
             ))}
-          {chats && chats.length > 0 && <Select.Separator />}
-          <MotionButton name="chat-group" className={cn(classesSelectItem)} onClick={() => setIsModalOpen(true)}>
-            Create
-          </MotionButton>
+          {/* {chats && chats.length > 0 && <Select.Separator />} */}
         </Select.Content>
       </Select>
+    </>
+  );
+}
+
+interface CreateChatGroupProps {
+  accounts: Account[];
+}
+export function CreateChatGroup({ accounts }: CreateChatGroupProps) {
+  const [isModalOpen, setIsModalOpen] = React.useState(false);
+  return (
+    <>
+      <MotionButton name="chat-group" className={cn('flex items-center justify-center border rounded-lg ml-auto p-0.5 size-9')} onClick={() => setIsModalOpen(true)}>
+        <ChatSquareCallFillIcon size={24} className="transition-colors" />
+        <span className="sr-only hidden">Create Chat Group</span>
+      </MotionButton>
 
       <Portal render={isModalOpen}>
         <MotionButtonModal

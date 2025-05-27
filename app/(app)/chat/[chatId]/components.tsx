@@ -7,7 +7,7 @@ import { Account, AllMessageProps } from '@/resource/types/user';
 import { useChat, useOtherUser } from '@/resource/client/components/chat/chat';
 import { Avatar } from '@/resource/client/components/ui/avatar-oeri';
 import { ChevronIcon, DoubleCheckIcon, PhotoCirclePlusIcon, XIcon } from '@/resource/client/components/icons';
-import { DotsFillIcon, PaperPlaneFillIcon, TrashFillIcon } from '@/resource/client/components/icons-fill';
+import { ArrowMessageBoxFillIcon, DotsFillIcon, PaperPlaneFillIcon, PhotoPlusFillIcon, TrashFillIcon } from '@/resource/client/components/icons-fill';
 import { Button } from '@/resource/client/components/ui/button';
 import { useActiveList } from './active-list';
 import { pusherClient } from '@/resource/server/messages/pusher';
@@ -29,6 +29,7 @@ import { MotionButton, MotionButtonModal } from '@/resource/client/components/mo
 import { classesInput } from '@/resource/client/components/fields/input';
 import { Textarea } from '@/resource/client/components/fields/textarea';
 import { SheetsBreakpoint } from '@/resource/client/components/sheets-breakpoint';
+import { cvx, cvxVariants } from 'xuxi';
 
 interface HeaderProps {
   chat: Chat & {
@@ -284,7 +285,7 @@ export function ChatForm() {
           uploadPreset="upload_default"
           className="text-muted-foreground hover:text-color transition-colors z-[9] cursor-pointer absolute bottom-[var(--inset-b)] left-[var(--inset-x)]"
         >
-          <PhotoCirclePlusIcon size={24} />
+          <PhotoPlusFillIcon size={24} />
         </CldUploadButton>
 
         <Form.Field
@@ -325,7 +326,7 @@ function MessageBox({ data, isLast }: MessageBoxProps) {
   const container = cn('flex gap-3 p-4', isOwn && 'justify-end');
   const avatar = cn(isOwn && 'order-2');
   const body = cn('flex flex-col gap-2', isOwn && 'items-end');
-  const message = cn('text-sm w-fit overflow-hidden', isOwn ? 'bg-sky-500 text-white' : 'bg-gray-100', data.image ? 'rounded-md p-0' : 'rounded-full py-2 px-3');
+  const message = cn('text-sm w-fit overflow-hidden', isOwn ? 'bg-gray-300 text-black' : 'bg-gray-100', data.image ? 'rounded-md p-0' : 'rounded-full py-2 px-3');
 
   return (
     <div className={container}>

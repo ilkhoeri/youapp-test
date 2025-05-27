@@ -34,16 +34,22 @@ export default auth(req => {
       callbackUrl += nextUrl.search;
     }
 
-    const encodedCallbackUrl = encodeURIComponent(callbackUrl);
+    const encoded = encodeURIComponent(callbackUrl);
+    const encodedCallbackUrl = encoded !== encodeURIComponent(DEFAULT_SIGN_IN_REDIRECT) ? `${SIGN_IN_ROUTE}?callbackUrl=${encoded}` : SIGN_IN_ROUTE;
 
-    return Response.redirect(new URL(`/auth/sign-in?callbackUrl=${encodedCallbackUrl}`, nextUrl));
+    return Response.redirect(new URL(encodedCallbackUrl, nextUrl));
   }
 
-  return;
+  // return;
 });
 
 // Optionally, don't invoke Middleware on some paths
 export const config = {
-  // matcher: ['/((?!api|_next/static|_next/image|favicon.ico).*)'],
-  matcher: ['/((?!.+\\.[\\w]+$|_next).*)', '/', '/(api|trpc)(.*)', '/chat/:path*']
+  matcher: ['/((?!api|_next/static|_next/image|favicon.ico).*)']
+  // matcher: [
+  //   '/((?!.+\\.[\\w]+$|_next).*)',
+  //   '/',
+  //   '/(api|trpc)(.*)'
+  //   // '/chat/:path*'
+  // ]
 };

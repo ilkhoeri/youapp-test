@@ -14,21 +14,11 @@ import { Tabs } from '../ui/tabs';
 import { Input } from '../fields/input';
 import { ChatList } from './chat-list';
 import { SearchIcon } from '../icons';
-import {
-  ArchiveFillIcon,
-  ArchiveJunkFillIcon,
-  CartShoppingFillIcon,
-  FileFillIcon,
-  InboxFillIcon,
-  MessagesSquareFillIcon,
-  SendFillIcon,
-  TrashFillIcon,
-  UpdateFillIcon,
-  User2FillIcon
-} from '../icons-fill';
-import { ChatGroupSwitcher } from './chat-group-switcher';
+import { ArchiveFillIcon, ArchiveJunkFillIcon, CartShoppingFillIcon, FileDraftFillIcon, InboxFillIcon, MailFillIcon, SendFillIcon, TrashFillIcon, RefreshFillIcon } from '../icons-fill';
+import { ChatGroupSwitcher, CreateChatGroup } from './chat-group-switcher';
 import { useDeviceQuery } from '@/resource/hooks/use-device-query';
 import { ClientRender } from '../client-render';
+import { Tag2DuotoneIcon } from '../icons-duotone';
 
 interface ChatAvatarsProps {
   data: Chat & {
@@ -46,15 +36,21 @@ export function ChatAvatars({ data, otherUser }: ChatAvatarsProps) {
 const links = {
   '1': [
     {
+      title: 'All',
+      label: '128',
+      icon: MailFillIcon,
+      variant: 'default'
+    },
+    {
       title: 'Inbox',
       label: '128',
       icon: InboxFillIcon,
-      variant: 'default'
+      variant: 'ghost'
     },
     {
       title: 'Drafts',
       label: '9',
-      icon: FileFillIcon,
+      icon: FileDraftFillIcon,
       variant: 'ghost'
     },
     {
@@ -84,21 +80,9 @@ const links = {
   ] as ChatNavProps['links'],
   '2': [
     {
-      title: 'Social',
-      label: '972',
-      icon: User2FillIcon,
-      variant: 'ghost'
-    },
-    {
       title: 'Updates',
       label: '342',
-      icon: UpdateFillIcon,
-      variant: 'ghost'
-    },
-    {
-      title: 'Forums',
-      label: '128',
-      icon: MessagesSquareFillIcon,
+      icon: RefreshFillIcon,
       variant: 'ghost'
     },
     {
@@ -108,16 +92,31 @@ const links = {
       variant: 'ghost'
     },
     {
+      title: 'Social',
+      label: '972',
+      icon: Tag2DuotoneIcon,
+      color: '#00a76f',
+      variant: 'ghost'
+    },
+    {
+      title: 'Forums',
+      label: '128',
+      icon: Tag2DuotoneIcon,
+      color: '#ffab00',
+      variant: 'ghost'
+    },
+    {
       title: 'Promotions',
       label: '21',
-      icon: ArchiveFillIcon,
+      icon: Tag2DuotoneIcon,
+      color: '#ff5630',
       variant: 'ghost'
     }
   ] as ChatNavProps['links']
 };
 
 const classTabs = {
-  list: 'inline-flex h-9 items-center justify-center rounded-lg bg-background-theme border p-1 ml-auto',
+  list: 'inline-flex h-9 items-center justify-center rounded-lg bg-background-theme border p-1',
   tab: 'inline-flex items-center justify-center whitespace-nowrap rounded-md px-3 py-1 text-sm font-semibold ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 aria-selected:bg-color data-[active]:text-background aria-selected:shadow text-muted-foreground',
   panel: 'px-4 m-0 space-y-0.5 overflow-y-auto max-h-[calc(100%-7.5rem)]'
 };
@@ -171,8 +170,9 @@ export function ChatContainer(_props: ChatContainerProps) {
         <ResizableHandle withHandle />
         <ResizablePanel defaultSize={defaultLayout[1]} minSize={30}>
           <Tabs defaultValue="all" className="h-full">
-            <div className="flex items-center px-4 py-2">
+            <div className="flex items-center px-4 py-2 gap-2">
               <h1 className="text-xl font-bold">Inbox</h1>
+              <CreateChatGroup accounts={accounts} />
               <Tabs.List className={classTabs.list}>
                 <Tabs.Tab value="all" className={classTabs.tab}>
                   All
@@ -201,6 +201,7 @@ export function ChatContainer(_props: ChatContainerProps) {
         </ResizablePanel>
         <ResizableHandle withHandle />
         <ResizablePanel defaultSize={defaultLayout[2]} minSize={30}>
+          <div className="size-full top-0 left-0 absolute bg-repeat" {...{ style: { opacity: '0.06', backgroundImage: 'url(/images/message-bg.png)' } }} />
           {/* <ChatDisplay mail={chats.find(item => item.id === mail.selected) || null} /> */}
           CHATDISPLAY
         </ResizablePanel>
@@ -215,6 +216,7 @@ interface ChatNavProps {
     title: string;
     label?: string;
     icon?: IconType;
+    color?: React.CSSProperties['color'];
     variant: 'default' | 'ghost';
   }[];
   className?: string;
@@ -231,7 +233,7 @@ export function ChatNav({ links, isCollapsed, className }: ChatNavProps) {
               href="#"
               className={cn(buttonVariants({ variant: link.variant, size: 'icon' }), 'h-9 w-9', link.variant === 'default' && 'transition-colors bg-color text-background')}
             >
-              {link?.icon && <link.icon />}
+              {link?.icon && <link.icon color={link?.color} />}
               <span className="sr-only">{link.title}</span>
             </Link>
           ) : (
@@ -240,7 +242,7 @@ export function ChatNav({ links, isCollapsed, className }: ChatNavProps) {
               href="#"
               className={cn(buttonVariants({ variant: link.variant, size: 'sm' }), link.variant === 'default' && 'transition-colors bg-color text-background', 'justify-start gap-2')}
             >
-              {link?.icon && <link.icon />}
+              {link?.icon && <link.icon color={link?.color} />}
               {link.title}
               {link.label && <span className={cn('ml-auto', link.variant === 'default' && 'text-background')}>{link.label}</span>}
             </Link>

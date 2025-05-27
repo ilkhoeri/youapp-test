@@ -1,25 +1,62 @@
 import nextPWA from 'next-pwa';
 import type { NextConfig } from 'next';
 
-/** @type {import('next-pwa').PWAConfig} */
-const withPWA = nextPWA({
-  dest: 'public',
-  register: true,
-  skipWaiting: true,
-  buildExcludes: ['app-build-manifest.json']
-});
+// /** @type {import('next-pwa').PWAConfig} */
+// const withPWA = nextPWA({
+//   dest: 'public',
+//   register: true,
+//   skipWaiting: true,
+//   buildExcludes: ['app-build-manifest.json']
+// });
 
 const nextConfig: NextConfig = {
   reactStrictMode: true,
-  experimental: {
-    turbo: {
-      rules: {
-        '*.svg': {
-          loaders: ['@svgr/webpack'],
-          as: '*.js'
-        }
+  // experimental: {},
+  turbopack: {
+    rules: {
+      '*.svg': {
+        loaders: ['@svgr/webpack'],
+        as: '*.js'
       }
     }
+  },
+  async headers() {
+    return [
+      {
+        source: '/(.*)',
+        headers: [
+          {
+            key: 'X-Content-Type-Options',
+            value: 'nosniff'
+          },
+          {
+            key: 'X-Frame-Options',
+            value: 'DENY'
+          },
+          {
+            key: 'Referrer-Policy',
+            value: 'strict-origin-when-cross-origin'
+          }
+        ]
+      },
+      {
+        source: '/sw.js',
+        headers: [
+          {
+            key: 'Content-Type',
+            value: 'application/javascript; charset=utf-8'
+          },
+          {
+            key: 'Cache-Control',
+            value: 'no-cache, no-store, must-revalidate'
+          },
+          {
+            key: 'Content-Security-Policy',
+            value: "default-src 'self'; script-src 'self'"
+          }
+        ]
+      }
+    ];
   },
   images: {
     deviceSizes: [375, 640, 768, 1024, 1536, 1920],
@@ -65,16 +102,9 @@ const nextConfig: NextConfig = {
         pathname: '/**'
       }
     ]
-  },
-  async redirects() {
-    return [
-      {
-        source: '/blogs',
-        destination: '/',
-        permanent: false
-      }
-    ];
   }
 };
+
 // @ts-ignore
-export default withPWA(nextConfig);
+// export default withPWA(nextConfig);
+export default nextConfig;

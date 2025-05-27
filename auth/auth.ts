@@ -1,10 +1,26 @@
-import user_db from '@/resource/db/user';
 import NextAuth from 'next-auth';
+import 'next-auth/jwt';
+
+import user_db from '@/resource/db/user';
 import authConfig from '@/auth/config';
-import { AccountStatus, UserRole, User } from '@prisma/client';
+import { AccountStatus, UserRole } from '@prisma/client';
 import { PrismaAdapter } from '@auth/prisma-adapter';
 import { getTwoFactorConfirmationByUserId } from './tokens/two-factor-confirmation';
 import { getAccountByUserId, gerUserById } from '@/resource/db/user/get-accounts';
+import { DEFAULT_SIGN_IN_REDIRECT } from '@/routes/auth';
+
+import { CredentialsSchema } from '@/resource/schemas/user';
+
+// import { UnstorageAdapter } from '@auth/unstorage-adapter';
+// const storage = createStorage({
+//   driver: process.env.VERCEL
+//     ? vercelKVDriver({
+//         url: process.env.AUTH_KV_REST_API_URL,
+//         token: process.env.AUTH_KV_REST_API_TOKEN,
+//         env: false
+//       })
+//     : memoryDriver()
+// });
 
 export const {
   handlers: { GET, POST },
@@ -13,10 +29,14 @@ export const {
   signOut,
   unstable_update: update
 } = NextAuth({
-  adapter: PrismaAdapter(user_db as any),
+  adapter: PrismaAdapter(user_db),
+  // debug: !!process.env.AUTH_DEBUG,
+  // theme: { logo: 'https://authjs.dev/img/logo-sm.png' },
+  ...authConfig,
+  // experimental: { enableWebAuthn: true },
   session: { strategy: 'jwt' },
   pages: {
-    signIn: '/auth/sign-in',
+    signIn: DEFAULT_SIGN_IN_REDIRECT,
     error: '/auth/error'
   },
   events: {
@@ -105,6 +125,17 @@ export const {
 
       return token;
     }
-  },
-  ...authConfig
+  }
 });
+
+declare module 'next-auth' {
+  interface Session {
+    accessToken?: string;
+  }
+}
+
+declare module 'next-auth/jwt' {
+  interface JWT {
+    accessToken?: string;
+  }
+}
