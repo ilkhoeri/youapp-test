@@ -94,7 +94,6 @@ export function CreateChatGroup({ accounts }: CreateChatGroupProps) {
         >
           <ChatGroup users={accounts} open={isModalOpen} onOpenChange={setIsModalOpen} />
         </MotionButtonModal>
-        <style dangerouslySetInnerHTML={{ __html: `body, body[data-scroll-locked] {pointer-events: auto !important;}` }} />
       </Portal>
     </>
   );
