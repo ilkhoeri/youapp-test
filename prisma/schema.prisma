@@ -53,8 +53,10 @@ model User {
   - id yang di ekspose, biasa untuk melakukan posting
   */
   refId                 String         @unique
+  username              String         @unique
   firstName             String
   lastName              String?        @default("")
+
   name                  String         // dibutuhkan ketika menggunakan provider (eg, Google, Github) / jika tidak = firstName + lastName
   email                 String         @unique
   emailVerified         DateTime?
@@ -66,6 +68,9 @@ model User {
   about                 About?         @relation("AboutUser")
   address               Address?       @relation("UserAddress")
 
+  lastOnline            DateTime?
+  lastSeen              DateTime?
+
   chatIds               String[]       @db.ObjectId
   chats                 Chat[] @relation(fields: [chatIds], references: [id])
 
@@ -74,9 +79,11 @@ model User {
 
   messages              Message[]
 
+  reactions             Reaction[]
+
   isTwoFactorEnabled    Boolean        @default(false)
   role                  UserRole       @default(USER)
-  accountStatus         AccountStatus  @default(ACTIVE)
+  status                AccountStatus  @default(ACTIVE)
   twoFactorConfirmation TwoFactorConfirmation?
   accounts              Account[]
 
@@ -481,63 +488,120 @@ enum NotificationStatus {
 }
 
 model Notification {
-  id          String   @id @default(auto()) @map("_id") @db.ObjectId
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id              String   @id @default(auto()) @map("_id") @db.ObjectId
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
 
-  title       String   // Judul notifikasi
-  message     String   // Isi notifikasi
-  channels    Json     // Menyimpan daftar kanal yang digunakan: ["inApp", "email", "push"]
-  isRead      Boolean  @default(false) // Apakah sudah dibaca?
-  type        NotificationType         // Jenis notifikasi
-  status      NotificationStatus       // PENDING, SENT, READ, FAILED
-  deliveredBy NotificationMethod[]     // Media pengiriman
+  title           String   // Judul notifikasi
+  message         String   // Isi notifikasi
+  channels        Json     // Menyimpan daftar kanal yang digunakan: ["inApp", "email", "push"]
+  isRead          Boolean  @default(false) // Apakah sudah dibaca?
+  type            NotificationType         // Jenis notifikasi
+  status          NotificationStatus       // PENDING, SENT, READ, FAILED
+  deliveredBy     NotificationMethod[]     // Media pengiriman
 
   recipientId     String? @db.ObjectId // Foreign Key // Bisa user atau general
-  recipient         User? @relation(fields: [recipientId], references: [id], onDelete: Cascade)
+  recipient       User? @relation(fields: [recipientId], references: [id], onDelete: Cascade)
 }
 
 model UserNotificationSetting {
-  id         String   @id @default(auto()) @map("_id") @db.ObjectId
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
+  id              String       @id @default(auto()) @map("_id") @db.ObjectId
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
 
-  allowEmail Boolean  @default(true)
-  allowPush  Boolean  @default(true)
-  allowInApp Boolean  @default(true)
+  allowEmail      Boolean      @default(true)
+  allowPush       Boolean      @default(true)
+  allowInApp      Boolean      @default(true)
 
-  userId     String   @db.ObjectId // Foreign Key
-  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId          String       @db.ObjectId // Foreign Key
+  user            User         @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([userId])
 }
 
+enum ChatType {
+  PRIVATE
+  GROUP
+  CHANNEL
+  BOT
+}
+
 model Chat {
   id              String       @id @default(auto()) @map("_id") @db.ObjectId
+  type            ChatType     @default(PRIVATE)
   createdAt       DateTime     @default(now())
   lastMessageAt   DateTime     @default(now())
   name            String?
-  isGroup         Boolean?
-
+  description     String?
+  isGroup         Boolean      @default(false)
+  avatarUrl       String?
+  // Relasi ke Message (many-to-many)
   messagesIds     String[]     @db.ObjectId
   messages        Message[]
-
+  // Pinned Message (one-to-one/optional)
+  pinnedMessageId String?      @db.ObjectId
+  pinnedMessage   Message?     @relation("PinnedMessage", fields: [pinnedMessageId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  // Relasi ke User (many-to-many)
   userIds         String[]     @db.ObjectId
-  users           User[]                 @relation(fields: [userIds], references: [id])
+  users           User[]       @relation(fields: [userIds], references: [id])
+  // Admins (hanya array ID, tidak perlu relasi ke model User)
+  admins          String[]     @db.ObjectId
+}
+
+enum MessageType {
+  TEXT
+  IMAGE
+  VIDEO
+  AUDIO
+  FILE
+  STICKER
+  SYSTEM
 }
 
 model Message {
   id              String       @id @default(auto()) @map("_id") @db.ObjectId
+  type            MessageType  @default(TEXT)
   body            String?
-  image           String?
+  mediaUrl        String?
+  mediaType       String?      // e.g., "image/png", "audio/mpeg"
   createdAt       DateTime     @default(now())
-
-  seenIds         String[]     @db.ObjectId
-  seen            User[]       @relation("Seen", fields: [seenIds], references: [id])
-
+  editedAt        DateTime     @updatedAt
+  // Relasi ke Chat (many-to-one)
   chatId          String       @db.ObjectId
   chat            Chat         @relation(fields: [chatId], references: [id], onDelete: Cascade)
-
+  // Relasi ke User (many-to-one)
   senderId        String       @db.ObjectId
   sender          User         @relation(fields: [senderId], references: [id], onDelete: Cascade)
+  // Relasi seen (many-to-many)
+  seenIds         String[]     @db.ObjectId
+  seen            User[]       @relation("Seen", fields: [seenIds], references: [id])
+  // Relasi ke Reaction (one-to-many)
+  reactions       Reaction[]
+  // Reply to (self-relation, optional)
+  replyToId       String?      @db.ObjectId
+  replyTo         Message?     @relation("Reply", fields: [replyToId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  replies         Message[]    @relation("Reply")
+  // Pinned by Chat (reverse dari pinnedMessage)
+  pinnedByChat    Chat[]       @relation("PinnedMessage")
+  isDeleted                    Boolean   @default(false)
+  forwardedFromMessageId       String?   @db.ObjectId
+
+  deletedForUserIds String[]   @db.ObjectId
+  forwardedFromId   String?    @db.ObjectId
+  forwardedFrom     Message?   @relation("Forward", fields: [forwardedFromId], references: [id], onDelete:NoAction, onUpdate:NoAction)
+  forwardedMessages Message[]  @relation("Forward")
+  isEdited          Boolean    @default(false)
+  isSystemMessage   Boolean    @default(false)
+}
+
+model Reaction {
+  id              String      @id @default(auto()) @map("_id") @db.ObjectId
+  emoji           String      // Misal: "👍", "😂", "❤️"
+  message         Message     @relation(fields: [messageId], references: [id])
+  messageId       String      @db.ObjectId
+  user            User        @relation(fields: [userId], references: [id])
+  userId          String      @db.ObjectId
+  createdAt       DateTime    @default(now())
+
+  @@unique([userId, messageId])
 }

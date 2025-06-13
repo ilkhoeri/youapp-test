@@ -2,6 +2,7 @@
 import * as React from 'react';
 import * as motion from 'motion/react-client';
 import { cn } from 'cn';
+import { useModal } from '@/resource/hooks/use-modal';
 
 interface MotionCardDependProps extends Omit<React.ComponentProps<typeof motion.div>, 'children'> {
   name: string;
@@ -33,12 +34,12 @@ MotionCard.displayName = 'MotionCard';
 
 export type MotionCardModalProps = MotionCardDependProps & {
   open: boolean;
-  onOpenChange: (prev: boolean | ((prev: boolean) => boolean)) => void;
+  onOpenChange?: (prev: boolean | ((prev: boolean) => boolean)) => void;
   classNames?: Partial<Record<'container', string>>;
 };
 
 export const MotionCardModal = React.forwardRef<React.ElementRef<typeof motion.div>, MotionCardModalProps>((_props, ref) => {
-  const { name, open, onOpenChange, header, children, classNames, ...props } = _props;
+  const { name, open, onOpenChange: setOpenProp, header, children, classNames, ...props } = _props;
 
   if (!open) return null;
 

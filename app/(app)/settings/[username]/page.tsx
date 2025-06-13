@@ -1,26 +1,26 @@
+import { Suspense } from 'react';
 import { redirect } from 'next/navigation';
-import { currentUser, getUserByRefId } from '@/resource/db/user/get-accounts';
-import { getLinks } from '@/resource/db/db-get';
+import { currentUser, getUserByUserName } from '@/resource/db/user/get-accounts';
 import { SettingsAccounts } from './components';
 
 import type { Metadata, ResolvingMetadata } from 'next';
 
 interface Params {
-  params: Promise<{ refId: string }>;
+  params: Promise<{ username: string }>;
   searchParams: Promise<{ getAccount: string }>;
 }
 
 export async function generateMetadata({ params, searchParams }: Params, parent: ResolvingMetadata): Promise<Metadata> {
-  const [session, { refId }, user, { openGraph }] = await Promise.all([currentUser(), params, getUserByRefId((await searchParams).getAccount), parent]);
+  const [session, { username }, user, { openGraph }] = await Promise.all([currentUser(), params, getUserByUserName((await searchParams).getAccount), parent]);
 
   const previousImages = openGraph?.images || [];
 
   const url = process.env.NEXT_PUBLIC_SITE_URL;
-  const slug = `/settings/${refId}` || '';
+  const slug = `/settings/${username}` || '';
   const namePage = session?.name || 'NotFound!';
 
   return {
-    title: user?.refId && `@${user?.refId}`,
+    title: user?.username && `@${user?.username}`,
     description: namePage,
     openGraph: {
       title: namePage,
@@ -42,15 +42,15 @@ export async function generateMetadata({ params, searchParams }: Params, parent:
 }
 
 export default async function Settings({ params, searchParams }: Params) {
-  const [session, searchAccount, links, { refId }] = await Promise.all([currentUser(), getUserByRefId((await searchParams).getAccount), getLinks(), params]);
+  const [session, { username }] = await Promise.all([currentUser(), params]);
 
-  if (!session) redirect('/');
-
-  if (refId !== session?.refId) redirect('/');
+  if (!session || username !== session?.username) redirect('/');
 
   return (
     <section className="w-full max-w-5xl mx-auto">
-      <SettingsAccounts />
+      <Suspense fallback="Load...">
+        <SettingsAccounts />
+      </Suspense>
     </section>
   );
 }

@@ -103,7 +103,7 @@ export function SettingPasswordForm({ account, session, currentAccount }: { acco
       <h3 className="font-bold text-sm">Password</h3>
       <Form.Provider {...form}>
         <Form onSubmit={form.handleSubmit(onSubmit)} className="group [&_[data-field]]:mt-0">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+          <div className="max-lg:flex max-lg:flex-col lg:grid lg:grid-cols-2 gap-3">
             <Form.Field
               control={form.control}
               name="email"
@@ -129,7 +129,7 @@ export function SettingPasswordForm({ account, session, currentAccount }: { acco
                 )}
               />
             ) : (
-              <div className="max-md:hidden max-md:sr-only" />
+              <div className="max-lg:hidden max-lg:sr-only" />
             )}
 
             <Form.Field

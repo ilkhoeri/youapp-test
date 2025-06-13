@@ -41,7 +41,7 @@ export function InstallPrompt() {
   );
 }
 
-export default function Page() {
+export function Page() {
   return (
     <div>
       <PushNotificationManager />

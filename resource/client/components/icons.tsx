@@ -259,7 +259,7 @@ export function GripVerticalIcon(props: SvgProps) {
 export function CheckIcon(props: SvgProps) {
   return (
     <Svg {...props}>
-      <path d="m6 12l4.243 4.243l8.484-8.486" />
+      <path d="m5 13l4 4L19 7" />
     </Svg>
   );
 }
@@ -267,7 +267,8 @@ export function CheckIcon(props: SvgProps) {
 export function DoubleCheckIcon(props: SvgProps) {
   return (
     <Svg {...props}>
-      <path d="m8 12.485l4.243 4.243l8.484-8.485M3 12.485l4.243 4.243m8.485-8.485L12.5 11.5" />
+      <path d="m1.5 12.5l4.076 4.076a.6.6 0 0 0 .848 0L9 14m7-7l-4 4" />
+      <path d="m7 12l4.576 4.576a.6.6 0 0 0 .848 0L22 7" />
     </Svg>
   );
 }

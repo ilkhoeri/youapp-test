@@ -18,7 +18,7 @@ import { Card } from '@/resource/client/components/ui/card';
 import { getAge } from '@/resource/utils/age-generated';
 import { Account } from '@/resource/types/user';
 import { cn } from 'cn';
-import { getDispaly } from '@/resource/const/get-name';
+import { getFromUser } from '@/resource/const/get-from-user';
 
 interface SettingsAccountsProps {}
 export function SettingsAccounts({}: SettingsAccountsProps) {
@@ -31,7 +31,7 @@ export function SettingsAccounts({}: SettingsAccountsProps) {
     <>
       <div className="mb-6 grid grid-cols-3 justify-items-center items-center">
         <ActionBack instance="back" className="mr-auto" />
-        {user?.name && <p className="text-sm font-semibold">@{user?.name}</p>}
+        {user?.name && <p className="text-sm font-semibold">@{user?.username}</p>}
         <span className="ml-auto"></span>
       </div>
       <div className="gap-6 grid grid-flow-row lg:grid-flow-col lg:grid-cols-7">
@@ -75,7 +75,7 @@ const UserInfo: React.FC<{ user: Account }> = ({ user }) => {
     shio = user.about?.zodiac;
 
   const birth = getAge(birthDate),
-    userInfoParts = [getDispaly(user.refId).refId(), birth.yearDiff].filter(Boolean);
+    userInfoParts = [getFromUser(user).username(), birth.yearDiff].filter(Boolean);
 
   if (userInfoParts.length === 0) return null;
 

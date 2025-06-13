@@ -15,7 +15,7 @@ const buttonVariants = cvx({
       destructive: 'text-destructive-foreground bg-destructive hover:bg-destructive/90',
       outline: 'border bg-background hover:bg-muted',
       secondary: 'bg-secondary text-secondary-foreground hover:bg-secondary/80',
-      ghost: 'hover:bg-muted hover:text-accent-foreground',
+      ghost: 'hover:bg-[#e4ebf1] dark:hover:bg-[#1c252e] text-muted-foreground hover:text-color transition-[transform,color,background-color,border-color]',
       link: 'text-primary underline-offset-4 hover:underline',
       base: 'bg-background hover:bg-muted',
       'rounded-tile': 'bg-background hover:bg-muted rounded-full'

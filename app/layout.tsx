@@ -2,7 +2,7 @@ import { currentUser } from '@/resource/db/user/get-accounts';
 import { cookiesValues } from '@/resource/client/contexts/cookies-server';
 import { Toaster } from '@/resource/client/components/sonner';
 import { AppProvider } from '@/resource/client/contexts/app-provider';
-import { ThemeProvider } from '@/resource/client/theme';
+import { ThemeProvider, ThemeStateHidden } from '@/resource/client/theme';
 import { auth } from '@/auth/auth';
 import { bodyConfig } from './config/fonts';
 
@@ -76,6 +76,7 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
               {children}
             </div>
             <Toaster />
+            <ThemeStateHidden />
           </ThemeProvider>
         </body>
       </html>

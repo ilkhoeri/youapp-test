@@ -1,5 +1,6 @@
 import db from '@/resource/db/user';
 import { getCurrentUser } from '@/resource/db/user/get-accounts';
+import { Message } from '@/resource/types/user';
 
 export async function getChats() {
   const currentUser = await getCurrentUser();
@@ -31,11 +32,11 @@ export async function getChats() {
   }
 }
 
-export async function getChatById(chatId: string) {
+export async function getChatById(chatId: string | null | undefined) {
   try {
     const currentUser = await getCurrentUser();
 
-    if (!currentUser?.email) return null;
+    if (!currentUser?.email || !chatId) return null;
 
     const chat = await db.chat.findUnique({
       where: {
@@ -53,15 +54,31 @@ export async function getChatById(chatId: string) {
   }
 }
 
-export async function getMessages(chatId: string) {
+export async function getMessages(chatId: string | null | undefined) {
   try {
-    const messages = await db.message.findMany({
+    if (!chatId) return [];
+    const pickFromOtherUser = {
+      refId: true,
+      email: true,
+      image: true,
+      name: true,
+      username: true,
+      firstName: true,
+      lastName: true,
+      createdAt: true
+    };
+    const messages: Message[] = await db.message.findMany({
       where: {
         chatId: chatId
       },
       include: {
-        sender: true,
-        seen: true
+        sender: { select: pickFromOtherUser },
+        seen: { select: pickFromOtherUser },
+        reactions: {
+          include: {
+            user: { select: pickFromOtherUser }
+          }
+        }
       },
       orderBy: {
         createdAt: 'asc'

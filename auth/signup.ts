@@ -6,7 +6,7 @@ import db from '@/resource/db/user';
 import { ObjectId } from 'bson';
 import { SignUpSchema } from '@/resource/schemas/user';
 import { getUserByEmail, getUserByRefId } from '../resource/db/user/get-accounts';
-import { getDispaly, getNameParts } from '@/resource/const/get-name';
+import { getFromUser, getNameParts } from '@/resource/const/get-from-user';
 import { sanitizedWord } from '@/resource/utils/text-parser';
 
 /** uncomment if activate resend for verificationToken */
@@ -25,7 +25,8 @@ export async function signup(values: z.infer<typeof SignUpSchema>) {
   const [firstName, lastName] = getNameParts(name);
 
   try {
-    let refId: string = new ObjectId().toHexString();
+    const refId: string = new ObjectId().toHexString(),
+      username = sanitizedWord(name);
 
     const existingEmail = await getUserByEmail(email),
       existingRefId = await getUserByRefId(sanitizedWord(name));
@@ -33,12 +34,12 @@ export async function signup(values: z.infer<typeof SignUpSchema>) {
     if (existingEmail && existingRefId) return { error: 'Email and Name already exists' };
     if (existingEmail) return { error: 'Email already exists' };
     if (existingRefId) return { error: 'Name already used' };
-    if (!existingRefId) refId = sanitizedWord(name);
 
     await db.user?.create({
       data: {
         refId,
-        name: getDispaly(name).name(),
+        username,
+        name: getFromUser().name(name),
         firstName,
         lastName,
         email,

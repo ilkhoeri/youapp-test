@@ -4,8 +4,8 @@ import { currentUser, getUserByRefId } from '@/resource/db/user/get-accounts';
 import type { Metadata, ResolvingMetadata } from 'next';
 import { EmptyChat } from '@/resource/client/components/chat/chat-room';
 import { getChatById, getMessages } from '@/resource/server/messages/get-chats';
-import { Body, ChatForm, Header } from './components';
-import { ActiveListProvider } from './active-list';
+import { Body, ChatForm, Header } from '@/resource/client/components/chat/chat-contents';
+import { ActiveChatProvider } from '../../../../resource/client/components/chat/chat-context';
 
 interface Params {
   params: Promise<{ chatId: string }>;
@@ -59,16 +59,16 @@ export default async function ChatIdPage({ params, searchParams }: Params) {
   }
 
   return (
-    <ActiveListProvider>
+    <ActiveChatProvider>
       <section className="w-full max-w-5xl mx-auto">
         <div className="lg:pl-80 h-full">
           <div className="h-full flex flex-col">
             <Header chat={chat} />
-            <Body initialMessages={messages} />
-            <ChatForm />
+            <Body messages={messages} />
+            <ChatForm messages={messages} />
           </div>
         </div>
       </section>
-    </ActiveListProvider>
+    </ActiveChatProvider>
   );
 }

@@ -40,16 +40,11 @@ export default auth(req => {
     return Response.redirect(new URL(encodedCallbackUrl, nextUrl));
   }
 
-  // return;
+  return;
 });
 
 // Optionally, don't invoke Middleware on some paths
 export const config = {
-  matcher: ['/((?!api|_next/static|_next/image|favicon.ico).*)']
-  // matcher: [
-  //   '/((?!.+\\.[\\w]+$|_next).*)',
-  //   '/',
-  //   '/(api|trpc)(.*)'
-  //   // '/chat/:path*'
-  // ]
+  // matcher: ['/((?!api|_next/static|_next/image|favicon.ico).*)'],
+  matcher: ['/((?!.+\\.[\\w]+$|_next).*)', '/', '/(api|trpc)(.*)', '/chat/:path*']
 };

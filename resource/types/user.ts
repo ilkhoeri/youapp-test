@@ -7,6 +7,7 @@ export type ElaboratedUser = {
   updatedAt: Date;
   /** Reference ID / External ID / Public ID */
   refId: string;
+  username: string;
   firstName: string;
   lastName?: string | null;
   name: string;
@@ -17,7 +18,7 @@ export type ElaboratedUser = {
   phone: string | null;
   isTwoFactorEnabled: boolean;
   role: user.$Enums.UserRole;
-  accountStatus: user.$Enums.AccountStatus;
+  status: user.$Enums.AccountStatus;
   /** Nomor KTP / SIM */
   nationalId?: string | null;
   /** NPWP */
@@ -91,7 +92,7 @@ export type IsRole = ElaboratedUser['role'];
 // export const IsRole = Object.values(user.$Enums.UserRole);
 export const IsRole = ['SUPERADMIN', 'ADMIN', 'USER'];
 
-export type IsAccountStatus = ElaboratedUser['accountStatus'];
+export type IsAccountStatus = ElaboratedUser['status'];
 export const IsAccountStatus = Object.values(user.$Enums.AccountStatus);
 
 export interface Session {
@@ -137,12 +138,21 @@ export type AddressProps = {
   userId?: string | null;
 };
 
-export interface AllMessageProps extends user.Message {
-  sender: user.User;
-  seen: user.User[];
+type SecureFromOtherUser = 'refId' | 'username' | 'email' | 'image' | 'name' | 'firstName' | 'createdAt';
+
+export type MinimalAccount = Pick<NonNullable<Account>, SecureFromOtherUser>;
+
+export interface MessageReaction extends user.Reaction {
+  user: MinimalAccount | null | undefined;
+}
+
+export interface Message extends user.Message {
+  sender: MinimalAccount;
+  seen: MinimalAccount[];
+  reactions?: MessageReaction[] | null | undefined;
 }
 
 export interface AllChatProps extends user.Chat {
   users: user.User[];
-  messages: AllMessageProps[];
+  messages: Message[];
 }

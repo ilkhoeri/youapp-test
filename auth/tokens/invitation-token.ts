@@ -8,7 +8,7 @@ import { RegisterUserWithTokenValues } from '@/resource/schemas/user/token/invit
 import { generateRefId } from '@/resource/db/user/generate-refId';
 import { getUserByEmail } from '@/resource/db/user/get-accounts';
 import { getTime } from '@/resource/const/times-helper';
-import { getNameParts } from '@/resource/const/get-name';
+import { getNameParts } from '@/resource/const/get-from-user';
 
 export async function invitationToken(values: RegisterUserWithTokenValues) {
   try {
@@ -40,6 +40,7 @@ export async function invitationToken(values: RegisterUserWithTokenValues) {
     await db.user?.create({
       data: {
         refId,
+        username: refId,
         email,
         name,
         firstName,
@@ -108,6 +109,7 @@ export async function registerWithToken(values: RegisterUserWithTokenValues) {
     const newUser = await db.user.create({
       data: {
         refId,
+        username: refId,
         email,
         name,
         firstName,
@@ -115,7 +117,7 @@ export async function registerWithToken(values: RegisterUserWithTokenValues) {
         phone,
         role: invitation?.assignedRole,
         password: hashedPassword,
-        accountStatus: 'ACTIVE'
+        status: 'ACTIVE'
       }
     });
 

@@ -84,9 +84,17 @@ export async function getUserByRefId(refId: string) {
   }
 }
 
+export async function getUserByUserName(username: string) {
+  try {
+    return await user_db.user.findUnique({ where: { username }, include: { about: true } });
+  } catch {
+    return null;
+  }
+}
+
 export async function getUserByIdentifier(identifier: string) {
   try {
-    return isEmail(identifier) ? await getUserByEmail(identifier, { include: { about: true } }) : await getUserByRefId(sanitizedWord(identifier));
+    return isEmail(identifier) ? await getUserByEmail(identifier, { include: { about: true } }) : await getUserByUserName(identifier);
   } catch {
     return null;
   }

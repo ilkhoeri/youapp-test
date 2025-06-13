@@ -86,8 +86,8 @@ report.[0-9]*.[0-9]*.[0-9]*.[0-9]*.json
 next-env.d.ts
 # public/sw.js.map
 # public/sw.js
-public/workbox-bd7e3b9b.js
-public/workbox-bd7e3b9b.js.map
+# public/workbox-bd7e3b9b.js
+# public/workbox-bd7e3b9b.js.map
 
 # test nest.js
 /test

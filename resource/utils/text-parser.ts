@@ -434,3 +434,13 @@ export const htmlCharacterEntities = [
   { char: '-', entity: '&#45;' },
   { char: ' ', entity: '&nbsp;' }
 ];
+
+export function stripHtml(text: string): string {
+  // 1. Remove HTML tags
+  let cleanText = text.replace(/<[^>]*>/g, '');
+  // 2. Build a mapping dictionary for fast lookup
+  const entityMap = new Map(htmlCharacterEntities.map(({ char, entity }) => [char, entity]));
+  // 3. Escape all characters using regex replace and lookup
+  cleanText = cleanText.replace(/[\s\S]/g, char => entityMap.get(char) ?? char);
+  return cleanText;
+}

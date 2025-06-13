@@ -168,7 +168,7 @@ export function LinkForm({ data, account, setOpenId }: LinkFormProps) {
                   placeholder="URL"
                   errorMessage="placeholder"
                   className="md:col-span-5"
-                  autoFocus={!data}
+                  autoFocus={!data && addLink}
                   {...field}
                   onPaste={onPaste}
                 />

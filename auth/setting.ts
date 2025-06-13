@@ -1,12 +1,9 @@
-// @ts-nocheck
 'use server';
 
-import * as z from 'zod';
 import bcrypt from 'bcryptjs';
 import user_db from '@/resource/db/user';
 import { auth, update } from './auth';
 import { gerUserById, getUserByEmail } from '../resource/db/user/get-accounts';
-import { SettingsSchema } from '@/resource/schemas/user';
 import { generateVerificationToken } from './tokens';
 import { sendVerificationEmail } from '../resource/server/mail';
 
@@ -22,10 +19,10 @@ export async function settings<T extends KeyMap = KeyMap>(values: T) {
   if (!dbCurrent) return { error: 'Akses tidak sah!' };
 
   if (current.isOAuth) {
-    values.email = undefined;
-    values.password = undefined;
-    values.newPassword = undefined;
-    values.isTwoFactorEnabled = undefined;
+    (values as any).email = undefined;
+    (values as any).password = undefined;
+    (values as any).newPassword = undefined;
+    (values as any).isTwoFactorEnabled = undefined;
   }
 
   if (values.email && values.email !== current.email) {
@@ -45,8 +42,8 @@ export async function settings<T extends KeyMap = KeyMap>(values: T) {
     if (!passwordsMatch) return { error: 'Kata sandi salah!' };
 
     const hashedPassword = await bcrypt.hash(values.newPassword, 10);
-    values.password = hashedPassword;
-    values.newPassword = undefined;
+    (values as any).password = hashedPassword;
+    (values as any).newPassword = undefined;
   }
 
   const updated = await user_db.user.update({
@@ -56,22 +53,7 @@ export async function settings<T extends KeyMap = KeyMap>(values: T) {
   });
 
   update({
-    user: {
-      firstName: updated.firstName,
-      lastName: updated.lastName,
-      name: updated.name || `${updated.firstName} ${updated.lastName}`.trim(),
-      email: updated.email,
-      isTwoFactorEnabled: updated.isTwoFactorEnabled,
-      role: updated.role,
-      accountStatus: updated.accountStatus,
-      status: updated.status,
-      birthPlace: updated.birthPlace,
-      birthDate: updated.birthDate,
-      phone: updated.phone,
-      bio: updated.bio,
-      resume: updated.resume,
-      gender: updated.gender
-    }
+    user: updated
   });
 
   return { success: 'Updated Successfully!' };

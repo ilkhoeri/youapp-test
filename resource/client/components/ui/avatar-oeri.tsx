@@ -96,15 +96,17 @@ function getStyles(selector: SelectorGroup, opts?: Options) {
   return {
     ...selected('root', { 'data-within-group': is(opts?.withinGroup) }),
     className: cn(
-      !opts?.unstyled?.[selector] && classes({ selector }),
-      cnx(
-        selector === 'root' && [
-          opts?.withinGroup && 'ml-[var(--ag-offset)] border-2 border-solid border-background',
-          opts?.size ? 'size-[var(--avatar-size)] min-w-[var(--avatar-size)] min-h-[var(--avatar-size)] max-w-[var(--avatar-size)] max-h-[var(--avatar-size)]' : 'size-9',
-          opts?.round ? 'rounded-[var(--avatar-round)]' : 'rounded-full',
-          opts?.color ? ['bg-[var(--avatar-bg)]', isInitials ? 'text-[var(--avatar-text-color)]' : 'text-color'] : 'bg-background'
-        ]
-      ),
+      !opts?.unstyled?.[selector] && [
+        classes({ selector }),
+        cnx(
+          selector === 'root' && [
+            opts?.withinGroup && 'ml-[var(--ag-offset)] border-2 border-solid border-background',
+            opts?.size ? 'size-[var(--avatar-size)] min-w-[var(--avatar-size)] min-h-[var(--avatar-size)] max-w-[var(--avatar-size)] max-h-[var(--avatar-size)]' : 'size-9',
+            opts?.round ? 'rounded-[var(--avatar-round)]' : 'rounded-full',
+            opts?.color ? ['bg-[var(--avatar-bg)]', isInitials ? 'text-[var(--avatar-text-color)]' : 'text-color'] : 'bg-background'
+          ]
+        )
+      ],
       stateProp(opts?.classNames?.[selector], state),
       stateProp(opts?.className, state)
     ),
@@ -173,6 +175,7 @@ interface __AvatarProps {
 }
 interface AvatarProps extends __AvatarProps, Omit<ImageProps, Exclude>, StylesNames<Selector> {
   rootProps?: React.ComponentPropsWithRef<'div'> & { style?: CSSProperties };
+  rootRef?: React.ComponentPropsWithRef<'div'>['ref'];
   children?: React.ReactNode | ((state: StateProps) => React.ReactNode);
 }
 export const Avatar = React.forwardRef<HTMLImageElement, AvatarProps>((_props, ref) => {
@@ -192,10 +195,11 @@ export const Avatar = React.forwardRef<HTMLImageElement, AvatarProps>((_props, r
     className,
     classNames,
     onError,
-    rootProps,
     onContextMenu,
-    loading = 'lazy',
     color,
+    rootRef,
+    rootProps = {},
+    loading = 'lazy',
     unoptimized = true,
     draggable = 'false',
     allowedInitialsColors,
@@ -204,6 +208,8 @@ export const Avatar = React.forwardRef<HTMLImageElement, AvatarProps>((_props, r
     size,
     ...props
   } = _props;
+
+  const { className: classNameRootProp, style: styleRootProp, ref: refRootProp, ...restRootProp } = rootProps;
 
   const ctx = useAvatarGroupCtx();
   const [error, setError] = React.useState(!src);
@@ -237,7 +243,7 @@ export const Avatar = React.forwardRef<HTMLImageElement, AvatarProps>((_props, r
 
   const stringWrap = (initials: string) => (
     <PolymorphicSlot data-load={is(hasLoad)} role="status" {...getStyles('fallback', stylesApi)}>
-      <bdi title={initials} className="line-clamp-1 uppercase text-[var(--avatar-text-color)] flex">
+      <bdi title={initials} className={cnx(!stylesApi.unstyled && 'line-clamp-1 uppercase text-[var(--avatar-text-color)]')}>
         {getInitials(initials, Number(initialLimit))}
       </bdi>
     </PolymorphicSlot>
@@ -253,14 +259,15 @@ export const Avatar = React.forwardRef<HTMLImageElement, AvatarProps>((_props, r
       {...{
         'data-initial': getInitials(_name, Number(initialLimit)),
         ...getStyles('root', {
-          className: cn(stateProp(rootProps?.className, state), stateProp(className, state)),
-          style: ocx(stateProp(style, state), rootProps?.style),
+          className: cn(stateProp(className, state), stateProp(classNameRootProp, state)),
+          style: ocx(stateProp(style, state), styleRootProp),
           withinGroup: ctx?.withinGroup,
           size: _size,
           ...stylesApi
         }),
         suppressHydrationWarning,
-        ...rootProps
+        ...restRootProp,
+        ref: rootRef ?? refRootProp
       }}
     >
       {!hasLoad && !error && fallbackContent}

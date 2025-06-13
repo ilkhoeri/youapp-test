@@ -2,7 +2,7 @@
 
 import webpush from 'web-push';
 
-webpush.setVapidDetails('<mailto:your-email@example.com>', process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY!, process.env.VAPID_PRIVATE_KEY!);
+webpush.setVapidDetails('mailto:khoeriilham@gmail.com', process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY!, process.env.VAPID_PRIVATE_KEY!);
 
 let subscription: PushSubscription | null = null;
 

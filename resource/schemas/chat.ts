@@ -19,7 +19,7 @@ export type ChatGroupValues = z.infer<typeof ChatGroupSchema>;
 
 export const ChatSchema = z.object({
   message: z.optional(z.string()),
-  image: z.optional(z.string()),
+  mediaUrl: z.optional(z.string()),
   chatId: z.string()
 });
 

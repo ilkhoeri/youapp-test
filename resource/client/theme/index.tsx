@@ -7,6 +7,7 @@ import { useApp } from '@/resource/client/contexts/app-provider';
 import { setCookies } from '@/resource/client/contexts/cookies-server';
 import { MonitorSmartphoneIcon, MoonStarIcon, SunIcon } from '@/resource/client/components/icons';
 import { useTheme, ThemeProvider as NextThemesProvider, type ThemeProviderProps } from 'next-themes';
+import { ClientRender } from '../components/client-render';
 
 export const theming = [
   { name: 'light', icon: SunIcon },
@@ -99,10 +100,8 @@ export function ThemeToggle({ classNames, unstyled }: { classNames?: { wrapper?:
 export function ThemeStateHidden() {
   useNextTheme();
   return (
-    <ruby aria-label="THEMING_SHORTCUT (⌘/ctrl + J)" className="sr-only hidden" tabIndex={-1} hidden aria-hidden>
-      <rp className="sr-only" tabIndex={-1} hidden aria-hidden>
-        THEMING_SHORTCUT (⌘/ctrl + J)
-      </rp>
-    </ruby>
+    <ClientRender>
+      <ruby aria-label="THEMING_SHORTCUT (⌘/ctrl + J)" className="sr-only hidden" tabIndex={-1} hidden aria-hidden />
+    </ClientRender>
   );
 }

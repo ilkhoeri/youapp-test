@@ -1,18 +1,18 @@
 'use client';
 import * as React from 'react';
 import axios from 'axios';
-import { useForm, Form } from '../fields/form';
-import { Account } from '@/resource/types/user';
 import { toast } from 'sonner';
 import { Button } from '../ui/button';
+import { useForm, Form } from '../fields/form';
+import { Account } from '@/resource/types/user';
 import { ChatGroupSchema, ChatGroupValues } from '@/resource/schemas/chat';
+import { MotionButton, MotionButtonModal } from '../motion/motion-button';
 import { styleForm } from '../form/accounts/components';
 import { MotionCardModal } from '../motion/motion-card';
-import { cn } from 'cn';
-import { MotionButton, MotionButtonModal } from '../motion/motion-button';
-import { useChat } from './chat';
 import { PeopleIcon } from '../icons-fill';
+import { useChat } from './chat-context';
 import { ActionBack } from '../actions';
+import { cn } from 'cn';
 
 const classes = styleForm().auth().focused();
 
@@ -45,7 +45,7 @@ export function ChatGroup(_props: GroupChatModalProps) {
       })
       .then(() => {
         router.refresh();
-        onOpenChange(false);
+        onOpenChange?.(false);
       })
       .catch(error => toast.error('Something went wrong!', { description: String(error.message) }))
       .finally(() => setLoading(false));
@@ -165,7 +165,6 @@ export function AddCharGroup(_props: AddChatGroupProps) {
             <ChatGroup users={accounts} open={isModalOpen} onOpenChange={setIsModalOpen} />
           </MotionButtonModal>
         </div>
-        {/* ChatBox */}
       </div>
     </aside>
   );

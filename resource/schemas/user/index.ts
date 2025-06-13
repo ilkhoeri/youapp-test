@@ -69,7 +69,7 @@ export const SettingsSchema = z
     phone,
     isTwoFactorEnabled,
     role: roleEnum,
-    accountStatus: accountStatusEnum,
+    status: accountStatusEnum,
     password,
     newPassword,
     confirmPassword
@@ -100,7 +100,7 @@ export function validateRoleStatus(role: keyof typeof statusByRole): { valid: bo
 export const SettingRoleStatusSchema = z
   .object({
     role: roleEnum,
-    accountStatus: accountStatusEnum
+    status: accountStatusEnum
   })
   .refine(
     ({ role }) => {

@@ -1,15 +1,15 @@
 'use client';
 import * as React from 'react';
 import { createPortal } from 'react-dom';
-import { mergeRefs } from '@/resource/hooks/use-merged-ref';
-import { cvx, rem, ocx } from 'xuxi';
-import { cn } from 'cn';
 import { useHotkeys } from '@/resource/hooks/use-hotkeys';
+import { mergeRefs } from '@/resource/hooks/use-merged-ref';
+import { getVarsPositions, useUpdatedPositions } from '@/resource/hooks/use-open-state';
 import { useMeasureScrollbar } from '@/resource/hooks/use-measure-scrollbar.ts';
 import { useClickOutside } from '@/resource/hooks/use-click-outside';
 import { useElementRect } from '@/resource/hooks/use-element-info';
-import { getVarsPositions, useUpdatedPositions } from '@/resource/hooks/use-open-state';
+import { cvx, rem, ocx } from 'xuxi';
 import { Svg } from './svg';
+import { cn } from 'cn';
 
 export enum SheetsVariant {
   Accordion = 'accordion',
@@ -610,8 +610,6 @@ export const SheetsContent = React.forwardRef<React.ComponentRef<'div'>, SheetsC
 
   switch (variant) {
     case SheetsVariant.Accordion:
-      return <SheetsContentCollapse {...propsApi} />;
-
     case SheetsVariant.Collapsible:
       return <SheetsContentCollapse {...propsApi} />;
 

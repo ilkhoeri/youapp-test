@@ -19,7 +19,7 @@ import { cvx, ocx } from 'xuxi';
 import * as motion from 'motion/react-client';
 import { transform } from '@/resource/utils/text-parser';
 import { cn } from 'cn';
-import { getDispaly } from '@/resource/const/get-name';
+import { getFromUser } from '@/resource/const/get-from-user';
 
 const classes = styleForm().account();
 
@@ -98,7 +98,7 @@ export function SettingAboutForm({ account }: { account: Account }) {
     try {
       toast.promise(
         updateAccount(account?.id, {
-          name: name ? getDispaly(name).name() : name,
+          name: name ? getFromUser().name(name) : name,
           about: {
             upsert: {
               create: about,

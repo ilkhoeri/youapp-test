@@ -3,31 +3,29 @@ import * as React from 'react';
 import * as motion from 'motion/react-client';
 import { XIcon } from '../icons';
 import { cn } from 'cn';
+import { Portal } from '@/resource/hooks/use-open-state';
+import { useModal } from '@/resource/hooks/use-modal';
 
+type MotionImageTrees = 'container' | 'image' | 'containerModal' | 'imageModal' | 'closeModal' | 'portalModal';
 interface MotionImageProps extends Omit<React.ComponentProps<typeof motion.div>, 'children'> {
   src: string;
   name: string;
+  modal?: boolean;
   open?: boolean;
   defaultOpen?: boolean;
   onOpenChange?: (open: React.SetStateAction<boolean>) => void;
   children?: React.ReactNode;
   disabled?: boolean;
-  classNames?: Partial<Record<'container' | 'image' | 'containerModal' | 'imageModal' | 'closeModal' | 'portalModal', string>>;
+  classNames?: Partial<Record<MotionImageTrees, string>>;
+  unstyled?: boolean | Partial<Record<MotionImageTrees, boolean>>;
 }
 
 export const MotionImage = React.forwardRef<React.ElementRef<typeof motion.div>, MotionImageProps>((_props, ref) => {
-  const { src, name, open: openProp, defaultOpen = false, onOpenChange: setOpenProp, children, disabled, className, classNames, ...props } = _props;
+  const { src, name, modal, open: openProp, defaultOpen = false, onOpenChange: setOpenProp, children, disabled, className, classNames, unstyled: u, ...props } = _props;
 
-  const [_open, _setOpen] = React.useState(defaultOpen);
-  const open = openProp ?? _open;
-  const setOpen = React.useCallback(
-    (value: boolean | ((value: boolean) => boolean)) => {
-      const openState = typeof value === 'function' ? value(open) : value;
-      if (setOpenProp) setOpenProp(openState);
-      else _setOpen(openState);
-    },
-    [setOpenProp, open]
-  );
+  const { open, setOpen, isRender } = useModal({ modal, defaultOpen, open: openProp, onOpenChange: setOpenProp });
+
+  const isUnstyled = (k: MotionImageTrees) => (typeof u === 'object' ? u[k] : u);
 
   return (
     <>
@@ -38,7 +36,7 @@ export const MotionImage = React.forwardRef<React.ElementRef<typeof motion.div>,
         whileHover={{ scale: 1.05 }}
         layoutId={`container-${name}`}
         onClick={() => setOpen(o => !o)}
-        className={cn(classNames?.container, className)}
+        className={cn(!isUnstyled('container') && '', classNames?.container, className)}
         aria-disabled={disabled ? 'true' : undefined}
       >
         <motion.img
@@ -46,21 +44,22 @@ export const MotionImage = React.forwardRef<React.ElementRef<typeof motion.div>,
           src={src}
           alt={name ?? ''}
           aria-disabled={disabled ? 'true' : undefined}
-          className={cn('size-full absolute inset-0 object-cover bg-transparent rounded-[inherit] object-center align-middle', classNames?.image)}
+          className={cn(!isUnstyled('image') && 'size-full absolute inset-0 object-cover bg-transparent rounded-[inherit] object-center align-middle', classNames?.image)}
         />
       </motion.div>
 
-      {open && (
+      {/* {open && ( )} */}
+      <Portal render={isRender}>
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          className={cn('fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70', classNames?.portalModal)}
+          className={cn(!isUnstyled('portalModal') && 'fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70', classNames?.portalModal)}
           onClick={() => setOpen(false)}
         >
           <motion.div
             layoutId={`container-${name}`}
-            className={cn('relative max-w-4xl max-h-[90vh] rounded-2xl overflow-hidden bg-background', classNames?.containerModal)}
+            className={cn(!isUnstyled('containerModal') && 'relative max-w-4xl max-h-[90vh] rounded-2xl overflow-hidden bg-background', classNames?.containerModal)}
             onClick={e => e.stopPropagation()}
           >
             <motion.img
@@ -68,14 +67,15 @@ export const MotionImage = React.forwardRef<React.ElementRef<typeof motion.div>,
               layoutId={`image-${name}`}
               src={src}
               alt={name ?? ''}
-              className={cn('w-full h-auto object-contain aria-disabled:opacity-50', classNames?.imageModal)}
+              className={cn(!isUnstyled('imageModal') && 'w-full h-auto object-contain aria-disabled:opacity-50', classNames?.imageModal)}
             />
             {children}
             <motion.button
               disabled={disabled}
               aria-disabled={disabled ? 'true' : undefined}
               className={cn(
-                'aria-disabled:pointer-events-none disabled:pointer-events-none disabled:opacity-50 absolute top-2 right-2 w-8 h-8 flex items-center justify-center rounded-full bg-background-theme/50 text-white/80 hover:bg-background-theme hover:text-white',
+                !isUnstyled('closeModal') &&
+                  'aria-disabled:pointer-events-none disabled:pointer-events-none disabled:opacity-50 absolute top-2 right-2 w-8 h-8 flex items-center justify-center rounded-full bg-background-theme/50 text-white/80 hover:bg-background-theme hover:text-white',
                 classNames?.closeModal
               )}
               onClick={() => setOpen(false)}
@@ -88,7 +88,7 @@ export const MotionImage = React.forwardRef<React.ElementRef<typeof motion.div>,
             </motion.button>
           </motion.div>
         </motion.div>
-      )}
+      </Portal>
     </>
   );
 });

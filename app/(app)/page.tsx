@@ -5,9 +5,9 @@ import { Typography } from '@/resource/client/components/ui/typography';
 import { Button, buttonVariants } from '@/resource/client/components/ui/button';
 import { cn } from 'cn';
 import { strictRole } from '@/resource/const/role-status';
-import { getDispaly } from '@/resource/const/get-name';
+import { getFromUser } from '@/resource/const/get-from-user';
 import { signOut } from '@/auth/auth';
-import { ChatMultipleIcon, SettingFillIcon, SignOutFillIcon } from '@/resource/client/components/icons-fill';
+import { ChatMultipleFillIcon, SettingFillIcon, SignOutFillIcon } from '@/resource/client/components/icons-fill';
 
 export default async function Page(props: { searchParams: Promise<{ q: string; tab: string }> }) {
   const [session, searchParams] = await Promise.all([currentUser(), props.searchParams]);
@@ -16,7 +16,7 @@ export default async function Page(props: { searchParams: Promise<{ q: string; t
   const isAdmin = strictRole(session, ['ADMIN', 'SUPERADMIN']);
   function linkByRole() {
     if (isAdmin) return `/${session?.refId}/dashboard`;
-    return `/settings/${session?.refId}`;
+    return `/settings/${session?.username}`;
   }
 
   return (
@@ -31,9 +31,9 @@ export default async function Page(props: { searchParams: Promise<{ q: string; t
               }
             }}
           >
-            <div className="flex flex-col [flex:1_1_auto] items-center lg:items-start">
-              <Typography prose="h2" el="h4" className="whitespace-pre-line mb-2">
-                Welcome 👋 <hr className="my-1 border-0 bg-transparent" /> {getDispaly(session.refId).refId()}
+            <div className="grid grid-flow-row [flex:1_1_auto] items-center lg:items-start">
+              <Typography prose="h2" el="h4" className="whitespace-pre-line mb-2 truncate">
+                Welcome 👋 <hr className="my-1 border-0 bg-transparent" /> {getFromUser(session).username()}
               </Typography>
               <Typography prose="p" className="mb-6 max-w-1/2 opacity-[0.64]">
                 Manage data and features easily.
@@ -47,7 +47,7 @@ export default async function Page(props: { searchParams: Promise<{ q: string; t
                   {isAdmin ? 'Manage Now' : 'Settings'}
                 </Link>
                 <Link href="/chat" tabIndex={0} className={cn(buttonVariants({ variant: 'blue', size: 'sm' }), 'gap-2')}>
-                  <ChatMultipleIcon size={20} />
+                  <ChatMultipleFillIcon size={20} />
                   Chat
                 </Link>
                 <Button

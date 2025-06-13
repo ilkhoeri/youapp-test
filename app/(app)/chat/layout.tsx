@@ -1,13 +1,12 @@
 import { ActionBack } from '@/resource/client/components/actions';
-import { ChatList } from '@/resource/client/components/chat/chat-list';
-import { getUsers } from '@/resource/db/user/get-accounts';
-import { getChats } from '@/resource/server/messages/get-chats';
+// import { getUsers } from '@/resource/db/user/get-accounts';
+// import { getChats } from '@/resource/server/messages/get-chats';
 
 interface LayoutProps {
   children: React.ReactNode;
 }
-export default async function ChatsLayout({ children }: Readonly<LayoutProps>) {
-  const [chats, users] = await Promise.all([getChats(), getUsers()]);
+export default function ChatsLayout({ children }: Readonly<LayoutProps>) {
+  // const [chats, users] = await Promise.all([getChats(), getUsers()]);
 
   return (
     <section className="relative w-full min-h-screen max-w-5xl mx-auto flex flex-col">

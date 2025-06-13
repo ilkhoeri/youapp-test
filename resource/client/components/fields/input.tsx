@@ -30,7 +30,8 @@ export const classesInput = cvx({
     'inline-flex items-center whitespace-nowrap transition-colors disabled:pointer-events-none py-2 w-full pl-3 text-left rounded-lg font-normal placeholder:text-muted-foreground disabled:cursor-not-allowed disabled:opacity-50',
   variants: {
     variant: {
-      outline:
+      outline: 'bg-background-theme hover:bg-background-theme border border-border focus-visible:ring-0 focus-visible:outline-none',
+      'outline-ring':
         'border border-border bg-background focus-visible:border-transparent focus-visible:ring-[#2f81f7] focus-visible:ring-offset-0 hover:bg-background ring-offset-background focus-visible:outline-none focus-visible:ring-2 read-only:focus-visible:border-border read-only:focus-visible:ring-0 file:border-0 file:bg-transparent',
       filled:
         'border-0 bg-[#ffffff0f] hover:bg-[#ffffff0f] focus-visible:border-transparent focus-visible:ring-transparent focus-visible:ring-offset-0 ring-offset-transparent focus-visible:outline-0 focus-visible:ring-0 read-only:focus-visible:border-transparent read-only:focus-visible:ring-0 file:border-0'
@@ -46,6 +47,7 @@ const classesButtonPassword = cvx({
   variants: {
     variant: {
       outline: 'text-color',
+      'outline-ring': 'text-color',
       filled: 'text-color-muted'
     },
     open: {

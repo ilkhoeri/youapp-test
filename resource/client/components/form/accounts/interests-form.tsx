@@ -16,6 +16,7 @@ import { PencilIcon } from '../../icons';
 import { styleForm } from './components';
 import { Badge } from '../../ui/badge';
 import { cn } from 'cn';
+import { useModal } from '@/resource/hooks/use-modal';
 
 const classes = styleForm().auth().focused();
 
@@ -96,7 +97,7 @@ export function SettingInterestsForm({ account }: { account: Account }) {
     date: []
   });
 
-  const [isEdit, setIsEdit] = React.useState(false);
+  const { open, setOpen: setIsEdit, isRender: isEdit } = useModal({ modal: true });
 
   const { form, update, router, loading, setLoading } = useSettingsForm<SettingGeneralFormValues>(account, {
     schema: SettingGeneralSchema,
@@ -105,11 +106,9 @@ export function SettingInterestsForm({ account }: { account: Account }) {
 
   const onOpen = () => {
       setIsEdit(true);
-      document.body.style.overflow = 'hidden';
     },
     onClose = () => {
       setIsEdit(false);
-      document.body.style.overflow = '';
     };
 
   useMobileHistoryState(true, { open: isEdit, onOpenChange: setIsEdit });

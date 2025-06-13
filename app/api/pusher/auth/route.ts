@@ -40,7 +40,12 @@ export async function POST(request: NextRequest) {
     const channel = body.channel_name;
 
     const data = {
-      user_id: session.email
+      user_id: session.email,
+      // user_id: session.id,
+      user_info: {
+        name: session.username,
+        avatar: session.image
+      }
     };
 
     // Authorize channel dengan Pusher

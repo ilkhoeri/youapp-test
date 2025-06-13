@@ -150,22 +150,56 @@ export function formatShortTimeIntl(date: Date, locale = 'en-US'): string {
   }).format(date);
 }
 
+interface PrettyDateOptions extends Intl.DateTimeFormatOptions {
+  format?: 'dd-mm-yyyy' | 'mm-dd-yyyy' | 'yyyy-mm-dd' | 'yyyy-dd-mm';
+  locale?: 'en-US' | 'id-ID' | 'fr-FR' | 'ja-JP' | (string & {});
+  separator?: string;
+}
 /**
  * @example
- * formatPrettyDate('2024-01-20', 'en-US'); // "Jan 20, 2024"
- * formatPrettyDate('2024-01-20', 'id-ID'); // "20 Jan 2024"
- * formatPrettyDate('2024-01-20', 'fr-FR'); // "20 janv. 2024"
- * formatPrettyDate('2024-01-20', 'ja-JP'); // "2024年1月20日"
+ * formatPrettyDate('2024-01-20', { locale: 'en-US' }); // "Jan 20, 2024"
+ * formatPrettyDate('2024-01-20', { locale: 'id-ID' }); // "20 Jan 2024"
+ * formatPrettyDate('2024-01-20', { locale: 'fr-FR' }); // "20 janv. 2024"
+ * formatPrettyDate('2024-01-20', { locale: 'ja-JP' }); // "2024年1月20日"
  * @param date Date | string
  * @param locale string (default: `en-US`)
  * @returns string
  */
-export function formatPrettyDate(date: Date | string, locale: string = 'en-US'): string {
-  const d = typeof date === 'string' ? new Date(date) : date;
+export function formatPrettyDate(date: Date | string, opts: PrettyDateOptions = {}): string {
+  const { format, day: formatDay = 'numeric', month: formatMonth = 'short', year: formatYear = '2-digit', locale = 'en-US', separator: x = ' ', ...rest } = opts;
+  const dt = typeof date === 'string' ? new Date(date) : date;
 
-  return new Intl.DateTimeFormat(locale, {
-    year: 'numeric',
-    month: 'short',
-    day: 'numeric'
-  }).format(d);
+  const day = dt
+    .getDate()
+    .toString()
+    .padStart(formatDay === '2-digit' ? 2 : 0, '0');
+  const month = dt.toLocaleString(locale, { month: formatMonth });
+  const year = dt
+    .getFullYear()
+    .toString()
+    .slice(formatYear === '2-digit' ? -2 : 0);
+
+  const defaultFormat = new Intl.DateTimeFormat(locale, {
+    year: formatYear,
+    month: formatMonth,
+    day: formatDay,
+    ...rest
+  }).format(dt);
+
+  switch (format) {
+    case 'dd-mm-yyyy':
+      return `${day}${x}${month}${x}${year}`;
+
+    case 'mm-dd-yyyy':
+      return `${month}${x}${day}${x}${year}`;
+
+    case 'yyyy-mm-dd':
+      return `${year}${x}${month}${x}${day}`;
+
+    case 'yyyy-dd-mm':
+      return `${year}${x}${day}${x}${month}`;
+
+    default:
+      return defaultFormat;
+  }
 }

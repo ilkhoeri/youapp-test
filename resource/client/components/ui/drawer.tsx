@@ -5,7 +5,9 @@ import { Drawer as DrawerPrimitive } from 'vaul';
 import { cn } from 'cn';
 
 type DrawerProps = React.ComponentProps<typeof DrawerPrimitive.Root>;
-const DrawerRoot = ({ shouldScaleBackground = true, ...props }: DrawerProps) => <DrawerPrimitive.Root shouldScaleBackground={shouldScaleBackground} {...props} />;
+const DrawerRoot = ({ shouldScaleBackground = true, setBackgroundColorOnScale = false, ...props }: DrawerProps) => (
+  <DrawerPrimitive.Root shouldScaleBackground={shouldScaleBackground} setBackgroundColorOnScale={setBackgroundColorOnScale} {...props} />
+);
 DrawerRoot.displayName = 'Drawer';
 
 const Drawer = DrawerRoot as DrawerComponent;

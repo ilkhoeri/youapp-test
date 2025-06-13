@@ -99,7 +99,7 @@ export const Alert = React.forwardRef<HTMLDialogElement, AlertProps>((_props, re
 }) as AlertComponent;
 Alert.displayName = 'Alert';
 
-type Selector = 'overlay' | 'content' | 'header' | 'headerWrap' | 'title' | 'description' | 'body';
+type Selector = 'overlay' | 'content' | 'header' | 'headerWrap' | 'title' | 'description' | 'body' | 'onCancle' | 'onConfirm';
 interface AlertModalProps {
   item?: string;
   onConfirm: () => void;
@@ -121,6 +121,7 @@ export function AlertModal(_props: AlertModalProps) {
     disabled,
     item,
     classNames,
+    className,
     children,
     deniedContent,
     title = 'Remove Item',
@@ -142,7 +143,7 @@ export function AlertModal(_props: AlertModalProps) {
         disabled={isDisabled}
         aria-disabled={isDisabled}
         classNames={classNames}
-        className={cn('p-0 max-sm:max-w-[87dvw] max-sm:rounded-xl bg-[var(--palette-background-paper)]')}
+        className={cn('p-0 max-sm:max-w-[87dvw] max-sm:rounded-xl', classNames?.content, className)}
       >
         {deniedContent || (
           <>
@@ -176,10 +177,10 @@ export function AlertModal(_props: AlertModalProps) {
               <hr className="absolute w-full min-w-full left-0 right-0 mt-6" />
 
               <div className="pt-4 pb-6 mt-8 gap-x-4 grid grid-flow-col grid-cols-2 items-center w-full">
-                <Button disabled={isDisabled} variant="outline" size="sm" onClick={() => props?.onOpenChange(false)}>
+                <Button disabled={isDisabled} variant="outline" size="sm" onClick={() => props?.onOpenChange(false)} className={classNames?.onCancle}>
                   Cancel
                 </Button>
-                <Button type="button" disabled={isDisabled} variant="danger" size="sm" onClick={onConfirm} className={cn(isDisabled && 'load_')}>
+                <Button type="button" disabled={isDisabled} variant="danger" size="sm" onClick={onConfirm} className={cn(isDisabled && 'load_', classNames?.onConfirm)}>
                   Remove
                 </Button>
               </div>

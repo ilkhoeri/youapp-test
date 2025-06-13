@@ -63,6 +63,7 @@ export function SettingAvatarForm({ account }: { account: Account }) {
     if (lastUrlRef?.current !== currentUrl) {
       form.handleSubmit(onSubmit)();
       lastUrlRef.current = currentUrl; // Memperbarui nilai terakhir
+      document.body.style.overflow = '';
     }
   }, [form, onSubmit]);
 

@@ -1,0 +1,331 @@
+.rt {
+  @apply relative;
+}
+.cft {
+  @apply my-3;
+}
+.clt {
+  @apply mb-3;
+}
+.cf0 {
+  @apply m-0;
+}
+
+._rpin,
+._rpout {
+  @apply flex flex-col select-text pr-[57px] pl-[71px] max-[968px]:pr-[19px] max-[968px]:pl-[53px];
+}
+
+._rpin {
+  @apply align-baseline items-start;
+}
+
+._rpout {
+  @apply align-baseline items-end;
+}
+
+/* wrapper */
+._wrpI,
+._wrpO {
+  @apply [--shadow:#0b141a21] [[class=dark]_&]:[--shadow:#0b141a21] relative flex-none text-[14.2px] leading-[19px] text-color rounded-lg max-[900px]:max-w-[95%] min-[901px]:max-[1024px]:max-w-[85%] min-[1025px]:max-[1300px]:max-w-[85%] min-[1301px]:max-w-[65%];
+}
+
+._wrpI {
+  @apply [--bg-themes:#fff] [[class=dark]_&]:[--bg-themes:#202c33];
+}
+._wrpO {
+  @apply [--bg-themes:#d9fdd3] [[class=dark]_&]:[--bg-themes:#005c4b];
+}
+
+/* Arrow box */
+._arin,
+._arout {
+  @apply absolute top-0 z-[1] block w-2 h-[13px];
+}
+._arin {
+  @apply -left-2;
+}
+._arout {
+  @apply -right-2;
+}
+
+/* Reaction (emoji) */
+._rctin,
+._rctout {
+  @apply relative flex w-fit bottom-1 z-[12];
+}
+._rctin {
+  @apply left-1.5 self-start;
+}
+._rctout {
+  @apply right-1.5 self-end;
+}
+
+._rct__pu {
+  @apply h-[26px] p-0 cursor-pointer bg-none border-0 focus:border-0 focus:ring-0 focus:ring-transparent focus-visible:border-0 focus-visible:ring-0 focus-visible:ring-transparent;
+}
+._rct__emj_wr {
+  @apply flex flex-row items-center justify-center flex-nowrap rounded-full self-auto justify-self-auto mx-0.5 py-0 px-1 h-6 min-w-0 min-h-0 border border-solid border-transparent bg-[#202c33] shadow-[0_1px_#00000012,0_0_3px_#00000000a];
+}
+._rct__emj_it,
+._rct__emj_it_ttl {
+  @apply min-w-0 basis-auto grow-0 order-[0] leading-[20px] self-auto justify-self-auto m-0;
+}
+._rct__emj_it {
+  @apply shrink min-h-0;
+}
+._rct__emj_it_ttl {
+  @apply shrink-0 h-4 min-h-4 -mt-1 flex flex-col items-start justify-start flex-nowrap ml-1 mr-[3px] overflow-hidden;
+  & span {
+    @apply text-center text-sm text-muted-foreground font-system font-light;
+  }
+}
+._rct__emj_tr {
+  @apply scale-100 backface-hidden [-webkit-backface-visibility:hidden] fill-mode-forwards will-change-transform [animation-timing-function:cubic-bezier(.83,0,.17,1)] [animation-duration:0.4s] [animation-name:rctemjtr];
+}
+@keyframes rctemjtr {
+  0% {
+    transform: scale(0);
+  }
+  25% {
+    transform: scale(1.2);
+  }
+  50% {
+    transform: scale(1.2);
+  }
+  75% {
+    transform: scale(0.94);
+  }
+  to {
+    transform: scale(1);
+  }
+}
+._rct__emj_im {
+  @apply visible size-5 inline-block align-top border-0 [zoom:1] [background-size:100px_100px] [transform:translate(0)_scale(.85)] [image-rendering:-webkit-optimize-contrast];
+}
+
+/* Avatar */
+._avtin,
+._avtout {
+  @apply absolute top-0 z-[12] cursor-pointer flex items-center justify-center select-none overflow-hidden p-0 border-0 size-[var(--avatar-size)] min-w-[var(--avatar-size)] min-h-[var(--avatar-size)] max-w-[var(--avatar-size)] max-h-[var(--avatar-size)] rounded-full bg-[var(--avatar-bg)] text-[var(--avatar-text-color)];
+
+  & bdi {
+    @apply absolute flex size-full items-center justify-center font-bold select-none text-[calc(var(--avatar-fz))] line-clamp-1 uppercase text-[var(--avatar-text-color)];
+  }
+
+  & img {
+    @apply visible overflow-hidden rounded-full size-full object-cover opacity-100 transition-opacity;
+  }
+}
+._avtin {
+  @apply left-[-38px];
+}
+._avtout {
+  @apply right-[-38px];
+}
+
+/* Box */
+._bxin,
+._bxout {
+  @apply rounded-lg relative z-[4];
+}
+._bxin {
+  @apply rounded-tl-none;
+}
+._bxout {
+  @apply rounded-tr-none;
+}
+
+/* Body chat */
+._ctn {
+  @apply select-text pb-2 pt-1.5 pr-[7px] pl-[9px];
+}
+
+/* Name Sender / header message | max-w-[calc(var(--width-msg-bubble-media,100%)-6px)] [--pre-maxw:calc(49.125%-(7px+9px))]*/
+._hdrin,
+._hdrout {
+  @apply flex max-w-full text-[12.8px] leading-[22px] font-medium;
+  & > ._snd {
+    @apply mb-0.5 min-h-0 cursor-pointer flex-[0_1_auto] truncate font-system;
+  }
+}
+._hdrin {
+  @apply text-left;
+  & > ._snd {
+    @apply pl-0.5 -ml-0.5;
+  }
+}
+._hdrout {
+  @apply text-right;
+  & > ._snd {
+    @apply pr-0.5 -mr-0.5;
+  }
+}
+/* Content | Message */
+._msg {
+  /* @apply min-h-0 visible select-text [-webkit-user-select:text] relative [word-wrap:break-word] whitespace-pre-wrap rtl:whitespace-pre-line; */
+  @apply relative [word-wrap:break-word] whitespace-pre-wrap;
+}
+._msgbd:where(:has(blockquote + *)) {
+  & blockquote {
+    margin-bottom: 10px;
+  }
+}
+._msgbd {
+  @apply min-h-0 visible select-text [display:unset];
+
+  & ._mention,
+  & a {
+    color: #53bdeb;
+  }
+  & ._mention {
+    cursor: pointer;
+    visibility: visible;
+    user-select: all;
+    -ms-user-select: all;
+    -moz-user-select: all;
+    -webkit-user-select: all;
+  }
+  & a {
+    cursor: pointer;
+  }
+  & s {
+    text-decoration: line-through;
+    text-decoration-line: line-through;
+    -moz-text-decoration-line: line-through;
+  }
+  & hr {
+    margin-top: 0.5rem;
+    margin-bottom: 0.5rem;
+    width: 100%;
+    height: 0px;
+    border-bottom-width: 1.5px;
+    border-bottom-color: hsl(var(--color) / 0.45);
+  }
+  & h1 {
+    font-size: clamp(18px, 0.75rem + 4vw, 1.5rem);
+    line-height: 2.5rem;
+    font-weight: 800;
+  }
+  & h2 {
+    font-size: clamp(16px, 11px + 3.5vw, 1.25rem);
+    line-height: 2.25rem;
+    font-weight: 700;
+  }
+  & h3 {
+    font-size: clamp(15px, 14px + 3vw, 1rem);
+    line-height: 2rem;
+    font-weight: 700;
+  }
+  & h4 {
+    font-size: clamp(14px, 0.75rem + 2vw, 1rem);
+    line-height: 1.75rem;
+    font-weight: 600;
+  }
+  & h5 {
+    font-size: clamp(13px, 0.85rem + 2vw, 0.9875rem);
+    line-height: 1.5;
+    font-weight: 600;
+  }
+  & h6 {
+    font-size: clamp(13px, 0.75rem + 1vw, 0.875rem);
+    line-height: 1.5;
+    font-weight: 600;
+  }
+  & u {
+    text-decoration: underline;
+  }
+  & pre {
+    max-width: 100%;
+    overflow-x: auto;
+  }
+  /* & pre code {
+    max-width: max-content;
+  } */
+  & blockquote {
+    margin-left: 20px;
+    font-size: 15px;
+    color: inherit;
+    border-left-color: #65676b;
+    border-left-width: 4px;
+    border-left-style: solid;
+    padding-left: 1rem;
+  }
+}
+._block {
+  @apply h-0 py-0 px-1 align-middle visibility-hidden inline-flex leading-[15px] text-[.6875rem];
+  & > [datatype='block'] {
+    @apply w-[19px] shrink-0 grow-0;
+  }
+  & > [datatype='time'] {
+    @apply shrink-0 grow-0;
+  }
+}
+._pictin,
+._pictout {
+  @apply w-[calc(100%+10px)] min-w-0 min-h-0 overflow-hidden flex items-center justify-center relative rounded-md mt-[-2.5px];
+  & > img {
+    @apply rounded-[inherit];
+  }
+  /* & > img {
+    @apply size-full absolute inset-0 object-cover bg-transparent rounded-[inherit] object-center align-middle w-full basis-auto shrink-0 grow-0;
+  } */
+}
+._pictin {
+  @apply -mr-1.5 -ml-0;
+}
+._pictout {
+  @apply -ml-1.5 -mr-0;
+}
+/* Footer */
+._ft {
+  @apply relative z-[4] mb-[-5px] -mt-2.5 ml-1 mr-0 float-right;
+}
+._ftw {
+  @apply h-[15px] flex items-center whitespace-nowrap leading-[15px] text-[.6875rem];
+
+  & time {
+    @apply inline-block align-top text-[#667781] [[class=dark]_&]:text-[#ffffff99];
+  }
+}
+._ftch {
+  @apply inline-block ml-[3px];
+  & svg {
+    @apply text-[#667781] [[class=dark]_&]:text-[#ffffff80];
+  }
+}
+
+/* State Menu */
+._stmnin,
+._stmnout {
+  @apply overflow-hidden absolute z-[14] top-[5px] h-[27px] w-[42px];
+  & > div[role='button'] {
+    @apply absolute z-[99] top-0.5 right-[var(--inset-r,unset)] left-[var(--inset-l,unset)] px-[3px] text-color cursor-pointer opacity-80;
+  }
+}
+._stmnin {
+  @apply right-[5px] [--inset-r:0] [--bg-deg:at_top_right];
+}
+._stmnout {
+  @apply left-[5px] [--inset-l:0] [--bg-deg:at_top_left];
+}
+
+/* Emoji Wrap */
+._emjin,
+._emjout {
+  @apply absolute top-1/2 w-max py-0 px-1 -mt-[13px] min-w-0 min-h-0 flex flex-nowrap items-center flex-row self-auto justify-self-auto;
+  & > [role='button'] {
+    @apply flex items-center justify-center size-[25px] p-0 m-0 border-0 focus-visible:ring-0;
+  }
+}
+._emjin {
+  @apply justify-start right-[-40px];
+}
+._emjout {
+  @apply justify-end left-[-40px];
+}
+
+@media (max-width: 1216px) and (min-width: 1152px) {
+}
+@media (max-width: 1152px) and (min-width: 1088px) {
+}

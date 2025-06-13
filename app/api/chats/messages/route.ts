@@ -5,7 +5,7 @@ import { NextResponse } from 'next/server';
 
 export async function POST(request: Request) {
   try {
-    const [currentUser, { message, image, chatId }] = await Promise.all([getCurrentUser(), request.json()]);
+    const [currentUser, { message, mediaUrl, chatId }] = await Promise.all([getCurrentUser(), request.json()]);
 
     if (!currentUser?.id || !currentUser?.email) {
       return new NextResponse('Unauthorized', { status: 401 });
@@ -18,7 +18,7 @@ export async function POST(request: Request) {
       },
       data: {
         body: message,
-        image: image,
+        mediaUrl: mediaUrl,
         chat: {
           connect: { id: chatId }
         },
