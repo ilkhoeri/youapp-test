@@ -4,7 +4,7 @@ import * as React from 'react';
 import { CheckIcon, DoubleCheckIcon } from '../../icons';
 import { cn } from 'cn';
 import { MotionImage } from '../../motion/motion-image';
-import { ArrowMessageBoxFillIcon, ChevronFillIcon, StickerSmileFillIcon } from '../../icons-fill';
+import { ChevronFillIcon, StickerSmileFillIcon } from '../../icons-fill';
 import { formatPrettyDate, formatShortTime } from '@/resource/const/times-helper';
 import { Account, Message as MessageProp, MessageReaction, MinimalAccount } from '@/resource/types/user';
 import { ContextMenu as CtxMenu } from '@/resource/client/components/ui/context-menu';
@@ -12,10 +12,15 @@ import * as motion from 'motion/react-client';
 import { Avatar, getInitialsColor } from '../../ui/avatar-oeri';
 import { useHover } from '@/resource/hooks/use-hover';
 import { getEmoji } from '../emoji/config';
+import { toast } from 'sonner';
 import { x } from 'xuxi';
 
 import { EnrichedMessage } from './helper';
 import { SafeInlineDisplay } from '../../inline-editor/inline-display';
+import { SheetsBreakpoint } from '../../sheets-breakpoint';
+import { Popover } from '../../ui/popover';
+import { useIsMobile } from '@/resource/hooks/use-device-query';
+import { Svg, SvgProps } from '../../ui/svg';
 
 import css from './msg.module.css';
 
@@ -36,15 +41,17 @@ interface DefFloat<T> {
 }
 
 // type MCTrees = 'container' | 'root' | 'wrapper' | 'box' | 'icon';
-interface MessageBoxProps extends React.ComponentPropsWithRef<'div'> {
+interface MessageBubbleProps extends React.ComponentPropsWithRef<'div'> {
   data: EnrichedMessage;
   members?: (MinimalAccount | null)[] | null | undefined;
   // classNames?: Partial<Record<MCTrees, string>>;
 }
 
-export function Message(_props: MessageBoxProps) {
+export function MessageBubble(_props: MessageBubbleProps) {
   const { data, className, members, ...props } = _props;
-  // const [openImage, setOpenImage] = React.useState(false);
+  const [openMenu, setOpenMenu] = React.useState<boolean>(false);
+
+  const isMediaQuery = useIsMobile();
 
   const refAvatar = React.useRef<HTMLDivElement>(null);
   const refContent = React.useRef<HTMLDivElement>(null);
@@ -92,10 +99,10 @@ export function Message(_props: MessageBoxProps) {
             >
               {!data.isRepeatInDay && (
                 <span aria-hidden className={arrow}>
-                  <ArrowMessageBoxFillIcon message={isOwn ? 'out' : 'in'} style={{ color: 'var(--bg-themes)' }} />
+                  <ArrowMessageBubble bubble={isOwn ? 'out' : 'in'} style={{ color: 'var(--bg-themes)' }} />
                 </span>
               )}
-              {!isOwn && (
+              {!data.isRepeatInDay && !isOwn && (
                 <Avatar
                   unstyled={{ root: true, fallback: true }}
                   size={28}
@@ -155,37 +162,51 @@ export function Message(_props: MessageBoxProps) {
                   </div>
 
                   <div>
-                    <ActionOnHovered
-                      aria-label="Context menu"
-                      withShadow={!data?.mediaUrl}
-                      onClick={() => {}}
-                      onContextMenu={onPrevent}
-                      visibleFrom={isOwn ? 'left' : 'right'}
-                      hovered={hovered}
-                      classNames={{ root: css._stmnin }}
-                    >
-                      <span aria-hidden data-icon="down-context">
-                        <ChevronFillIcon size={20} chevron="down" />
-                      </span>
-                    </ActionOnHovered>
+                    {!isMediaQuery && (
+                      <SheetsBreakpoint
+                        openWith="popover"
+                        open={openMenu}
+                        onOpenChange={setOpenMenu}
+                        trigger={
+                          <ActionOnHovered
+                            aria-label="Context menu"
+                            withShadow={!data?.mediaUrl}
+                            onClick={() => {}}
+                            onContextMenu={onPrevent}
+                            visibleFrom={isOwn ? 'left' : 'right'}
+                            hovered={hovered || openMenu}
+                            classNames={{ root: css._stmnin }}
+                          >
+                            <span aria-hidden data-icon="down-context">
+                              <ChevronFillIcon size={20} chevron="down" />
+                            </span>
+                          </ActionOnHovered>
+                        }
+                        content={<MessageMenu opened data={data} />}
+                        classNames={{ content: 'p-1 h-fit w-48' }}
+                      />
+                    )}
                   </div>
 
                   <div></div>
                 </div>
               </CtxMenu.Trigger>
 
-              <ActionOnHovered
-                aria-label="Add Emoji Sticker"
-                onClick={() => {}}
-                onContextMenu={onPrevent}
-                visibleFrom={isOwn ? 'right' : 'left'}
-                hovered={rootHovered}
-                classNames={{ root: emoji }}
-              >
-                <span aria-hidden data-icon="Sticker">
-                  <StickerSmileFillIcon size={20} />
-                </span>
-              </ActionOnHovered>
+              {!isMediaQuery && (
+                <ActionOnHovered
+                  aria-label="Add Emoji Sticker"
+                  onClick={() => {}}
+                  whileHover={{ scale: 1.1 }}
+                  onContextMenu={onPrevent}
+                  visibleFrom={isOwn ? 'right' : 'left'}
+                  hovered={rootHovered}
+                  classNames={{ root: emoji }}
+                >
+                  <span aria-hidden data-icon="Sticker">
+                    <StickerSmileFillIcon size={20} />
+                  </span>
+                </ActionOnHovered>
+              )}
             </div>
 
             <Reactions reactions={data?.reactions} classNames={{ root: reaction }} />
@@ -193,7 +214,7 @@ export function Message(_props: MessageBoxProps) {
         </div>
       </article>
 
-      <ContextMenuContent />
+      <MessageMenu data={data} />
     </CtxMenu>
   );
 }
@@ -329,7 +350,6 @@ function ActionOnHovered(_props: ActionOnHoveredProps) {
         aria-expanded="false"
         role="button"
         initial={{ x }}
-        whileHover={{ scale: 1.1 }}
         animate={hovered ? { x: 0, opacity: 1 } : { x, opacity: 0 }}
         transition={{
           type: 'spring',
@@ -342,34 +362,90 @@ function ActionOnHovered(_props: ActionOnHoveredProps) {
   );
 }
 
-type ContextMenuMap = {
+interface UseMenuMapOptions {}
+
+function useMenuMap(data: EnrichedMessage) {
+  const handleCopy = React.useCallback(() => {
+    if (data.body) {
+      navigator.clipboard
+        .writeText(data.body)
+        .then(() => {
+          toast('Text copied to clipboard');
+        })
+        .catch(err => {
+          console.error('Failed to copy: ', err);
+        });
+    }
+  }, [data.body]);
+
+  const handleSaveMedia = React.useCallback(async () => {
+    if (!data.mediaUrl) return;
+
+    try {
+      const response = await fetch(data.mediaUrl, { mode: 'cors' }); // Pastikan server mendukung CORS
+      const blob = await response.blob();
+
+      const fileExtension = data.mediaUrl.split('.').pop()?.split('?')[0] || 'jpg';
+      const fileName = `media-${data.sender.username}-${data.id}-${Date.now()}.${fileExtension}`;
+
+      const blobUrl = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = blobUrl;
+      link.download = fileName;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+
+      URL.revokeObjectURL(blobUrl); // Bersihkan URL blob setelah download
+    } catch (error) {
+      console.error('Gagal menyimpan media:', error);
+      alert('Gagal menyimpan media. Coba lagi.');
+    }
+  }, [data.mediaUrl]);
+
+  const handleSavePage = React.useCallback(() => {
+    const blob = new Blob([document.documentElement.outerHTML], { type: 'text/html' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = `page-${Date.now()}.html`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  }, []);
+
+  const menuMap: MenuMap[] = [
+    { label: 'Message info', shortcut: '⌘I', onAction: () => {} },
+    ...(data.mediaUrl ? [{ label: 'Save Media', onAction: handleSaveMedia }] : []),
+    { label: 'Reply', shortcut: '⌘R', onAction: () => {} },
+    { label: 'Copy', shortcut: '⌘P', onAction: handleCopy },
+    { label: 'React', shortcut: '⌘E', onAction: () => {} },
+    { label: 'Forward', shortcut: '⌘F', onAction: () => {} },
+    { label: 'Pin', shortcut: '', onAction: () => {} },
+    { label: 'Star', shortcut: '', onAction: () => {} },
+    { label: 'Delete', onAction: () => {} },
+    {
+      label: 'More',
+      separator: true,
+      sub: [
+        { label: 'Save Page', shortcut: '⇧⌘S', onAction: handleSavePage },
+        { label: 'Create Shortcut', onAction: () => {} },
+        { label: 'Developer', separator: true, onAction: () => {} }
+      ]
+    }
+  ];
+
+  return menuMap;
+}
+
+type MenuMap = {
   label: string;
   shortcut?: string | undefined;
   separator?: boolean | undefined;
-  onAction?: () => void;
-  sub?: ContextMenuMap[];
+  onAction?: React.MouseEventHandler<HTMLDivElement>;
+  sub?: MenuMap[];
 };
-const contextMenuMap: ContextMenuMap[] = [
-  { label: 'Message info', shortcut: '⌘I', onAction: () => {} },
-  { label: 'Reply', shortcut: '⌘R', onAction: () => {} },
-  { label: 'Copy', shortcut: '⌘P', onAction: () => {} },
-  { label: 'React', shortcut: '⌘E', onAction: () => {} },
-  { label: 'Forward', shortcut: '⌘F', onAction: () => {} },
-  { label: 'Pin', shortcut: '', onAction: () => {} },
-  { label: 'Star', shortcut: '', onAction: () => {} },
-  { label: 'Delete', onAction: () => {} },
-  {
-    label: 'More',
-    separator: true,
-    sub: [
-      { label: 'Save Page', shortcut: '⇧⌘S', onAction: () => {} },
-      { label: 'Create Shortcut', onAction: () => {} },
-      { label: 'Developer', separator: true, onAction: () => {} }
-    ]
-  }
-];
 
-function renderMenuItems(items: ContextMenuMap[]) {
+function renderMenuItemsX(items: MenuMap[]) {
   return items.flatMap(item => {
     const elements: React.ReactNode[] = [];
 
@@ -380,13 +456,13 @@ function renderMenuItems(items: ContextMenuMap[]) {
     if (item.sub && item.sub.length > 0) {
       elements.push(
         <CtxMenu.Sub key={item.label}>
-          <CtxMenu.SubTrigger inset>{item.label}</CtxMenu.SubTrigger>
-          <CtxMenu.SubContent className="w-48">{renderMenuItems(item.sub)}</CtxMenu.SubContent>
+          <CtxMenu.SubTrigger>{item.label}</CtxMenu.SubTrigger>
+          <CtxMenu.SubContent className="w-40">{renderMenuItems(item.sub)}</CtxMenu.SubContent>
         </CtxMenu.Sub>
       );
     } else {
       elements.push(
-        <CtxMenu.Item inset key={item.label} onClick={item.onAction}>
+        <CtxMenu.Item key={item.label} onClick={item.onAction}>
           {item.label}
           {item.shortcut && <CtxMenu.Shortcut>{item.shortcut}</CtxMenu.Shortcut>}
         </CtxMenu.Item>
@@ -397,8 +473,67 @@ function renderMenuItems(items: ContextMenuMap[]) {
   });
 }
 
-function ContextMenuContent() {
-  return <CtxMenu.Content className="w-64">{renderMenuItems(contextMenuMap)}</CtxMenu.Content>;
+function renderMenuItems(items: MenuMap[], event: 'contextmenu' | 'click' = 'contextmenu') {
+  const componentMap = {
+    contextmenu: {
+      Item: CtxMenu.Item,
+      Separator: CtxMenu.Separator,
+      Shortcut: CtxMenu.Shortcut,
+      Sub: CtxMenu.Sub,
+      SubTrigger: CtxMenu.SubTrigger,
+      SubContent: CtxMenu.SubContent
+    },
+    click: {
+      Item: Popover.Item,
+      Separator: Popover.Separator,
+      Shortcut: Popover.Shortcut,
+      Sub: Popover.Sub,
+      SubTrigger: Popover.SubTrigger,
+      SubContent: Popover.SubContent
+    }
+  };
+
+  const { Item, Separator, Sub, SubTrigger, SubContent, Shortcut } = componentMap[event];
+
+  return items.flatMap(item => {
+    const elements: React.ReactNode[] = [];
+
+    if (item.separator) {
+      elements.push(<Separator key={`sep-${item.label}`} />);
+    }
+
+    if (item.sub && item.sub.length > 0) {
+      elements.push(
+        <Sub key={item.label}>
+          <SubTrigger>{item.label}</SubTrigger>
+          <SubContent className="w-40">{renderMenuItems(item.sub, event)}</SubContent>
+        </Sub>
+      );
+    } else {
+      elements.push(
+        <Item key={item.label} onClick={item.onAction}>
+          {item.label}
+          {item.shortcut && <Shortcut>{item.shortcut}</Shortcut>}
+        </Item>
+      );
+    }
+
+    return elements;
+  });
+}
+
+interface MessageMenuProps {
+  // event?: 'contextmenu' | 'click';
+  opened?: boolean;
+  data: EnrichedMessage;
+}
+function MessageMenu({ opened, ...props }: MessageMenuProps) {
+  const menuMap = useMenuMap(props.data);
+  // const event = open ? 'click' : 'contextmenu';
+
+  if (opened) return renderMenuItems(menuMap, 'click');
+
+  return <CtxMenu.Content className="w-48">{renderMenuItems(menuMap, 'contextmenu')}</CtxMenu.Content>;
 }
 
 interface ReactionsProps {
@@ -489,4 +624,22 @@ function imageStyle(props: ImageStyleProps): React.CSSProperties {
     backgroundPosition: `${position?.x}px ${position?.y}px`,
     backgroundImage: `${src}`
   } as React.CSSProperties;
+}
+
+export function ArrowMessageBubble({ bubble = 'in', size = 13, ...props }: SvgProps<{ bubble?: 'in' | 'out' }>) {
+  return (
+    <Svg {...props} size={size} currentFill="fill" viewBox="0 0 8 13" ratio={{ w: 0.6154 }} enableBackground="new 0 0 8 13">
+      {bubble === 'in' ? (
+        <>
+          <path opacity="0.13" d="M1.533,3.568L8,12.193V1H2.812 C1.042,1,0.474,2.156,1.533,3.568z" />
+          <path d="M1.533,2.568L8,11.193V0L2.812,0C1.042,0,0.474,1.156,1.533,2.568z" />
+        </>
+      ) : (
+        <>
+          <path opacity="0.13" d="M5.188,1H0v11.193l6.467-8.625 C7.526,2.156,6.958,1,5.188,1z" />
+          <path d="M5.188,0H0v11.193l6.467-8.625C7.526,1.156,6.958,0,5.188,0z" />
+        </>
+      )}
+    </Svg>
+  );
 }

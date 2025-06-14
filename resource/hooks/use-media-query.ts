@@ -30,8 +30,10 @@ function getInitialValue(query: string, initialValue?: boolean) {
   return false;
 }
 
+type MediaType = `(min-width: ${string})` | `(max-width: ${string})` | (string & {});
+
 export function useMediaQuery(
-  query: string,
+  query: MediaType,
   initialValue?: boolean,
   { getInitialValueInEffect }: UseMediaQueryOptions = {
     getInitialValueInEffect: true

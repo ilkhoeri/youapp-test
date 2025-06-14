@@ -123,7 +123,7 @@ export function InlineEditor<TData, TTag extends TTagPatterns = TTagPatterns>(_p
   const [internalValue, setInternalValue] = React.useState(defaultValue ?? '');
 
   const rawText = isControlled ? (value ?? '') : internalValue;
-  const formattedHTML = likeMdx(rawText).trim() + '\n';
+  const formattedHTML = likeMdx(rawText).trim();
 
   const usersList = React.useMemo(() => (users ?? [])?.map(user => `@${user.name}`), [users]);
   const findUser = React.useCallback((query: string) => (users ?? [])?.find(user => user.name === query), [users]);
@@ -247,10 +247,10 @@ export function InlineEditor<TData, TTag extends TTagPatterns = TTagPatterns>(_p
 
       cleanEmptyNodes(el, currentTags);
 
-      console.log('TEXT:', text);
-      console.log('TEXT.LENGTH:', text?.length);
-      console.log('innerHTML:', editorRef.current?.innerHTML);
-      console.log('isControlled:', isControlled);
+      // console.log('TEXT:', text);
+      // console.log('TEXT.LENGTH:', text?.length);
+      // console.log('innerHTML:', editorRef.current?.innerHTML);
+      // console.log('isControlled:', isControlled);
 
       el.classList.toggle('empty', text?.trim() === '');
 
@@ -378,7 +378,7 @@ export function InlineEditor<TData, TTag extends TTagPatterns = TTagPatterns>(_p
   // Render value (markdown) ke dalam HTML (formatted)
   React.useEffect(() => {
     if (editorRef.current && editorRef.current.innerHTML !== formattedHTML) {
-      editorRef.current.innerHTML = formattedHTML;
+      editorRef.current.innerHTML = formattedHTML + '\n';
       // moveCaretToEnd(editorRef.current);
     }
   }, [formattedHTML]);

@@ -263,7 +263,7 @@
 }
 ._pictin,
 ._pictout {
-  @apply w-[calc(100%+10px)] min-w-0 min-h-0 overflow-hidden flex items-center justify-center relative rounded-md mt-[-2.5px];
+  @apply w-[calc(100%+10px)] -ml-1.5 -mr-0 min-w-0 min-h-0 overflow-hidden flex items-center justify-center relative rounded-md mt-[-2.5px];
   & > img {
     @apply rounded-[inherit];
   }
@@ -271,12 +271,7 @@
     @apply size-full absolute inset-0 object-cover bg-transparent rounded-[inherit] object-center align-middle w-full basis-auto shrink-0 grow-0;
   } */
 }
-._pictin {
-  @apply -mr-1.5 -ml-0;
-}
-._pictout {
-  @apply -ml-1.5 -mr-0;
-}
+
 /* Footer */
 ._ft {
   @apply relative z-[4] mb-[-5px] -mt-2.5 ml-1 mr-0 float-right;
@@ -298,7 +293,7 @@
 /* State Menu */
 ._stmnin,
 ._stmnout {
-  @apply overflow-hidden absolute z-[14] top-[5px] h-[27px] w-[42px];
+  @apply overflow-hidden absolute z-[14] top-[5px] h-[27px] w-[42px] max-md:hidden max-md:sr-only;
   & > div[role='button'] {
     @apply absolute z-[99] top-0.5 right-[var(--inset-r,unset)] left-[var(--inset-l,unset)] px-[3px] text-color cursor-pointer opacity-80;
   }
@@ -313,7 +308,7 @@
 /* Emoji Wrap */
 ._emjin,
 ._emjout {
-  @apply absolute top-1/2 w-max py-0 px-1 -mt-[13px] min-w-0 min-h-0 flex flex-nowrap items-center flex-row self-auto justify-self-auto;
+  @apply absolute top-1/2 w-max py-0 px-1 -mt-[13px] min-w-0 min-h-0 flex flex-nowrap items-center flex-row self-auto justify-self-auto max-md:hidden max-md:sr-only;
   & > [role='button'] {
     @apply flex items-center justify-center size-[25px] p-0 m-0 border-0 focus-visible:ring-0;
   }

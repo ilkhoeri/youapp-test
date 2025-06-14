@@ -23,7 +23,7 @@ interface MotionImageProps extends Omit<React.ComponentProps<typeof motion.div>,
 export const MotionImage = React.forwardRef<React.ElementRef<typeof motion.div>, MotionImageProps>((_props, ref) => {
   const { src, name, modal, open: openProp, defaultOpen = false, onOpenChange: setOpenProp, children, disabled, className, classNames, unstyled: u, ...props } = _props;
 
-  const { open, setOpen, isRender } = useModal({ modal, defaultOpen, open: openProp, onOpenChange: setOpenProp });
+  const { open, setOpen, isRender } = useModal({ modal, defaultOpen, open: openProp, onOpenChange: setOpenProp, exitDuration: 100 });
 
   const isUnstyled = (k: MotionImageTrees) => (typeof u === 'object' ? u[k] : u);
 
@@ -33,7 +33,6 @@ export const MotionImage = React.forwardRef<React.ElementRef<typeof motion.div>,
         {...props}
         ref={ref}
         whileTap={{ scale: 0.95 }}
-        whileHover={{ scale: 1.05 }}
         layoutId={`container-${name}`}
         onClick={() => setOpen(o => !o)}
         className={cn(!isUnstyled('container') && '', classNames?.container, className)}
@@ -43,6 +42,7 @@ export const MotionImage = React.forwardRef<React.ElementRef<typeof motion.div>,
           layoutId={`image-${name}`}
           src={src}
           alt={name ?? ''}
+          style={{ opacity: isRender ? 0 : undefined }}
           aria-disabled={disabled ? 'true' : undefined}
           className={cn(!isUnstyled('image') && 'size-full absolute inset-0 object-cover bg-transparent rounded-[inherit] object-center align-middle', classNames?.image)}
         />

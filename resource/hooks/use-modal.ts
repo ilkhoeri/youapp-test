@@ -6,11 +6,13 @@ export interface UseModalOptions {
   modal?: boolean;
   open?: boolean;
   defaultOpen?: boolean;
+  /** @default 300 */
+  exitDuration?: number;
   onOpenChange?: (prev: boolean | ((prev: boolean) => boolean)) => void;
 }
 
 export function useModal(opts: UseModalOptions = {}) {
-  const { defaultOpen = false, open: openProp, onOpenChange: setOpenProp, modal } = opts;
+  const { defaultOpen = false, open: openProp, onOpenChange: setOpenProp, modal, exitDuration = 300 } = opts;
 
   const [_open, _setOpen] = useState(defaultOpen);
   const open = openProp ?? _open;
@@ -30,7 +32,7 @@ export function useModal(opts: UseModalOptions = {}) {
       setRender(true);
     } else {
       // Delay hiding to allow exit animation
-      const timer = setTimeout(() => setRender(false), 300); // Match this with your exit animation duration
+      const timer = setTimeout(() => setRender(false), exitDuration); // Match this with your exit animation duration
       return () => clearTimeout(timer);
     }
   }, [open, setOpen]);

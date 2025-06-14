@@ -94,7 +94,7 @@ function ContextMenuItem({
       data-inset={inset}
       data-variant={variant}
       className={cn(
-        'focus:bg-background-theme/20 relative flex cursor-pointer select-none items-center rounded-lg gap-2 px-2 py-1.5 text-sm outline-0 focus:text-accent-foreground',
+        'focus:bg-card relative flex cursor-pointer select-none items-center rounded-lg gap-2 px-2 py-1.5 text-sm outline-0 focus:text-accent-foreground',
         "[&_svg:not([class*='text-'])]:text-muted-foreground data-[disabled]:pointer-events-none data-[disabled]:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
         { 'text-destructive focus:bg-destructive/10 dark:focus:bg-destructive/20 focus:text-destructive *:[svg]:!text-destructive': variant === 'destructive' },
         inset && 'pl-8',

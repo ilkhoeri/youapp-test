@@ -11,6 +11,7 @@ import { useApp } from '../../contexts/app-provider';
 import { ChatAvatars, ChatGroupAvatar } from './component';
 import { find } from 'lodash';
 import { cn } from 'cn';
+import { truncate } from '@/resource/utils/text-parser';
 
 interface ChatListProps extends UseChatOptions {
   items: AllChatProps[];
@@ -135,7 +136,7 @@ export function ChatListItem(_props: ChatListItemProps) {
                 <p className="text-md font-medium text-color">{data?.name || otherUser?.name}</p>
                 {lastMessage?.createdAt && <p className="text-xs text-muted-foreground font-light">{formatShortTime(new Date(lastMessage.createdAt))}</p>}
               </div>
-              <p className={cn('truncate text-xs', hasSeen || !lastMessage?.body ? 'text-muted-foreground' : 'text-color')}>{escapeText(lastMessageText)}</p>
+              <p className={cn('truncate text-xs', hasSeen || !lastMessage?.body ? 'text-muted-foreground' : 'text-color')}>{truncate(escapeText(lastMessageText), 200)}</p>
             </div>
           </div>
         </div>

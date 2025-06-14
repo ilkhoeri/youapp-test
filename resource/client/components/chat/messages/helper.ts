@@ -146,7 +146,7 @@ export function getLastMessage(grouped: GroupedMessages): EnrichedMessage | unde
  *   <div key={day}>
  *     <DateDivider date={day} count={countByDay[day]} />
  *     {messages.map((msg) => (
- *       <Message key={msg.id} data={msg} />
+ *       <MessageBubble key={msg.id} data={msg} />
  *     ))}
  *   </div>
  * ))}

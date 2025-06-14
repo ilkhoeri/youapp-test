@@ -34,14 +34,17 @@ import { ChatSchema, ChatValues } from '@/resource/schemas/chat';
 import { useChat, UseChatOptions, useOtherUser, ActiveChatProvider, useActiveChat } from './chat-context';
 import { formatDayLabel, getLastMessage, groupMessagesByDate } from './messages/helper';
 import { InlineEditor, limitedMarkdown } from '../inline-editor/inline-editor';
+import { useIsMobile } from '@/resource/hooks/use-device-query';
 import { DateDivider } from './messages/date-divider';
 import { ClientRender } from '../client-render';
-import { Message } from './messages/message';
+import { MessageBubble } from './messages/message-bubble';
 import { ChatAvatars } from './component';
 import { AlertModal } from '../alert';
 import { toast } from 'sonner';
-import { find } from 'lodash';
+import { find, debounce } from 'lodash';
 import { cn } from 'cn';
+import { useMergedRef } from '@/resource/hooks/use-merged-ref';
+import { markMessagesAsSeenSequentially } from './messages/actions';
 
 const ICON_SIZE: number = 20;
 
@@ -49,6 +52,7 @@ export type HeaderProps = Omit<GroupProfileProps, 'confirm' | 'onConfirm'>;
 
 export function Header({ chat, searchQuery }: HeaderProps) {
   const otherUser = useOtherUser(chat);
+  const isMediaQuery = useIsMobile();
 
   const [confirm, onConfirm] = React.useState(false);
 
@@ -93,24 +97,27 @@ export function Header({ chat, searchQuery }: HeaderProps) {
             </div>
           </div>
 
-          <Separator orientation="vertical" className="mx-1 h-6" />
-          <Button variant="ghost" size="icon" disabled={!chat}>
-            <ReplyFillIcon size={ICON_SIZE} />
-            <span className="sr-only">Reply</span>
-          </Button>
+          {!isMediaQuery && (
+            <>
+              <Separator orientation="vertical" className="mx-1 h-6 max-md:hidden max-md:sr-only" />
+              <Button variant="ghost" size="icon" disabled={!chat} className="max-md:hidden max-md:sr-only">
+                <ReplyFillIcon size={ICON_SIZE} />
+                <span className="sr-only">Reply</span>
+              </Button>
 
-          <Button variant="ghost" size="icon" disabled={!chat}>
-            <ReplyAllFillIcon size={ICON_SIZE} />
-            <span className="sr-only">Reply all</span>
-          </Button>
+              <Button variant="ghost" size="icon" disabled={!chat} className="max-md:hidden max-md:sr-only">
+                <ReplyAllFillIcon size={ICON_SIZE} />
+                <span className="sr-only">Reply all</span>
+              </Button>
 
-          <Button variant="ghost" size="icon" disabled={!chat}>
-            <ForwardFillIcon size={ICON_SIZE} />
-            <span className="sr-only">Forward</span>
-          </Button>
+              <Button variant="ghost" size="icon" disabled={!chat} className="max-md:hidden max-md:sr-only">
+                <ForwardFillIcon size={ICON_SIZE} />
+                <span className="sr-only">Forward</span>
+              </Button>
 
-          <Separator orientation="vertical" className="mx-1 h-6" />
-
+              <Separator orientation="vertical" className="mx-1 h-6 max-md:hidden max-md:sr-only" />
+            </>
+          )}
           {/* <Tooltip>
         <Popover>
           <PopoverTrigger asChild>
@@ -150,21 +157,24 @@ export function Header({ chat, searchQuery }: HeaderProps) {
         <TooltipContent>Snooze</TooltipContent>
       </Tooltip> */}
         </div>
-        <div className="ml-auto flex items-center gap-1">
-          <Button variant="ghost" size="icon" disabled={!chat}>
-            <ArchiveFillIcon size={ICON_SIZE} />
-            <span className="sr-only">Archive</span>
-          </Button>
-          <Button variant="ghost" size="icon" disabled={!chat}>
-            <ArchiveJunkFillIcon size={ICON_SIZE} />
-            <span className="sr-only">Move to junk</span>
-          </Button>
-          <Button variant="ghost" size="icon" disabled={!chat} onClick={() => onConfirm(true)}>
-            <TrashFillIcon size={ICON_SIZE} />
-            <span className="sr-only">Move to trash</span>
-          </Button>
-        </div>
-        <Separator orientation="vertical" className="mx-2 h-6" />
+
+        {!isMediaQuery && (
+          <div className="ml-auto flex items-center gap-1 max-md:hidden max-md:sr-only">
+            <Button variant="ghost" size="icon" disabled={!chat} className="max-md:hidden max-md:sr-only">
+              <ArchiveFillIcon size={ICON_SIZE} />
+              <span className="sr-only">Archive</span>
+            </Button>
+            <Button variant="ghost" size="icon" disabled={!chat} className="max-md:hidden max-md:sr-only">
+              <ArchiveJunkFillIcon size={ICON_SIZE} />
+              <span className="sr-only">Move to junk</span>
+            </Button>
+            <Button variant="ghost" size="icon" disabled={!chat} className="max-md:hidden max-md:sr-only" onClick={() => onConfirm(true)}>
+              <TrashFillIcon size={ICON_SIZE} />
+              <span className="sr-only">Move to trash</span>
+            </Button>
+          </div>
+        )}
+        <Separator orientation="vertical" className="mx-2 h-6 max-md:ml-auto rtl:max-md:mr-auto" />
 
         <SheetsBreakpoint
           openWith="drawer"
@@ -317,16 +327,21 @@ export interface BodyProps extends UseChatOptions {
 }
 export function Body({ messages: initialMessages = [], searchQuery, members }: BodyProps) {
   const { user } = useApp();
+
   const bottomRef = React.useRef<HTMLDivElement>(null);
-  const [messages, setMessages] = React.useState(initialMessages);
+
+  const lastMessageRef = React.useRef<HTMLDivElement>(null);
 
   const { scrollableRef, targetRef } = useActiveChat();
+
+  const [messages, setMessages] = React.useState(initialMessages);
 
   const { chatId } = useChat({ searchQuery });
 
   const { totalCount, byDate, dateKeys } = groupMessagesByDate(messages, user!!);
   const lastMessage = getLastMessage({ totalCount, byDate, dateKeys });
 
+  /**
   React.useEffect(() => {
     if (!chatId) return;
     axios.post(`/api/chats/${chatId}/seen`);
@@ -366,19 +381,111 @@ export function Body({ messages: initialMessages = [], searchQuery, members }: B
       pusherClient.unbind('message:update', updateMessageHandler);
     };
   }, [chatId]);
+ */
+
+  // React.useEffect(() => {
+  //   if (!lastMessageRef.current || !chatId) return;
+
+  //   const observer = new IntersectionObserver(
+  //     ([entry]) => {
+  //       if (entry.isIntersecting) {
+  //         axios.post(`/api/chats/${chatId}/seen`);
+  //       }
+  //     },
+  //     { threshold: 1.0 } //
+  //   );
+
+  //   observer.observe(lastMessageRef.current);
+
+  //   return () => observer.disconnect();
+  // }, [chatId, lastMessage?.id]); // bergantung pada id terakhir
+
+  const markAsSeen = debounce((chatId: string, messageId: string) => {
+    axios.post(`/api/chats/${chatId}/seen`, { messageId });
+  }, 500); // delay 500ms agar tidak terlalu sering
+
+  // React.useEffect(() => {
+  //   if (!lastMessageRef.current || !chatId || !lastMessage?.id) return;
+
+  //   const observer = new IntersectionObserver(
+  //     ([entry]) => {
+  //       if (entry.isIntersecting) {
+  //         markAsSeen(chatId, lastMessage.id); // kirim ID terakhir
+  //       }
+  //     },
+  //     { threshold: 1.0 } // hanya saat 100% terlihat
+  //   );
+
+  //   observer.observe(lastMessageRef.current);
+
+  //   return () => observer.disconnect();
+  // }, [chatId, lastMessage?.id]);
+
+  React.useEffect(() => {
+    if (!lastMessageRef.current || !chatId || !lastMessage?.id) return;
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          markMessagesAsSeenSequentially(chatId, messages, user?.id!);
+        }
+      },
+      { threshold: 1.0 }
+    );
+
+    observer.observe(lastMessageRef.current);
+
+    return () => observer.disconnect();
+  }, [chatId, lastMessage?.id, messages.length]);
+
+  React.useEffect(() => {
+    if (chatId) {
+      pusherClient.subscribe(chatId);
+
+      const messageHandler = (message: MessageProp) => {
+        setMessages(current => {
+          if (find(current, { id: message.id })) return current;
+          return [...current, message];
+        });
+      };
+
+      const updateMessageHandler = (newMessage: MessageProp) => {
+        setMessages(current => current.map(m => (m.id === newMessage.id ? newMessage : m)));
+      };
+
+      pusherClient.bind('messages:new', messageHandler);
+      pusherClient.bind('message:update', updateMessageHandler);
+
+      return () => {
+        pusherClient.unsubscribe(chatId);
+        pusherClient.unbind('messages:new', messageHandler);
+        pusherClient.unbind('message:update', updateMessageHandler);
+      };
+    }
+  }, [chatId]);
+
+  React.useEffect(() => {
+    bottomRef?.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages.length]);
 
   return (
     <div className="relative h-full contents overflow-y-auto">
       <div ref={scrollableRef} className="overflow-y-auto flex-1">
         {/* {messages?.map((message, i) => (
-          <Message key={message.id} index={i} dataLength={messages.length} ref={i === messages.length - 1 ? targetRef : undefined} user={user} data={message} />
+          <MessageBubble key={message.id} index={i} dataLength={messages.length} ref={i === messages.length - 1 ? targetRef : undefined} user={user} data={message} />
         ))} */}
+        {/* ref={lastMessage?.id === msg.id ? (msg.senderId === user?.id ? bottomRef : targetRef) : undefined} */}
 
         {dateKeys.map(date => (
           <React.Fragment key={date}>
             <DateDivider date={formatDayLabel(date, { options: { dateStyle: 'short' } })} count={byDate[date].count} />
             {byDate[date].messages.map(msg => (
-              <Message key={msg.id} data={msg} members={members} ref={lastMessage?.id === msg.id ? (msg.senderId === user?.id ? bottomRef : targetRef) : undefined} />
+              <MessageBubble
+                key={msg.id}
+                data={msg}
+                members={members}
+                ref={lastMessage?.id === msg.id ? useMergedRef(msg.senderId === user?.id ? bottomRef : targetRef, lastMessageRef) : undefined}
+              />
             ))}
           </React.Fragment>
         ))}
@@ -406,7 +513,7 @@ export function ChatForm({ searchQuery, messages, members: initialMembers }: Cha
   });
 
   const messagesIsDefined = messages?.length > 0;
-  const isMessage = form.watch('message')?.trim() === '';
+  const isMessage = form.watch('message')?.trim() === '' || form.watch('mediaUrl') === '';
 
   function onSubmit(data: ChatValues) {
     // form.setValue('message', '', { shouldValidate: true });
@@ -415,7 +522,7 @@ export function ChatForm({ searchQuery, messages, members: initialMembers }: Cha
     //   chatId: chatId
     // });
 
-    if (!data.message || data.message?.trim() === '') return;
+    if (!data.message || data.message?.trim() === '' || !data.mediaUrl) return;
 
     try {
       axios.post('/api/chats/messages', {
@@ -530,7 +637,7 @@ export function ChatForm({ searchQuery, messages, members: initialMembers }: Cha
           tabIndex={-1}
           unstyled
           disabled={isMessage}
-          className="bg-background-theme/70 backdrop-blur rounded-full p-2 text-muted-foreground hover:text-color transition-colors z-[9] cursor-pointer absolute bottom-[var(--inset-b)] right-[var(--inset-x)] disabled:text-color/50"
+          className="bg-background-theme/70 backdrop-blur rounded-full p-2 text-color hover:text-color transition-colors z-[9] cursor-pointer absolute bottom-[var(--inset-b)] right-[var(--inset-x)] disabled:text-color/50"
         >
           <PaperPlaneFillIcon size={24} />
         </Button>
@@ -600,7 +707,8 @@ function ScrollToBottom(_props: ScrollToBottomProps) {
       whileHover={{ scale: 1.15 }}
       animate={visible ? { scale: 1 } : { scale: 0 }}
       aria-label="Scroll To Bottom"
-      className="size-[42px] rounded-full centered absolute right-[11px] top-[calc((70px+17px)*-0.75)] z-[20] bg-muted dark:bg-[#182229] text-muted-foreground"
+      className="[--sz:42px] size-[--sz] min-h-[--sz] min-w-[--sz] max-h-[--sz] max-w-[--sz] rounded-full centered absolute right-[11px] top-[calc((70px+17px)*-0.75)] z-[20] bg-muted dark:bg-[#182229] text-muted-foreground"
+      onContextMenu={e => e.preventDefault()}
     >
       <ChevronFillIcon chevron="down" size={32} />
     </motion.div>

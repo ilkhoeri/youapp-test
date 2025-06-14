@@ -9,13 +9,14 @@ import { twMerge as cn } from 'tailwind-merge';
 import type { FieldError } from 'react-hook-form';
 
 export interface ContentProps {
+  modal?: boolean;
   disabled?: boolean;
   error?: FieldError;
   open?: boolean;
   setOpen?: (prev: boolean | ((prev: boolean) => boolean)) => void;
 }
 
-type ComponentType = React.ReactNode | ((props: ContentProps) => React.ReactNode);
+type ComponentType = React.ReactNode | ((rest: ContentProps) => React.ReactNode);
 
 export interface __SheetsBreakpointProps extends Omit<ContentProps, 'setOpen'> {
   openWith?: 'popover' | 'dialog' | 'alert-dialog' | 'drawer';
@@ -37,6 +38,7 @@ export type SheetsBreakpointProps = __SheetsBreakpointProps &
 
 export const SheetsBreakpoint = React.forwardRef<HTMLButtonElement, SheetsBreakpointProps>((_props, ref) => {
   const {
+    hidden,
     openWith = 'popover',
     type = 'button',
     role = 'button',
@@ -56,8 +58,11 @@ export const SheetsBreakpoint = React.forwardRef<HTMLButtonElement, SheetsBreakp
     trigger: triggerProp,
     content: contentProp,
     mobileBreakpoint = 768,
+    modal = true,
     ...props
   } = _props;
+
+  if (hidden) return null;
 
   const BREAKPOINT = Number(mobileBreakpoint);
 
@@ -111,8 +116,10 @@ export const SheetsBreakpoint = React.forwardRef<HTMLButtonElement, SheetsBreakp
     return () => window.removeEventListener('popstate', handlePopState);
   }, [isMobile, open, setOpen, hasPushedStateRef.current]);
 
-  const content = typeof contentProp === 'function' ? contentProp({ setOpen, open, error, disabled }) : contentProp;
-  const triggerFn = typeof triggerProp === 'function' && triggerProp({ setOpen, open, error, disabled });
+  const restProp: ContentProps = { setOpen, open, error, disabled, modal };
+
+  const content = typeof contentProp === 'function' ? contentProp(restProp) : contentProp;
+  const triggerFn = typeof triggerProp === 'function' && triggerProp(restProp);
 
   const apiProps = {
     asChild: true,
@@ -132,9 +139,9 @@ export const SheetsBreakpoint = React.forwardRef<HTMLButtonElement, SheetsBreakp
   switch (openWith) {
     case 'popover':
       return (
-        <Popover open={open} onOpenChange={setOpen}>
+        <Popover modal={modal} open={open} onOpenChange={setOpen}>
           {typeof triggerProp === 'function' ? triggerFn : <Popover.Trigger {...apiProps}>{triggerProp}</Popover.Trigger>}
-          <Popover.Content className={cn('p-0 h-[356px] bg-card w-[--radix-popper-anchor-width] [--p-select-content:0]', classNames?.content)} align="end">
+          <Popover.Content align="end" className={cn('p-0 h-[356px] w-[--radix-popper-anchor-width] [--p-select-content:0]', classNames?.content)}>
             {content}
           </Popover.Content>
         </Popover>
@@ -143,7 +150,7 @@ export const SheetsBreakpoint = React.forwardRef<HTMLButtonElement, SheetsBreakp
     case 'dialog':
     case 'alert-dialog':
       return (
-        <Dialog open={open} onOpenChange={setOpen}>
+        <Dialog modal={modal} open={open} onOpenChange={setOpen}>
           {typeof triggerProp === 'function' ? triggerFn : <Dialog.Trigger {...apiProps}>{triggerProp}</Dialog.Trigger>}
           <Dialog.Content
             important={openWith === 'alert-dialog'}
@@ -159,7 +166,7 @@ export const SheetsBreakpoint = React.forwardRef<HTMLButtonElement, SheetsBreakp
 
     case 'drawer':
       return (
-        <Drawer open={open} onOpenChange={setOpen}>
+        <Drawer modal={modal} open={open} onOpenChange={setOpen}>
           {typeof triggerProp === 'function' ? triggerFn : <Drawer.Trigger {...apiProps}>{triggerProp}</Drawer.Trigger>}
           <Drawer.Content
             classNames={{
