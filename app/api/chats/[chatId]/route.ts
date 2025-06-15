@@ -2,7 +2,7 @@ import db from '@/resource/db/user';
 import { getCurrentUser } from '@/resource/db/user/get-accounts';
 import { pusherServer } from '@/resource/server/messages/pusher';
 import { Message, pickFromOtherUser } from '@/resource/types/user';
-import { NextRequest, NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
 
 interface Params {
   chatId?: string;
@@ -48,7 +48,7 @@ export async function DELETE(request: Request, { params }: { params: Promise<Par
   }
 }
 
-export async function GET(req: NextRequest, { params }: { params: Promise<Params> }) {
+export async function GET(req: Request, { params }: { params: Promise<Params> }) {
   try {
     const [currentUser, { chatId }] = await Promise.all([getCurrentUser(), params]);
 
