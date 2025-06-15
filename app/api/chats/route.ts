@@ -1,5 +1,5 @@
 import db from '@/resource/db/user';
-import { NextRequest, NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
 import { pusherServer } from '@/resource/server/messages/pusher';
 import { getCurrentUser } from '@/resource/db/user/get-accounts';
 import { ChatGroupValues } from '@/resource/schemas/chat';
@@ -104,7 +104,7 @@ export async function POST(req: Request) {
   }
 }
 
-export async function GET(req: NextRequest) {
+export async function GET(req: Request) {
   try {
     const currentUser = await getCurrentUser();
 
