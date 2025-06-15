@@ -48,16 +48,14 @@ export async function DELETE(request: Request, { params }: { params: Promise<Par
   }
 }
 
-export async function GET(req: NextRequest, { params }: { params: Promise<{ chatId: string }> }) {
+export async function GET(req: NextRequest, { params }: { params: Promise<Params> }) {
   try {
     const [currentUser, { chatId }] = await Promise.all([getCurrentUser(), params]);
 
     // Simulasi delay
     // await new Promise(resolve => setTimeout(resolve, 1000));
 
-    if (!currentUser?.id || !currentUser?.email) {
-      return new NextResponse('Unauthorized', { status: 401 });
-    }
+    if (!currentUser?.id || !currentUser?.email) return new NextResponse('Unauthorized', { status: 401 });
 
     if (!chatId) return [];
 

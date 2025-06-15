@@ -2,7 +2,6 @@
 import React from 'react';
 import * as z from 'zod';
 import axios from 'axios';
-// import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
@@ -31,13 +30,9 @@ const stylingMotionImage: React.ComponentProps<typeof MotionImage>['classNames']
 };
 
 export function SettingAvatarForm({ account }: { account: Account }) {
-  const router = useRouter();
-
-  const [loading, setLoading] = React.useState(false);
-
   type SettingsFormValues = z.infer<typeof SettingAvatarImageSchema>;
 
-  const { form } = useForm<SettingsFormValues>({
+  const { form, router, loading, setLoading } = useForm<SettingsFormValues>({
     resolver: zodResolver(SettingAvatarImageSchema),
     defaultValues: { image: account?.image ?? '' }
   });
