@@ -1,7 +1,7 @@
 import db from '@/resource/db/user';
 import { getCurrentUser } from '@/resource/db/user/get-accounts';
 import { pusherServer } from '@/resource/server/messages/pusher';
-import { NextRequest, NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
 
 export async function POST(req: Request) {
   try {
