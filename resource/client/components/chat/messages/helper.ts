@@ -91,23 +91,26 @@ export function enrichMessages(messages: Message[], user: MinimalAccount): Enric
   });
 }
 
+type MessagesByDate = Record<
+  string,
+  {
+    messages: EnrichedMessage[];
+    count: number;
+    label: string;
+  }
+>;
+
 export type GroupedMessages = {
+  byDate: MessagesByDate;
   totalCount: number;
-  byDate: Record<
-    string,
-    {
-      messages: EnrichedMessage[];
-      count: number;
-      label: string;
-    }
-  >;
   dateKeys: string[]; // ordered list of dateKeys, untuk urutan tampilan
+  lastMessage: EnrichedMessage | undefined;
 };
 
 export function groupMessagesByDate(messages: Message[], user: MinimalAccount): GroupedMessages {
   const enriched = enrichMessages(messages, user);
 
-  const byDate: GroupedMessages['byDate'] = {};
+  const byDate: MessagesByDate = {};
 
   for (const msg of enriched) {
     const dayKey = msg.dayKey;
@@ -127,14 +130,21 @@ export function groupMessagesByDate(messages: Message[], user: MinimalAccount): 
   // pastikan tanggal terurut naik (dari awal ke akhir)←
   const dateKeys = Object.keys(byDate).sort((a, b) => new Date(a).getTime() - new Date(b).getTime());
 
+  const totalCount = enriched.length;
+
+  const lastMessage = getLastMessage({ byDate, dateKeys });
+
   return {
-    totalCount: enriched.length,
+    totalCount,
     byDate,
-    dateKeys
+    dateKeys,
+    lastMessage
   };
 }
 
-export function getLastMessage(grouped: GroupedMessages): EnrichedMessage | undefined {
+type LastMessage = Pick<GroupedMessages, 'byDate' | 'dateKeys'>;
+
+export function getLastMessage(grouped: LastMessage): EnrichedMessage | undefined {
   const lastDateKey = grouped.dateKeys[grouped.dateKeys.length - 1];
   const lastMessages = grouped.byDate[lastDateKey]?.messages;
   return lastMessages?.[lastMessages.length - 1];

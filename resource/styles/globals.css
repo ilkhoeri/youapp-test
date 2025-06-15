@@ -1095,6 +1095,24 @@
         @apply size-[60%] border-[calc(var(--rises-size)/12)] border-b-transparent [--rises-property:reverse] opacity-20;
       }
     }
+    &[data-loader='ring'] {
+      @apply flex items-center justify-center size-auto;
+      & [data-ring='inner'] {
+        @apply block relative size-[var(--ring-size)];
+      }
+      & [data-ring='ring'] {
+        @apply block absolute size-full opacity-100 rounded-full border-transparent border-t-[var(--ring-color,#757575)] [animation:rotate_var(--ring-duration)_cubic-bezier(0.5,0,0.5,1)_var(--delay,0s)_infinite_normal_none_running];
+        &:nth-child(1) {
+          animation-delay: -0.45s;
+        }
+        &:nth-child(2) {
+          animation-delay: -0.3s;
+        }
+        &:nth-child(3) {
+          animation-delay: -0.15s;
+        }
+      }
+    }
   }
 
   @keyframes spinloader {

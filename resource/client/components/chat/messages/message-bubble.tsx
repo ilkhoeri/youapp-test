@@ -23,6 +23,12 @@ import { useIsMobile } from '@/resource/hooks/use-device-query';
 import { Svg, SvgProps } from '../../ui/svg';
 
 import css from './msg.module.css';
+import { debounce } from 'lodash';
+import axios from 'axios';
+import { useChat, UseChatOptions } from '../chat-context';
+import { useMergedRef } from '@/resource/hooks/use-merged-ref';
+import { useApp } from '@/resource/client/contexts/app-provider';
+import { useRouter } from 'next/navigation';
 
 const reactions: MessageReaction[] = [
   { emoji: '❤️', createdAt: new Date(Date.now()), id: '1', messageId: '1', userId: '1', user: null },
@@ -41,17 +47,22 @@ interface DefFloat<T> {
 }
 
 // type MCTrees = 'container' | 'root' | 'wrapper' | 'box' | 'icon';
-interface MessageBubbleProps extends React.ComponentPropsWithRef<'div'> {
+interface MessageBubbleProps extends React.ComponentPropsWithRef<'div'>, UseChatOptions {
   data: EnrichedMessage;
+  lastMessage: EnrichedMessage | undefined;
   members?: (MinimalAccount | null)[] | null | undefined;
+  targetRef: React.RefObject<HTMLDivElement> | null;
   // classNames?: Partial<Record<MCTrees, string>>;
 }
 
 export function MessageBubble(_props: MessageBubbleProps) {
-  const { data, className, members, ...props } = _props;
+  const { ref, data, className, members, lastMessage, searchQuery, targetRef, ...props } = _props;
   const [openMenu, setOpenMenu] = React.useState<boolean>(false);
 
   const isMediaQuery = useIsMobile();
+  const { user } = useApp();
+
+  const { chatId } = useChat({ searchQuery });
 
   const refAvatar = React.useRef<HTMLDivElement>(null);
   const refContent = React.useRef<HTMLDivElement>(null);
@@ -82,9 +93,28 @@ export function MessageBubble(_props: MessageBubbleProps) {
     cntpict = defFloat({ in: css._pictin, out: css._pictout }),
     emoji = defFloat({ in: css._emjin, out: css._emjout });
 
+  const markAsSeen = debounce((chatId: string, messageId: string) => {
+    axios.post(`/api/chats/${chatId}/seen`, { messageId });
+  }, 500); // delay 500ms agar tidak terlalu sering
+
+  React.useEffect(() => {
+    if (!targetRef?.current || !chatId || !lastMessage?.id || data.senderId === user?.id) return;
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) markAsSeen(chatId, lastMessage.id); // kirim ID terakhir
+      },
+      { threshold: 1.0 } // hanya saat 100% terlihat
+    );
+
+    observer.observe(targetRef.current);
+
+    return () => observer.disconnect();
+  }, [chatId, lastMessage?.id]);
+
   return (
     <CtxMenu>
-      <article {...{ ...props, role: 'row', suppressHydrationWarning: true, tabIndex: -1 }}>
+      <article ref={useMergedRef(ref, targetRef)} {...{ ...props, role: 'row', suppressHydrationWarning: true, tabIndex: -1 }}>
         <div tabIndex={-1} className={container}>
           <div ref={refRootHovered} className={root}>
             <div
@@ -118,7 +148,7 @@ export function MessageBubble(_props: MessageBubbleProps) {
 
                   <div>
                     <div className={css._ctn}>
-                      {!isOwn && (
+                      {!data.isRepeatInDay && !isOwn && (
                         <div className={header}>
                           <span dir="auto" className={css._snd} {...{ style: { color: colorByInitial } }}>
                             {data.sender.name}
@@ -131,7 +161,7 @@ export function MessageBubble(_props: MessageBubbleProps) {
                           {data?.mediaUrl && <MotionImage src={data.mediaUrl} name={data.id} modal unstyled={{ container: true, image: true }} className={cntpict} />}
 
                           <ExpandableMessageBody members={members} text={data.body} dir="ltr" className={css._msgbd} />
-                          <SpacerMessageBody dateTime={dateTime} />
+                          {data.body && <SpacerMessageBody dateTime={dateTime} />}
                         </div>
                       </div>
 
@@ -149,7 +179,9 @@ export function MessageBubble(_props: MessageBubbleProps) {
                               {isSend ? (
                                 <>
                                   <DoubleCheckIcon size={17} style={{ color: '#53bdeb' }} />
-                                  <span className="hidden sr-only">{seenBy}</span>
+                                  <span className="hidden sr-only" style={{ display: 'none' }}>
+                                    {seenBy}
+                                  </span>
                                 </>
                               ) : (
                                 <CheckIcon size={17} />
@@ -260,6 +292,8 @@ function removeZeroWidthSpace(root: HTMLElement) {
 const ExpandableMessageBody = React.forwardRef<HTMLDivElement, ExpandableMessageProps>((_props, ref) => {
   const { text = '', members: initialMembers, ...props } = _props;
 
+  if (!text) return null;
+
   const fullText: string = text ?? '';
 
   const SLICE_STEPS = generateSliceSteps(2768, 3071, fullText?.length);
@@ -365,6 +399,9 @@ function ActionOnHovered(_props: ActionOnHoveredProps) {
 interface UseMenuMapOptions {}
 
 function useMenuMap(data: EnrichedMessage) {
+  const router = useRouter();
+  const isMediaQuery = useIsMobile();
+
   const handleCopy = React.useCallback(() => {
     if (data.body) {
       navigator.clipboard
@@ -413,25 +450,42 @@ function useMenuMap(data: EnrichedMessage) {
     document.body.removeChild(link);
   }, []);
 
+  const handleDelete = React.useCallback(async () => {
+    const confirmDelete = window.confirm('Apakah kamu yakin ingin menghapus pesan ini?');
+    if (!confirmDelete) return;
+
+    try {
+      await axios.delete(`/api/chats/${data.id}`);
+      router.replace('/chat');
+      router.refresh();
+    } catch (_e) {
+      console.error('Gagal menghapus Pesan', _e);
+    }
+  }, [data.id, router]);
+
   const menuMap: MenuMap[] = [
-    { label: 'Message info', shortcut: '⌘I', onAction: () => {} },
+    { label: 'Message info', shortcut: '⌘+I', onAction: () => {} },
     ...(data.mediaUrl ? [{ label: 'Save Media', onAction: handleSaveMedia }] : []),
-    { label: 'Reply', shortcut: '⌘R', onAction: () => {} },
-    { label: 'Copy', shortcut: '⌘P', onAction: handleCopy },
-    { label: 'React', shortcut: '⌘E', onAction: () => {} },
-    { label: 'Forward', shortcut: '⌘F', onAction: () => {} },
+    { label: 'Reply', shortcut: '⌘+R', onAction: () => {} },
+    { label: 'Copy', shortcut: '⌘+P', onAction: handleCopy },
+    { label: 'React', shortcut: '⌘+E', onAction: () => {} },
+    { label: 'Forward', shortcut: '⌘+F', onAction: () => {} },
     { label: 'Pin', shortcut: '', onAction: () => {} },
     { label: 'Star', shortcut: '', onAction: () => {} },
-    { label: 'Delete', onAction: () => {} },
-    {
-      label: 'More',
-      separator: true,
-      sub: [
-        { label: 'Save Page', shortcut: '⇧⌘S', onAction: handleSavePage },
-        { label: 'Create Shortcut', onAction: () => {} },
-        { label: 'Developer', separator: true, onAction: () => {} }
-      ]
-    }
+    { label: 'Delete', variant: 'destructive', onAction: handleDelete },
+    ...(!isMediaQuery
+      ? [
+          {
+            label: 'More',
+            separator: true,
+            sub: [
+              { label: 'Save Page', shortcut: '⇧⌘+S', onAction: handleSavePage },
+              { label: 'Create Shortcut', onAction: () => {} },
+              { label: 'Developer', separator: true, onAction: () => {} }
+            ]
+          }
+        ]
+      : [])
   ];
 
   return menuMap;
@@ -443,6 +497,8 @@ type MenuMap = {
   separator?: boolean | undefined;
   onAction?: React.MouseEventHandler<HTMLDivElement>;
   sub?: MenuMap[];
+  disabled?: boolean;
+  variant?: React.ComponentProps<typeof CtxMenu.Item>['variant'];
 };
 
 function renderMenuItemsX(items: MenuMap[]) {
@@ -462,7 +518,7 @@ function renderMenuItemsX(items: MenuMap[]) {
       );
     } else {
       elements.push(
-        <CtxMenu.Item key={item.label} onClick={item.onAction}>
+        <CtxMenu.Item key={item.label} disabled={item.disabled} variant={item.variant} onClick={item.onAction}>
           {item.label}
           {item.shortcut && <CtxMenu.Shortcut>{item.shortcut}</CtxMenu.Shortcut>}
         </CtxMenu.Item>
@@ -511,7 +567,7 @@ function renderMenuItems(items: MenuMap[], event: 'contextmenu' | 'click' = 'con
       );
     } else {
       elements.push(
-        <Item key={item.label} onClick={item.onAction}>
+        <Item key={item.label} disabled={item.disabled} variant={item.variant} onClick={item.onAction}>
           {item.label}
           {item.shortcut && <Shortcut>{item.shortcut}</Shortcut>}
         </Item>

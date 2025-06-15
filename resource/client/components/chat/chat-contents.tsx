@@ -36,9 +36,9 @@ import { formatDayLabel, getLastMessage, groupMessagesByDate } from './messages/
 import { InlineEditor, limitedMarkdown } from '../inline-editor/inline-editor';
 import { useIsMobile } from '@/resource/hooks/use-device-query';
 import { DateDivider } from './messages/date-divider';
-import { ClientRender } from '../client-render';
+import { ClientMount } from '../client-mount';
 import { MessageBubble } from './messages/message-bubble';
-import { ChatAvatars } from './component';
+import { ChatAvatars } from './chat-avatar';
 import { AlertModal } from '../alert';
 import { toast } from 'sonner';
 import { find, debounce } from 'lodash';
@@ -48,9 +48,9 @@ import { markMessagesAsSeenSequentially } from './messages/actions';
 
 const ICON_SIZE: number = 20;
 
-export type HeaderProps = Omit<GroupProfileProps, 'confirm' | 'onConfirm'>;
+export type ChatHeaderProps = Pick<GroupProfileProps, 'chat' | 'searchQuery'>;
 
-export function Header({ chat, searchQuery }: HeaderProps) {
+export function ChatHeader({ chat, searchQuery }: ChatHeaderProps) {
   const otherUser = useOtherUser(chat);
   const isMediaQuery = useIsMobile();
 
@@ -61,7 +61,7 @@ export function Header({ chat, searchQuery }: HeaderProps) {
   const isActive = members.indexOf(otherUser?.email!) !== -1;
 
   const statusText = React.useMemo(() => {
-    if (chat?.isGroup) return `${chat?.users.length} members`;
+    if (chat?.type === 'GROUP') return `${chat?.users.length} members`;
     return isActive ? 'Active' : 'Offline';
   }, [chat, isActive]);
 
@@ -205,13 +205,15 @@ export function Header({ chat, searchQuery }: HeaderProps) {
 }
 
 interface GroupProfileProps extends DeleteGroupAlertProps {
-  chat: Chat & {
-    users: MinimalAccount[];
-  };
+  chat: (Chat & { users: MinimalAccount[] }) | undefined;
 }
 
 function GroupProfile({ chat: data, confirm, onConfirm }: GroupProfileProps) {
+  if (!data) return null;
+
   const otherUser = useOtherUser(data);
+
+  const isGroup = data.type === 'GROUP';
 
   const joinedDate = React.useMemo(() => {
     return formatPrettyDate(new Date(otherUser?.createdAt ?? Date.now()));
@@ -225,7 +227,7 @@ function GroupProfile({ chat: data, confirm, onConfirm }: GroupProfileProps) {
   const isActive = members.indexOf(otherUser?.email!) !== -1;
 
   const statusText = React.useMemo(() => {
-    if (data.isGroup) {
+    if (isGroup) {
       return `${data.users.length} members`;
     }
     return isActive ? 'Active' : 'Offline';
@@ -248,19 +250,19 @@ function GroupProfile({ chat: data, confirm, onConfirm }: GroupProfileProps) {
           </div>
           <div className="w-full pb-5 pt-5 sm:px-0 sm:pt-0">
             <dl className="space-y-8 px-4 sm:space-y-6 sm:px-6">
-              {data.isGroup && (
+              {isGroup && (
                 <div>
                   <dt className="text-sm font-medium text-muted-foreground sm:w-40 sm:flex-shrink-0">Members</dt>
                   <dd className="mt-1 text-sm text-muted-foreground sm:col-span-2">{data.users.map(user => user?.name).join(', ')}</dd>
                 </div>
               )}
-              {!data.isGroup && (
+              {!isGroup && (
                 <div>
                   <dt className="text-sm font-medium text-muted-foreground sm:w-40 sm:flex-shrink-0">Email</dt>
                   <dd className="mt-1 text-sm text-muted-foreground sm:col-span-2">{otherUser?.email}</dd>
                 </div>
               )}
-              {!data.isGroup && (
+              {!isGroup && (
                 <>
                   <div className="h-px border-t w-full" />
                   <div>
@@ -321,16 +323,16 @@ function DeleteGroupAlert({ confirm, onConfirm, searchQuery }: DeleteGroupAlertP
   );
 }
 
-export interface BodyProps extends UseChatOptions {
+export interface ChatBodyProps extends UseChatOptions {
   messages: MessageProp[];
   members?: (MinimalAccount | null)[] | null | undefined;
 }
-export function Body({ messages: initialMessages = [], searchQuery, members }: BodyProps) {
+export function ChatBody({ messages: initialMessages = [], searchQuery, members }: ChatBodyProps) {
   const { user } = useApp();
 
   const bottomRef = React.useRef<HTMLDivElement>(null);
 
-  const lastMessageRef = React.useRef<HTMLDivElement>(null);
+  const seenMessageIds = React.useRef<Set<string>>(new Set());
 
   const { scrollableRef, targetRef } = useActiveChat();
 
@@ -338,8 +340,7 @@ export function Body({ messages: initialMessages = [], searchQuery, members }: B
 
   const { chatId } = useChat({ searchQuery });
 
-  const { totalCount, byDate, dateKeys } = groupMessagesByDate(messages, user!!);
-  const lastMessage = getLastMessage({ totalCount, byDate, dateKeys });
+  const { totalCount, byDate, dateKeys, lastMessage } = groupMessagesByDate(messages, user!!);
 
   /**
   React.useEffect(() => {
@@ -383,60 +384,24 @@ export function Body({ messages: initialMessages = [], searchQuery, members }: B
   }, [chatId]);
  */
 
+  // const markAsSeen = debounce((chatId: string, messageId: string) => {
+  //   axios.post(`/api/chats/${chatId}/seen`, { messageId });
+  // }, 500); // delay 500ms agar tidak terlalu sering
+
   // React.useEffect(() => {
-  //   if (!lastMessageRef.current || !chatId) return;
+  //   if (!targetRef.current || !chatId || !lastMessage?.id) return;
 
   //   const observer = new IntersectionObserver(
   //     ([entry]) => {
-  //       if (entry.isIntersecting) {
-  //         axios.post(`/api/chats/${chatId}/seen`);
-  //       }
-  //     },
-  //     { threshold: 1.0 } //
-  //   );
-
-  //   observer.observe(lastMessageRef.current);
-
-  //   return () => observer.disconnect();
-  // }, [chatId, lastMessage?.id]); // bergantung pada id terakhir
-
-  const markAsSeen = debounce((chatId: string, messageId: string) => {
-    axios.post(`/api/chats/${chatId}/seen`, { messageId });
-  }, 500); // delay 500ms agar tidak terlalu sering
-
-  // React.useEffect(() => {
-  //   if (!lastMessageRef.current || !chatId || !lastMessage?.id) return;
-
-  //   const observer = new IntersectionObserver(
-  //     ([entry]) => {
-  //       if (entry.isIntersecting) {
-  //         markAsSeen(chatId, lastMessage.id); // kirim ID terakhir
-  //       }
+  //       if (entry.isIntersecting) markAsSeen(chatId, lastMessage.id); // kirim ID terakhir
   //     },
   //     { threshold: 1.0 } // hanya saat 100% terlihat
   //   );
 
-  //   observer.observe(lastMessageRef.current);
+  //   observer.observe(targetRef.current);
 
   //   return () => observer.disconnect();
   // }, [chatId, lastMessage?.id]);
-
-  React.useEffect(() => {
-    if (!lastMessageRef.current || !chatId || !lastMessage?.id) return;
-
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        if (entry.isIntersecting) {
-          markMessagesAsSeenSequentially(chatId, messages, user?.id!);
-        }
-      },
-      { threshold: 1.0 }
-    );
-
-    observer.observe(lastMessageRef.current);
-
-    return () => observer.disconnect();
-  }, [chatId, lastMessage?.id, messages.length]);
 
   React.useEffect(() => {
     if (chatId) {
@@ -484,7 +449,10 @@ export function Body({ messages: initialMessages = [], searchQuery, members }: B
                 key={msg.id}
                 data={msg}
                 members={members}
-                ref={lastMessage?.id === msg.id ? useMergedRef(msg.senderId === user?.id ? bottomRef : targetRef, lastMessageRef) : undefined}
+                targetRef={targetRef}
+                lastMessage={lastMessage}
+                searchQuery={searchQuery}
+                ref={lastMessage?.id === msg.id ? useMergedRef(msg.senderId === user?.id ? bottomRef : targetRef) : undefined}
               />
             ))}
           </React.Fragment>
@@ -513,7 +481,7 @@ export function ChatForm({ searchQuery, messages, members: initialMembers }: Cha
   });
 
   const messagesIsDefined = messages?.length > 0;
-  const isMessage = form.watch('message')?.trim() === '' || form.watch('mediaUrl') === '';
+  const isMessage = (form.watch('message') === undefined && form.watch('message')?.trim() === '') || (form.watch('mediaUrl') === undefined && form.watch('mediaUrl')?.trim() === '');
 
   function onSubmit(data: ChatValues) {
     // form.setValue('message', '', { shouldValidate: true });
@@ -522,7 +490,7 @@ export function ChatForm({ searchQuery, messages, members: initialMembers }: Cha
     //   chatId: chatId
     // });
 
-    if (!data.message || data.message?.trim() === '' || !data.mediaUrl) return;
+    if ((!data.message && !data.mediaUrl) || (data.message && data.message?.trim() === '') || (data.mediaUrl && data.mediaUrl?.trim() === '')) return;
 
     try {
       axios.post('/api/chats/messages', {
@@ -565,7 +533,7 @@ export function ChatForm({ searchQuery, messages, members: initialMembers }: Cha
             if (!field.value) return <React.Fragment />;
             return (
               <div className="relative size-full max-w-full">
-                <Image fill alt=" " sizes="600" src={field.value} />
+                <Image fill alt=" " sizes="600" src={field.value} className="object-cover align-middle rounded-[inherit] overflow-hidden" />
               </div>
             );
           }}
@@ -589,12 +557,12 @@ export function ChatForm({ searchQuery, messages, members: initialMembers }: Cha
           render={({ field }) => {
             return (
               <InlineEditor
-                autoFocus
+                // autoFocus
                 dir="ltr"
                 placeholder="Type a message"
                 users={members}
                 {...field}
-                value={`_text italic_ *text bold* _*italic and bold*_\n\`\`\`\nconstructor(props) {\n  super(props)\n\n  this.state = {\n\n  }\n\n  this.handleEvent = this.handleEvent.bind(this)\n  }\n\`\`\`\n> blockQuotes\u200B> xxx\n\n\n`}
+                // value={`_text italic_ *text bold* _*italic and bold*_\n\`\`\`\nconstructor(props) {\n  super(props)\n\n  this.state = {\n\n  }\n\n  this.handleEvent = this.handleEvent.bind(this)\n  }\n\`\`\`\n> blockQuotes\u200B> xxx\n\n\n`}
                 onChange={i => {
                   console.log('[VALUE]:', JSON.stringify(i));
                   field.onChange(i);
@@ -612,24 +580,27 @@ export function ChatForm({ searchQuery, messages, members: initialMembers }: Cha
         <Form.Field
           control={form.control}
           name="mediaUrl"
-          render={({ field }) => (
-            <Form.UnstyledAvatarField uploadPreset={process.env.NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET} value={field.value} onChange={url => field.onChange(url)}>
-              {({ open }) => {
-                return (
-                  <button
-                    type="button"
-                    role="button"
-                    tabIndex={-1}
-                    onClick={() => open()}
-                    className="bg-background-theme/70 backdrop-blur rounded-full p-2 text-muted-foreground hover:text-color transition-colors z-[9] cursor-pointer absolute bottom-[var(--inset-b)] left-[var(--inset-x)] focus-visible:outline-0 focus-visible:ring-0 focus-visible:border-0"
-                  >
-                    <PhotoPlusFillIcon size={24} />
-                    <span className="hidden sr-only">Upload Image</span>
-                  </button>
-                );
-              }}
-            </Form.UnstyledAvatarField>
-          )}
+          render={({ field }) => {
+            if (field.value) return <React.Fragment />;
+            return (
+              <Form.UnstyledAvatarField uploadPreset={process.env.NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET} value={field.value} onChange={url => field.onChange(url)}>
+                {({ open }) => {
+                  return (
+                    <button
+                      type="button"
+                      role="button"
+                      tabIndex={-1}
+                      onClick={() => open()}
+                      className="bg-background-theme/70 backdrop-blur rounded-full p-2 text-muted-foreground hover:text-color transition-colors z-[9] cursor-pointer absolute bottom-[var(--inset-b)] left-[var(--inset-x)] focus-visible:outline-0 focus-visible:ring-0 focus-visible:border-0"
+                    >
+                      <PhotoPlusFillIcon size={24} />
+                      <span className="hidden sr-only">Upload Image</span>
+                    </button>
+                  );
+                }}
+              </Form.UnstyledAvatarField>
+            );
+          }}
         />
 
         <Button
@@ -646,36 +617,33 @@ export function ChatForm({ searchQuery, messages, members: initialMembers }: Cha
   );
 }
 
-type ChatDisplayConstructor = Nullable<HeaderProps & BodyProps, 'messages.required' | 'chat.required'>;
-
-export interface ChatDisplayProps extends ChatDisplayConstructor {
-  message: MessageProp | null;
-}
+export type ChatDisplayProps = Nullable<ChatHeaderProps & ChatBodyProps, 'messages.required' | 'chat.required'>;
 
 export function ChatDisplay(_props: ChatDisplayProps) {
-  const { message, chat, messages, searchQuery, members } = _props;
+  const { chat, messages, searchQuery, members } = _props;
   const today = new Date();
 
+  if (!chat || !messages || !searchQuery) {
+    return (
+      <div className="flex h-full flex-col">
+        <EmptyChat />
+      </div>
+    );
+  }
+
   return (
-    <ClientRender>
-      <ActiveChatProvider>
+    <ClientMount>
+      <ActiveChatProvider searchQuery={searchQuery}>
         <div className="flex h-full flex-col">
-          {chat && messages ? (
-            <>
-              <div className="h-full flex flex-col relative z-[9]">
-                <Header key={`head-${chat?.id}`} chat={chat} searchQuery={searchQuery} />
-                <Body key={`body-${chat?.id}`} members={members} messages={messages} searchQuery={searchQuery} />
-                <ChatForm key={`form-${chat?.id}`} members={members} messages={messages} searchQuery={searchQuery} />
-              </div>
-              <ChatBackground />
-            </>
-          ) : (
-            // <div className="p-8 text-center text-muted-foreground">No message selected</div>
-            <EmptyChat />
-          )}
+          <div className="h-full flex flex-col relative z-[9]">
+            <ChatHeader key={`head-${chat?.id}`} chat={chat} searchQuery={searchQuery} />
+            <ChatBody key={`body-${chat?.id}`} members={members} messages={messages} searchQuery={searchQuery} />
+            <ChatForm key={`form-${chat?.id}`} members={members} messages={messages} searchQuery={searchQuery} />
+          </div>
+          <ChatBackground />
         </div>
       </ActiveChatProvider>
-    </ClientRender>
+    </ClientMount>
   );
 }
 
@@ -683,7 +651,7 @@ interface ChatBackgroundProps extends React.ComponentProps<'div'> {
   visible?: boolean | null;
   style?: React.CSSProperties & Record<string, any>;
 }
-function ChatBackground(_props: ChatBackgroundProps) {
+export function ChatBackground(_props: ChatBackgroundProps) {
   const { visible, className, style, ...props } = _props;
 
   return (
@@ -704,7 +672,7 @@ function ScrollToBottom(_props: ScrollToBottomProps) {
     <motion.div
       {...props}
       role="button"
-      whileHover={{ scale: 1.15 }}
+      whileHover={visible ? { scale: 1.15 } : {}}
       animate={visible ? { scale: 1 } : { scale: 0 }}
       aria-label="Scroll To Bottom"
       className="[--sz:42px] size-[--sz] min-h-[--sz] min-w-[--sz] max-h-[--sz] max-w-[--sz] rounded-full centered absolute right-[11px] top-[calc((70px+17px)*-0.75)] z-[20] bg-muted dark:bg-[#182229] text-muted-foreground"

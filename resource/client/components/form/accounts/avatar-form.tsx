@@ -2,11 +2,11 @@
 import React from 'react';
 import * as z from 'zod';
 import axios from 'axios';
-import { useForm } from 'react-hook-form';
+// import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
-import { Form } from '../../fields/form';
+import { Form, useForm } from '../../fields/form';
 import { Account } from '@/resource/types/user';
 import { Loader } from '../../loader';
 import { SettingAvatarImageSchema } from '@/resource/schemas/user';
@@ -37,9 +37,9 @@ export function SettingAvatarForm({ account }: { account: Account }) {
 
   type SettingsFormValues = z.infer<typeof SettingAvatarImageSchema>;
 
-  const form = useForm<SettingsFormValues>({
+  const { form } = useForm<SettingsFormValues>({
     resolver: zodResolver(SettingAvatarImageSchema),
-    defaultValues: { image: account?.image }
+    defaultValues: { image: account?.image ?? '' }
   });
 
   async function onSubmit(value: SettingsFormValues) {
@@ -59,11 +59,9 @@ export function SettingAvatarForm({ account }: { account: Account }) {
 
   React.useEffect(() => {
     const currentUrl = form.getValues('image');
-    // Memanggil onSubmit hanya jika url berubah dari nilai sebelumnya
     if (lastUrlRef?.current !== currentUrl) {
       form.handleSubmit(onSubmit)();
-      lastUrlRef.current = currentUrl; // Memperbarui nilai terakhir
-      document.body.style.overflow = '';
+      lastUrlRef.current = currentUrl;
     }
   }, [form, onSubmit]);
 

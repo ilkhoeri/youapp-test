@@ -1,11 +1,11 @@
 import db from '@/resource/db/user';
 import { getCurrentUser } from '@/resource/db/user/get-accounts';
 import { pusherServer } from '@/resource/server/messages/pusher';
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 
-export async function POST(request: Request) {
+export async function POST(req: Request) {
   try {
-    const [currentUser, { message, mediaUrl, chatId }] = await Promise.all([getCurrentUser(), request.json()]);
+    const [currentUser, { message, mediaUrl, chatId }] = await Promise.all([getCurrentUser(), req.json()]);
 
     if (!currentUser?.id || !currentUser?.email) {
       return new NextResponse('Unauthorized', { status: 401 });

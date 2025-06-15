@@ -154,8 +154,16 @@ export function UnstyledAvatarUpload(_props: UnstyledAvatarUploadProps) {
 
   const [openWidget, setOpenWidget] = React.useState(false);
 
+  const lastUrlRef = React.useRef<typeof value>(value);
+
   React.useEffect(() => {
     const cleanupTimeout = setTimeout(() => {
+      if (lastUrlRef?.current !== value) {
+        // form.handleSubmit(onSubmit)();
+        lastUrlRef.current = value;
+        document.body.style.overflow = '';
+      }
+
       if (!value) setOpenWidget(false);
     }, 1000);
     return () => clearTimeout(cleanupTimeout);

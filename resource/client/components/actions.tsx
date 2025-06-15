@@ -2,7 +2,7 @@
 
 import * as React from 'react';
 import axios from 'axios';
-import { useRouter } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { useDialog } from '@/resource/client/components/ui/dialog';
 import { useApp } from '@/resource/client/contexts/app-provider';
 import { DisketteIcon, TrashFillIcon } from './icons-fill';
@@ -26,22 +26,69 @@ interface NavigateOptions {
 interface PrefetchOptions {
   kind: PrefetchKind;
 }
-interface ActionBackBaseProps extends React.ComponentPropsWithRef<typeof Button> {
+interface NavigationBaseProps extends React.ComponentPropsWithRef<typeof Button> {
   label?: string;
 }
-type ActionBackProps =
-  | ({ instance: 'back' | 'forward' | 'refresh' | 'stop' } & ActionBackBaseProps)
-  | ({ instance: 'push'; href: string; options?: NavigateOptions } & ActionBackBaseProps)
-  | ({ instance: 'replace'; href: string; options?: NavigateOptions } & ActionBackBaseProps)
-  | ({ instance: 'prefetch'; href: string; options?: PrefetchOptions } & ActionBackBaseProps);
 
-export function ActionBack(_props: ActionBackProps) {
-  const { label = 'Back', onClick, className, instance, ...props } = _props;
+export type NavigationProps =
+  | ({ instance: 'forward' | 'refresh' | 'break' } & NavigationBaseProps)
+  | ({ instance: 'back'; onBackResolve?: (location: Location) => string | null } & NavigationBaseProps)
+  | ({ instance: 'push'; href: string; options?: NavigateOptions } & NavigationBaseProps)
+  | ({ instance: 'replace'; href: string; options?: NavigateOptions } & NavigationBaseProps)
+  | ({ instance: 'prefetch'; href: string; options?: PrefetchOptions } & NavigationBaseProps);
+
+export function Navigation(_props: NavigationProps) {
+  const { label = 'Back', children, onClick, className, instance, 'aria-label': aL, disabled, ...props } = _props;
   const router = useRouter();
+
+  const hasRecentPushState = React.useRef(false);
+
+  const [canGoBack, setCanGoBack] = React.useState(true);
+
+  React.useEffect(() => {
+    // Aturan umum: jika history length <= 1, maka tidak ada halaman sebelumnya
+    setCanGoBack(window.history.length > 1);
+  }, []);
+
+  // Override pushState to detect open:true
+  React.useEffect(() => {
+    const originalPushState = window.history.pushState;
+
+    window.history.pushState = function (state, title, url) {
+      if (state && state.open) {
+        hasRecentPushState.current = true;
+
+        // Reset flag after a short time, to not persist across unrelated navigations
+        setTimeout(() => {
+          hasRecentPushState.current = false;
+        }, 300);
+      }
+
+      return originalPushState.apply(this, arguments as any);
+    };
+
+    return () => {
+      window.history.pushState = originalPushState;
+    };
+  }, []);
 
   function handleClick(e: React.MouseEvent<HTMLButtonElement>) {
     switch (instance) {
-      case 'back':
+      case 'back': {
+        if (!canGoBack) return; // tidak bisa kembali
+
+        if (!hasRecentPushState.current) {
+          const resolved = _props.onBackResolve?.(window.location);
+          if (resolved) {
+            router.replace(resolved);
+            break;
+          }
+        }
+
+        router.back();
+        break;
+      }
+
       case 'forward':
       case 'refresh':
         router[instance]();
@@ -53,20 +100,23 @@ export function ActionBack(_props: ActionBackProps) {
         break;
 
       case 'prefetch':
-        router.prefetch(_props.href, _props.options);
+        router[instance](_props.href, _props.options);
         break;
 
-      case 'stop':
+      case 'break':
         break;
     }
-
     onClick?.(e);
   }
 
   return (
-    <Button {...props} onClick={handleClick} className={cn('text-sm font-bold', className)}>
-      <ChevronIcon chevron="left" size={28} />
-      {label}
+    <Button {...props} onClick={handleClick} disabled={disabled || (instance === 'back' && !canGoBack)} aria-label={aL || label} className={cn('text-sm font-bold', className)}>
+      {children ?? (
+        <>
+          <ChevronIcon chevron="left" size={28} />
+          {label}
+        </>
+      )}
     </Button>
   );
 }

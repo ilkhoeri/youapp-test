@@ -138,7 +138,7 @@ export type AddressProps = {
   userId?: string | null;
 };
 
-type SecureFromOtherUser = 'refId' | 'username' | 'email' | 'image' | 'name' | 'firstName' | 'createdAt';
+type SecureFromOtherUser = keyof typeof pickFromOtherUser;
 
 export type MinimalAccount = Pick<NonNullable<Account>, SecureFromOtherUser>;
 
@@ -153,6 +153,18 @@ export interface Message extends user.Message {
 }
 
 export interface AllChatProps extends user.Chat {
-  users: user.User[];
+  users: MinimalAccount[];
   messages: Message[];
 }
+
+export const pickFromOtherUser = {
+  id: true,
+  refId: true,
+  email: true,
+  image: true,
+  name: true,
+  username: true,
+  firstName: true,
+  lastName: true,
+  createdAt: true
+};

@@ -1,6 +1,6 @@
 import Image from 'next/image';
 import { org } from '@/resource/const/org';
-import { ActionBack } from '@/resource/client/components/actions';
+import { Navigation } from '@/resource/client/components/actions';
 
 export default async function AuthLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
@@ -22,7 +22,7 @@ export default async function AuthLayout({ children }: Readonly<{ children: Reac
         </div>
         <div className="flex flex-1 max-lg:items-start lg:items-center justify-center max-lg:min-h-[150svh]">
           <div className="w-full max-w-md">
-            <ActionBack instance="back" className="mr-auto rtl:mr-0 rtl:ml-auto" />
+            <Navigation instance="back" className="mr-auto rtl:mr-0 rtl:ml-auto" />
             <div className="mt-[3.75rem]">{children}</div>
           </div>
         </div>

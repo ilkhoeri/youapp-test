@@ -5,9 +5,11 @@ import { Account, AllChatProps, MinimalAccount } from '@/resource/types/user';
 import { useSession } from 'next-auth/react';
 import { ScrollIntoViewAnimation, useScrollIntoView } from '@/resource/hooks/use-scroll-into-view';
 
-export interface UseChatOptions {
-  searchQuery?: string;
+interface getChatId {
+  searchQuery: string;
 }
+
+export type UseChatOptions = Partial<getChatId>;
 
 interface UseChat {
   isOpen: boolean;
@@ -38,44 +40,57 @@ export function useChat(opts: UseChatOptions = {}): UseChat {
   );
 }
 
-export function useOtherUser(chats: AllChatProps | { users: MinimalAccount[] }) {
+export function useOtherUser(chats: (AllChatProps | { users: MinimalAccount[] }) | null | undefined): MinimalAccount | null {
   const session = useSession();
 
-  const otherUser = React.useMemo(() => {
-    const currentUserEmail = session.data?.user?.email;
+  try {
+    if (!session || !chats) return null;
 
-    const otherUser = chats.users.filter(user => user?.email !== currentUserEmail);
+    const otherUser = React.useMemo(() => {
+      const currentUserEmail = session.data?.user?.email;
 
-    return otherUser[0];
-  }, [session.data?.user?.email, chats.users]);
+      const otherUser = chats?.users.filter(user => user?.email !== currentUserEmail);
 
-  return otherUser;
+      return otherUser?.[0];
+    }, [session.data?.user?.email, chats?.users]);
+
+    return otherUser;
+  } catch (error: any) {
+    console.log('Errror,', error.message);
+    return null;
+  }
 }
 
-interface ActiveChatStore extends InferType<typeof useScrollIntoView> {
+export type ExpandedState = string | string[] | null | boolean;
+export type ExpandedOptions = { multiple?: boolean | undefined };
+
+interface ActiveChatStore extends UseChat, getChatId, InferType<typeof useScrollIntoView> {
   members: string[];
   add: (id: string) => void;
   remove: (id: string) => void;
   set: (ids: string[]) => void;
   scrollableRef: React.RefObject<HTMLDivElement>;
   targetRef: React.RefObject<HTMLDivElement>;
+  loading: boolean;
+  setLoading: (prev: boolean | ((prev: boolean) => boolean)) => void;
+  expanded: (targetId?: string) => boolean;
+  setExpanded: (value: string | null | boolean | undefined, opts?: ExpandedOptions) => void;
 }
 
 const ActiveListContext = React.createContext<ActiveChatStore | undefined>(undefined);
 
-/**
- *
- * @example
- * const App = () => (
- *   <ActiveChatProvider>
- *     <YourComponent />
- *   </ActiveChatProvider>
- * );
- */
-export function ActiveChatProvider({ children }: { children: React.ReactNode }) {
+interface ActiveChatProviderProps extends getChatId {
+  children: React.ReactNode;
+}
+
+export function ActiveChatProvider({ children, searchQuery }: ActiveChatProviderProps) {
   const [members, setMembers] = React.useState<string[]>([]);
+  const [loading, setLoading] = React.useState<boolean>(false);
+  const [_expanded, _setExpanded] = React.useState<ExpandedState>(false);
 
   const scrollIntoView = useScrollIntoView<HTMLDivElement, HTMLDivElement>();
+
+  const getChat = useChat({ searchQuery });
 
   const add = React.useCallback((id: string) => {
     setMembers(prev => [...prev, id]);
@@ -89,7 +104,69 @@ export function ActiveChatProvider({ children }: { children: React.ReactNode }) 
     setMembers(ids);
   }, []);
 
-  return <ActiveListContext.Provider value={{ members, add, remove, set, ...scrollIntoView }}>{children}</ActiveListContext.Provider>;
+  const expanded = React.useCallback(
+    (targetId?: string) => {
+      if (typeof _expanded === 'boolean') {
+        return _expanded;
+      }
+      if (typeof _expanded === 'string') {
+        return _expanded === targetId;
+      }
+      if (Array.isArray(_expanded) && targetId) {
+        return _expanded.includes(targetId);
+      }
+      return false;
+    },
+    [_expanded]
+  );
+
+  const setExpanded = React.useCallback(
+    (value: string | null | boolean = !_expanded, opts: ExpandedOptions = {}) => {
+      const { multiple = true } = opts;
+      _setExpanded(prev => {
+        // if (typeof prev === 'boolean' && prev === true && allIds) {
+        //   // Kalau masih true (global open), ubah jadi semua ID terbuka
+        //   return allIds;
+        // }
+
+        if (typeof value === 'boolean' || value === null) {
+          return value;
+        }
+
+        if (multiple) {
+          // Multiple mode: array of ids
+          if (Array.isArray(prev)) {
+            // Sudah array, toggle id
+            if (prev.includes(value)) {
+              return prev.filter(id => id !== value);
+            } else {
+              return [...prev, value];
+            }
+          } else if (typeof prev === 'string') {
+            // Sebelumnya single string → jadikan array
+            return prev === value ? [] : [prev, value];
+          } else {
+            // Sebelumnya null atau boolean
+            return [value];
+          }
+        } else {
+          // Single mode
+          if (typeof value === 'string' && prev === value) {
+            // Kalau klik ID yang sama → tutup
+            return null;
+          }
+          return value;
+        }
+      });
+    },
+    [_expanded]
+  );
+
+  return (
+    <ActiveListContext.Provider value={{ members, add, searchQuery, remove, set, loading, setLoading, expanded, setExpanded, ...getChat, ...scrollIntoView }}>
+      {children}
+    </ActiveListContext.Provider>
+  );
 }
 
 /**

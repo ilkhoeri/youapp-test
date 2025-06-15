@@ -11,7 +11,7 @@ import { useDeviceSession } from '@/resource/hooks/use-device-session';
 import { Avatar } from '@/resource/client/components/ui/avatar-oeri';
 import { FormCard } from '@/resource/client/components/fields/form';
 import { useDeviceQuery } from '@/resource/hooks/use-device-query';
-import { ActionBack } from '@/resource/client/components/actions';
+import { Navigation } from '@/resource/client/components/actions';
 import { useApp } from '@/resource/client/contexts/app-provider';
 import { Badge } from '@/resource/client/components/ui/badge';
 import { Card } from '@/resource/client/components/ui/card';
@@ -30,7 +30,7 @@ export function SettingsAccounts({}: SettingsAccountsProps) {
   return (
     <>
       <div className="mb-6 grid grid-cols-3 justify-items-center items-center">
-        <ActionBack instance="back" className="mr-auto" />
+        <Navigation instance="back" className="mr-auto" />
         {user?.name && <p className="text-sm font-semibold">@{user?.username}</p>}
         <span className="ml-auto"></span>
       </div>

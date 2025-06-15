@@ -166,9 +166,23 @@
   /* @apply min-h-0 visible select-text [-webkit-user-select:text] relative [word-wrap:break-word] whitespace-pre-wrap rtl:whitespace-pre-line; */
   @apply relative [word-wrap:break-word] whitespace-pre-wrap;
 }
+._msg:where(:has(._pictin + ._msgbd:where(:empty))),
+._msg:where(:has(._pictout + ._msgbd:where(:empty))) {
+  & ._pictin,
+  & ._pictout {
+    @apply -mb-6;
+  }
+}
+._msg:where(:has(._pictin:only-child)),
+._msg:where(:has(._pictout:only-child)) {
+  & ._pictin,
+  & ._pictout {
+    @apply mb-[-5px];
+  }
+}
 ._msgbd:where(:has(blockquote + *)) {
   & blockquote {
-    margin-bottom: 10px;
+    @apply mb-2.5;
   }
 }
 ._msgbd {
@@ -263,13 +277,16 @@
 }
 ._pictin,
 ._pictout {
-  @apply w-[calc(100%+10px)] -ml-1.5 -mr-0 min-w-0 min-h-0 overflow-hidden flex items-center justify-center relative rounded-md mt-[-2.5px];
+  @apply w-[calc(100%+10px)] -ml-1.5 -mr-0 mt-[var(--pict-mt,-2.5px)] min-w-0 min-h-0 overflow-hidden flex items-center justify-center relative rounded-md;
   & > img {
     @apply rounded-[inherit];
   }
   /* & > img {
     @apply size-full absolute inset-0 object-cover bg-transparent rounded-[inherit] object-center align-middle w-full basis-auto shrink-0 grow-0;
   } */
+}
+._pictout {
+  @apply [--pict-mt:-3px];
 }
 
 /* Footer */

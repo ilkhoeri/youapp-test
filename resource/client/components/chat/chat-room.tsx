@@ -17,6 +17,10 @@ export function EmptyRoomChat() {
   );
 }
 
-export function EmptyChat() {
-  return <h6 className="relative m-auto px-9 text-center text-h6 font-semibold text-gray-800 dark:text-gray-400">Select a chat or start a new conversation</h6>;
+export function EmptyChat({ className, content = 'Select a chat or start a new conversation', children, ...props }: React.ComponentProps<'h6'>) {
+  return (
+    <h6 {...props} className={cn('relative m-auto px-9 text-center text-h6 font-semibold text-gray-800 dark:text-gray-400', className)}>
+      {children || content}
+    </h6>
+  );
 }

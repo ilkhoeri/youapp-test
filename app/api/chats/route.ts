@@ -1,28 +1,32 @@
 import db from '@/resource/db/user';
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { pusherServer } from '@/resource/server/messages/pusher';
 import { getCurrentUser } from '@/resource/db/user/get-accounts';
+import { ChatGroupValues } from '@/resource/schemas/chat';
+import { AllChatProps, pickFromOtherUser } from '@/resource/types/user';
 
-export async function POST(request: Request) {
+export async function POST(req: Request) {
   try {
-    const [currentUser, { userId, isGroup, members, name }] = await Promise.all([getCurrentUser(), request.json()]);
+    const [currentUser, data] = await Promise.all([getCurrentUser(), req.json()]);
+
+    const { userId, type, members, name } = data as ChatGroupValues;
 
     if (!currentUser?.id || !currentUser?.email) {
       return new NextResponse('Unauthorized', { status: 401 });
     }
 
-    if (isGroup && (!members || members.length < 1 || !name)) {
+    if (type === 'GROUP' && (!members || members.length < 1 || !name)) {
       return new NextResponse('Invalid data', { status: 402 });
     }
 
-    if (isGroup) {
+    if (type === 'GROUP') {
       const newChat = await db.chat.create({
         data: {
           name,
-          isGroup,
+          type,
           users: {
             connect: [
-              ...members.map((member: { value: string }) => ({
+              ...members.map(member => ({
                 id: member.value
               })),
               {
@@ -97,5 +101,47 @@ export async function POST(request: Request) {
     return NextResponse.json(newChat);
   } catch (error) {
     return new NextResponse('Internal Error', { status: 500 });
+  }
+}
+
+export async function GET(req: NextRequest) {
+  try {
+    const currentUser = await getCurrentUser();
+
+    // Simulasi delay
+    // await new Promise(resolve => setTimeout(resolve, 1000));
+
+    if (!currentUser?.id) return [];
+
+    if (!currentUser?.id || !currentUser?.email) {
+      return new NextResponse('Unauthorized', { status: 401 });
+    }
+
+    const allChat: Array<AllChatProps> = await db.chat.findMany({
+      orderBy: {
+        lastMessageAt: 'desc'
+      },
+      where: {
+        userIds: {
+          has: currentUser.id
+        }
+      },
+      include: {
+        users: { select: pickFromOtherUser },
+        messages: {
+          include: {
+            sender: { select: pickFromOtherUser },
+            seen: { select: pickFromOtherUser }
+          }
+        }
+      }
+    });
+
+    if (!allChat) return NextResponse.json({ error: 'Chat group not found' }, { status: 404 });
+
+    return NextResponse.json(allChat);
+  } catch (error) {
+    console.error('Error fetching chat group:', error);
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

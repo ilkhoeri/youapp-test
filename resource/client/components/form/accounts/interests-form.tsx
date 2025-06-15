@@ -11,7 +11,7 @@ import { SettingGeneralFormValues, SettingGeneralSchema } from '@/resource/schem
 import { containerVariants, itemVariants } from '@/resource/styles/motion-styles';
 import { useMobileHistoryState } from '@/resource/hooks/use-mobile-history-state';
 import { MotionCard, MotionCardModal } from '../../motion/motion-card';
-import { ActionBack } from '../../actions';
+import { Navigation } from '../../actions';
 import { PencilIcon } from '../../icons';
 import { styleForm } from './components';
 import { Badge } from '../../ui/badge';
@@ -171,7 +171,7 @@ export function SettingInterestsForm({ account }: { account: Account }) {
         {...stylingMotionCards().modal()}
         header={
           <>
-            <ActionBack instance="back" className="mr-auto" />
+            <Navigation instance="back" className="mr-auto" />
             <p className="text-sm font-semibold"></p>
             <Button
               type="submit"

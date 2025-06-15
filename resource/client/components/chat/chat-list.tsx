@@ -1,21 +1,21 @@
 'use client';
 import * as React from 'react';
-import { useRouter } from 'next/navigation';
-import { Account, AllChatProps } from '@/resource/types/user';
+import axios from 'axios';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { Account, AllChatProps, MinimalAccount } from '@/resource/types/user';
 import { pusherClient } from '@/resource/server/messages/pusher';
-import { useChat, useOtherUser, type UseChatOptions } from './chat-context';
+import { useActiveChat, useChat, useOtherUser, type UseChatOptions } from './chat-context';
 import { ContextMenu as CtxMenu } from '@/resource/client/components/ui/context-menu';
 import { formatShortTime } from '@/resource/const/times-helper';
-import { useSearchQuery } from '../link-search-query';
+import { truncate } from '@/resource/utils/text-parser';
 import { useApp } from '../../contexts/app-provider';
-import { ChatAvatars, ChatGroupAvatar } from './component';
+import { ChatGroupAvatar } from './chat-avatar';
 import { find } from 'lodash';
 import { cn } from 'cn';
-import { truncate } from '@/resource/utils/text-parser';
 
 interface ChatListProps extends UseChatOptions {
   items: AllChatProps[];
-  accounts: Account[];
+  accounts: MinimalAccount[];
   title?: string;
 }
 
@@ -26,7 +26,7 @@ export function ChatList(_props: ChatListProps) {
   // const router = useRouter();
   const { session } = useApp();
 
-  const { chatId } = useChat({ searchQuery });
+  // const { chatId } = useChat({ searchQuery });
 
   const pusherKey = React.useMemo(() => {
     return session?.user?.email;
@@ -39,7 +39,7 @@ export function ChatList(_props: ChatListProps) {
 
     const updateHandler = (chat: AllChatProps) => {
       setItems(current =>
-        current.map(currentChat => {
+        current?.map(currentChat => {
           if (currentChat.id === chat.id) {
             return {
               ...currentChat,
@@ -71,25 +71,32 @@ export function ChatList(_props: ChatListProps) {
     pusherClient.bind('chat:remove', removeHandler);
   }, [pusherKey]);
 
-  return items.map(item => <ChatListItem key={item.id} searchQuery={searchQuery} data={item} selected={chatId === item.id} />);
+  return items?.map(item => <ChatListItem key={item.id} data={item} />);
 }
 
-interface ChatListItemProps extends UseChatOptions {
+interface ChatListItemProps {
   data: AllChatProps;
-  selected?: boolean;
+  // selected?: boolean;
 }
 
 export function ChatListItem(_props: ChatListItemProps) {
-  const { data, selected, searchQuery } = _props;
-  const otherUser = useOtherUser(data);
-  const { session } = useApp();
-  const router = useRouter();
-  const { createQuery } = useSearchQuery('');
+  const { data } = _props,
+    { chatId, setLoading, searchQuery: query } = useActiveChat(),
+    // searchParams = useSearchParams(),
+    otherUser = useOtherUser(data),
+    router = useRouter(),
+    app = useApp(),
+    // chatId = searchParams?.get(query!),
+    // chatGroupId = searchParams.has(query!),
+    selected = chatId === data.id;
 
   const handleClick = React.useCallback(() => {
-    const route = searchQuery ? createQuery(searchQuery, data.id) : `/chat/${data.id}`;
+    const route = query ? `/chat?${query}=${data.id}` : `/chat/${data.id}`;
+    // if (!chatGroupId) setLoading(true);
+    setLoading(true);
+    if (selected) setLoading(false);
     router.push(route, { scroll: false });
-  }, [data, router, searchQuery]);
+  }, [data, query]);
 
   const lastMessage = React.useMemo(() => {
     const messages = data.messages || [];
@@ -97,7 +104,7 @@ export function ChatListItem(_props: ChatListItemProps) {
     return messages[messages.length - 1];
   }, [data.messages]);
 
-  const userEmail = React.useMemo(() => session?.user?.email, [session?.user?.email]);
+  const userEmail = React.useMemo(() => app.session?.user?.email, [app.session?.user?.email]);
 
   const hasSeen = React.useMemo(() => {
     if (!lastMessage) return false;
@@ -123,8 +130,8 @@ export function ChatListItem(_props: ChatListItemProps) {
         <div
           onClick={handleClick}
           className={cn(
-            'w-full relative flex items-center space-x-3 py-3 px-4 rounded-lg transition cursor-pointer hover:bg-[#e4ebf1] dark:hover:bg-[#1c252e]',
-            selected && 'bg-[#e4ebf1] dark:bg-[#1c252e]'
+            'w-full relative flex items-center space-x-3 py-3 px-4 rounded-lg transition cursor-pointer [--bg:#e4ebf1] dark:[--bg:#1c252e] hover:bg-[var(--bg)]',
+            selected && 'bg-[var(--bg)]'
           )}
         >
           {/* <ChatAvatars data={data} otherUser={otherUser} /> */}
@@ -142,31 +149,88 @@ export function ChatListItem(_props: ChatListItemProps) {
         </div>
       </CtxMenu.Trigger>
 
-      <ContextMenuContent />
+      {contextMenu(data)}
     </CtxMenu>
   );
 }
 
-export function ContextMenuContent() {
-  return (
-    <CtxMenu.Content className="w-52">
-      <CtxMenu.Item>Group Info</CtxMenu.Item>
-      <CtxMenu.Item>Group Media</CtxMenu.Item>
+export function contextMenu(data: AllChatProps) {
+  const menuMap = useMenuMap(data);
+  return <CtxMenu.Content className="w-48">{renderMenuItems(menuMap)}</CtxMenu.Content>;
+}
 
-      <CtxMenu.Item>Back</CtxMenu.Item>
-      <CtxMenu.Item disabled>Forward</CtxMenu.Item>
-      <CtxMenu.Item>Reload</CtxMenu.Item>
+function useMenuMap(data: AllChatProps) {
+  const router = useRouter();
 
-      <CtxMenu.Sub>
-        <CtxMenu.SubTrigger>More</CtxMenu.SubTrigger>
-        <CtxMenu.SubContent className="w-44">
-          <CtxMenu.Item>Exit group</CtxMenu.Item>
-          <CtxMenu.Separator />
-          <CtxMenu.Item variant="destructive">Delete</CtxMenu.Item>
-        </CtxMenu.SubContent>
-      </CtxMenu.Sub>
-    </CtxMenu.Content>
-  );
+  const handleDelete = React.useCallback(async () => {
+    const confirmDelete = window.confirm(`Apakah kamu yakin ingin menghapus Group ${data.name}?`);
+    if (!confirmDelete) return;
+
+    try {
+      await axios.delete(`/api/chats/${data.id}`);
+      router.replace('/chat');
+      router.refresh();
+    } catch (_e) {
+      console.error(`Gagal menghapus GroupChat ${data.name}`, _e);
+    }
+  }, [data.id, router]);
+
+  const menuMap: MenuMap[] = [
+    { label: 'Group Info', onAction: () => {} },
+    { label: 'Group Media', onAction: () => {} },
+    { label: 'Back', onAction: () => router.back() },
+    { label: 'Forward', disabled: true, onAction: () => {} },
+    { label: 'Reload', onAction: () => {} },
+    { label: 'Pin', onAction: () => {} },
+    {
+      label: 'More',
+      separator: true,
+      sub: [
+        { label: 'Exit group', onAction: () => {} },
+        { label: 'Delete Group', separator: true, variant: 'destructive', onAction: handleDelete }
+      ]
+    }
+  ];
+
+  return menuMap;
+}
+
+type MenuMap = {
+  label: string;
+  shortcut?: string | undefined;
+  separator?: boolean | undefined;
+  onAction?: React.MouseEventHandler<HTMLDivElement>;
+  sub?: MenuMap[];
+  disabled?: boolean;
+  variant?: React.ComponentProps<typeof CtxMenu.Item>['variant'];
+};
+
+function renderMenuItems(items: MenuMap[]) {
+  return items.flatMap(item => {
+    const elements: React.ReactNode[] = [];
+
+    if (item.separator) {
+      elements.push(<CtxMenu.Separator key={`sep-${item.label}`} />);
+    }
+
+    if (item.sub && item.sub.length > 0) {
+      elements.push(
+        <CtxMenu.Sub key={item.label}>
+          <CtxMenu.SubTrigger>{item.label}</CtxMenu.SubTrigger>
+          <CtxMenu.SubContent className="w-40">{renderMenuItems(item.sub)}</CtxMenu.SubContent>
+        </CtxMenu.Sub>
+      );
+    } else {
+      elements.push(
+        <CtxMenu.Item key={item.label} disabled={item.disabled} variant={item.variant} onClick={item.onAction}>
+          {item.label}
+          {item.shortcut && <CtxMenu.Shortcut>{item.shortcut}</CtxMenu.Shortcut>}
+        </CtxMenu.Item>
+      );
+    }
+
+    return elements;
+  });
 }
 
 function escapeText(text: string | null | undefined): string {

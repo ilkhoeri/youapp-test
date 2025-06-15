@@ -371,7 +371,7 @@ export function InlineEditor<TData, TTag extends TTagPatterns = TTagPatterns>(_p
       el.innerHTML = '';
       cleanEmptyNodes(el, currentTags);
       el.append(document.createTextNode('')); // agar bisa diketik
-      el.focus();
+      // el.focus();
     }
   }, [value]);
 

@@ -533,7 +533,6 @@ model Chat {
   lastMessageAt   DateTime     @default(now())
   name            String?
   description     String?
-  isGroup         Boolean      @default(false)
   avatarUrl       String?
   // Relasi ke Message (many-to-many)
   messagesIds     String[]     @db.ObjectId

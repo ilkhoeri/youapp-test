@@ -6,6 +6,25 @@ import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 
 export type LinkQueryHrefType = { pathname: string | undefined; query: string; slug: string | null };
 export type SearchQueryType = { path?: string; append?: boolean };
+
+export function useCreateQuery() {
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const createQuery = React.useCallback(
+    (query: string, slug: string | null) => {
+      const params = new URLSearchParams(searchParams.toString());
+
+      if (slug !== null) params.set(query, slug);
+      else params.delete(query);
+
+      const queryString = params.toString();
+      return queryString ? `${pathname}?${queryString}` : pathname;
+    },
+    [searchParams, pathname]
+  );
+  return { pathname, searchParams, createQuery };
+}
+
 /**
  * @usage
  * ```js

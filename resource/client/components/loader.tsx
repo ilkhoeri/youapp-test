@@ -1,13 +1,14 @@
 import * as React from 'react';
 import Image from 'next/image';
 import { cn } from 'cn';
-import { ocx, type cvxResult } from 'xuxi';
+import { ocx } from 'xuxi';
 
-import classes from '@/resource/styles/app.module.css';
+import css from '@/resource/styles/app.module.css';
 
 type SubKeys = {
   spinner: 'root' | 'bar';
   orbit: 'root' | 'inner' | 'orbit';
+  ring: 'root' | 'inner' | 'ring';
   clockwise: 'root' | 'clockwise';
   dots: 'root' | 'dots';
   buffer: 'root' | 'buffer';
@@ -21,15 +22,13 @@ type classes = {
 };
 
 type __Loader = keyof SubKeys;
-type __Selector<T extends __Loader> = NonNullable<cvxResult<classes>[T]>;
+type __Selector<T extends __Loader> = keyof classes[T];
 
 type StylesNames<T extends __Loader> = {
-  // @ts-ignore
   unstyled?: Partial<Record<__Selector<T>, boolean>>;
   className?: string;
   style?: React.CSSProperties & { [key: string]: any };
   classNames?: Partial<Record<SubKeys[T], string>>;
-  // @ts-ignore
   styles?: Partial<Record<__Selector<T>, React.CSSProperties & { [key: string]: any }>>;
   color?: React.CSSProperties['color'] | 'currentColor';
   size?: string | number;
@@ -67,8 +66,8 @@ export function LoaderProgress(props: LoaderSyntheticProps<'progressbar'>) {
   const { className, classNames, ...rest } = props;
   return (
     <div {...rest} className={cn('overflow-hidden size-full min-w-full min-h-full m-auto flex items-center justify-center relative', className, classNames?.root)}>
-      <div {...{ className: cn(classes.progress, classNames?.wrap), role: 'progressbar' }}>
-        <div className={cn(classes.progress_bar, classNames?.inner)} />
+      <div {...{ className: cn(css.progress, classNames?.wrap), role: 'progressbar' }}>
+        <div className={cn(css.progress_bar, classNames?.inner)} />
       </div>
     </div>
   );
@@ -82,13 +81,13 @@ export function LoaderLogo(props: LoaderLogoProps) {
   const { className, classNames, image = '/icons/assets-logo.png', ...rest } = props;
   return (
     <div {...rest} className={cn('overflow-hidden size-full min-w-full min-h-full m-auto flex items-center justify-center relative', className, classNames?.container)}>
-      <div className={cn(classes.logoloadRoot, classNames?.root)}>
-        <div className={cn(classes.logoloadWrap, classNames?.wrap)}>
-          <div className={cn(classes.logoloadS, classNames?.inner)}>
+      <div className={cn(css.logoloadRoot, classNames?.root)}>
+        <div className={cn(css.logoloadWrap, classNames?.wrap)}>
+          <div className={cn(css.logoloadS, classNames?.inner)}>
             <Image alt="" width={86} height={86} src={image} className={cn('size-full', classNames?.logo)} />
           </div>
-          <div data-loader-ring="x" className={cn(classes.boxloadX, classNames?.ringX)} />
-          <div data-loader-ring="y" className={cn(classes.boxloadY, classNames?.ringY)} />
+          <div data-loader-ring="x" className={cn(css.boxloadX, classNames?.ringX)} />
+          <div data-loader-ring="y" className={cn(css.boxloadY, classNames?.ringY)} />
         </div>
       </div>
     </div>
@@ -190,6 +189,20 @@ export const LoaderRises = React.forwardRef<HTMLDivElement, LoaderSyntheticProps
   );
 });
 
+export const LoaderRing = React.forwardRef<HTMLDivElement, LoaderSyntheticProps<'ring'>>(function LoaderOrbit(_props, ref) {
+  const { size = '3rem', color, duration = 1.2, unstyled, className, classNames, style, styles, children, ...props } = _props;
+  return (
+    <div {...{ ref, ...getStyles<'ring'>('ring', 'root', { size, color, duration, unstyled, className, classNames, style, styles }), ...props }}>
+      <div {...getStyles<'ring'>('ring', 'inner', { unstyled, classNames, styles })}>
+        {[...Array(4)].map((_, index) => (
+          <div key={index} {...getStyles<'ring'>('ring', 'ring', { unstyled, classNames, styles })} />
+        ))}
+      </div>
+      {children}
+    </div>
+  );
+});
+
 export type LoaderProps =
   | ({ type?: 'spinner' } & LoaderSyntheticProps<'spinner'>)
   | ({ type?: 'orbit' } & LoaderSyntheticProps<'orbit'>)
@@ -198,7 +211,8 @@ export type LoaderProps =
   | ({ type?: 'progressbar' } & LoaderSyntheticProps<'progressbar'>)
   | ({ type?: 'logo' } & LoaderLogoProps)
   | ({ type?: 'buffer' } & LoaderSyntheticProps<'buffer'>)
-  | ({ type?: 'rises' } & LoaderSyntheticProps<'rises'>);
+  | ({ type?: 'rises' } & LoaderSyntheticProps<'rises'>)
+  | ({ type?: 'ring' } & LoaderSyntheticProps<'ring'>);
 
 const loaderMap = {
   spinner: LoaderSpinner,
@@ -207,6 +221,7 @@ const loaderMap = {
   dots: LoaderDots,
   buffer: LoaderBuffer,
   rises: LoaderRises,
+  ring: LoaderRing,
   progressbar: LoaderProgress,
   logo: LoaderLogo
 } as const;
@@ -227,6 +242,7 @@ type LoaderComponent = ForwardRef<'div', LoaderProps> & {
   Dots: typeof LoaderDots;
   Buffer: typeof LoaderBuffer;
   Rises: typeof LoaderRises;
+  Ring: typeof LoaderRing;
 };
 // Attach sub-components
 Loader.Spinner = LoaderSpinner;
@@ -235,3 +251,4 @@ Loader.ClockWise = LoaderClockWise;
 Loader.Dots = LoaderDots;
 Loader.Buffer = LoaderBuffer;
 Loader.Rises = LoaderRises;
+Loader.Ring = LoaderRing;

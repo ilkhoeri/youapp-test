@@ -8,7 +8,7 @@ import { AuthButtonSubmit, DirectLink, HeadImageSign, styleForm } from './compon
 import { Form, useForm } from '@/resource/client/components/fields/form';
 import { Alert } from '../../alert';
 import { cn } from 'cn';
-import { ClientRender } from '../../client-render';
+import { ClientMount } from '../../client-mount';
 // import { getInvitationToken } from '@/auth/tokens/verification-token';
 
 const classes = styleForm().auth();
@@ -92,7 +92,7 @@ export function InvitationVerificationTokenForm(_props: InvitationVerificationTo
   const loading = load || transition;
 
   return (
-    <ClientRender>
+    <ClientMount>
       <Form.Provider {...form}>
         <Form {...props} onSubmit={form.handleSubmit(onSubmit)} className={cn('group flex flex-col gap-4 w-full min-h-max [--scroll-bg:red]', className)}>
           <HeadImageSign imageUrl="/images/key.png" className="lg:-mt-14" />
@@ -110,6 +110,6 @@ export function InvitationVerificationTokenForm(_props: InvitationVerificationTo
           <DirectLink disabled={loading} href="/auth/sign-in" label={['Have an account?', 'Login here']} />
         </Form>
       </Form.Provider>
-    </ClientRender>
+    </ClientMount>
   );
 }
