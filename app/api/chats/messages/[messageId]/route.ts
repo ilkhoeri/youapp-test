@@ -1,9 +1,9 @@
 import db from '@/resource/db/user';
 import { getCurrentUser } from '@/resource/db/user/get-accounts';
 import { pusherServer } from '@/resource/server/messages/pusher';
-import { NextRequest, NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
 
-export async function GET(req: NextRequest, { params }: { params: Promise<{ messageId: string }> }) {
+export async function GET(req: Request, { params }: { params: Promise<{ messageId: string }> }) {
   try {
     const [currentUser, { messageId }] = await Promise.all([getCurrentUser(), params]);
 
