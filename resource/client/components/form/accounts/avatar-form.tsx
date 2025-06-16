@@ -50,15 +50,22 @@ export function SettingAvatarForm({ account }: { account: Account }) {
     }
   }
 
-  const lastUrlRef = React.useRef<string | null>(form.getValues('image'));
+  // const lastUrlRef = React.useRef<string | null>(form.getValues('image'));
 
-  React.useEffect(() => {
-    const currentUrl = form.getValues('image');
-    if (lastUrlRef?.current !== currentUrl) {
-      form.handleSubmit(onSubmit)();
-      lastUrlRef.current = currentUrl;
-    }
-  }, [form, onSubmit]);
+  // React.useEffect(() => {
+  //   const currentUrl = form.getValues('image');
+  //   if (lastUrlRef?.current !== currentUrl) {
+  //     form.handleSubmit(onSubmit)();
+  //     lastUrlRef.current = currentUrl;
+  //     router.refresh();
+  //   }
+  // }, [form, onSubmit]);
+
+  const onUpload = async (formData: FormData) => {
+    const image = formData.get('image') as string;
+    form.setValue('image', image); // ← masukkan ke form react-hook-form
+    await form.handleSubmit(onSubmit)(); // ← jalankan submit
+  };
 
   return (
     <Form.Provider {...form}>
@@ -71,13 +78,19 @@ export function SettingAvatarForm({ account }: { account: Account }) {
 
           function RenderWidget() {
             return (
-              <Form.UnstyledAvatarField uploadPreset={process.env.NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET} disabled={loading} value={field.value} onChange={url => field.onChange(url)}>
-                {({ open }) => {
+              <Form.UnstyledAvatarField
+                uploadPreset={process.env.NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET}
+                disabled={loading}
+                value={field.value}
+                onChange={url => field.onChange(url)}
+                // formAction={onUpload}
+                formAction={async () => await form.handleSubmit(onSubmit)()}
+              >
+                {({ setOpenWidget }) => {
                   return (
                     <button
                       type="button"
-                      onClick={() => open()}
-                      // formAction={form.handleSubmit(onSubmit)}
+                      onClick={() => setOpenWidget(true)}
                       aria-label={label}
                       className={cn(stylingImage({ hasValue: !!field.value }))}
                       {...{ style: { '--bg-gradient': !field.value && '40% 40% / 200% no-repeat linear-gradient(33deg, #a08404, #f9f3b2)' } as React.CSSProperties }}

@@ -59,7 +59,7 @@ export const MotionImage = React.forwardRef<React.ElementRef<typeof motion.div>,
         >
           <motion.div
             layoutId={`container-${name}`}
-            className={cn(!isUnstyled('containerModal') && 'relative max-w-4xl max-h-[90vh] rounded-2xl overflow-hidden bg-background', classNames?.containerModal)}
+            className={cn(!isUnstyled('containerModal') && 'relative w-full max-w-4xl max-h-[90vh] rounded-2xl overflow-hidden bg-background', classNames?.containerModal)}
             onClick={e => e.stopPropagation()}
           >
             <motion.img

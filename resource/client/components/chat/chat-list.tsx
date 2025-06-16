@@ -91,12 +91,12 @@ export function ChatListItem(_props: ChatListItemProps) {
     selected = chatId === data.id;
 
   const handleClick = React.useCallback(() => {
+    if (selected) return;
     const route = query ? `/chat?${query}=${data.id}` : `/chat/${data.id}`;
     // if (!chatGroupId) setLoading(true);
     setLoading(true);
-    if (selected) setLoading(false);
     router.push(route, { scroll: false });
-  }, [data, query]);
+  }, [data, query, selected]);
 
   const lastMessage = React.useMemo(() => {
     const messages = data.messages || [];
