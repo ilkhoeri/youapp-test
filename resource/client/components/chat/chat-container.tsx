@@ -105,7 +105,7 @@ const links = {
   ] as ChatNavProps['links']
 };
 
-const classResizable = {
+export const classResizable = {
   root: 'h-full max-xl:min-h-[176dvh] max-xl:max-h-[176dvh] xl:min-h-[80dvh] xl:max-h-[82dvh] items-stretch border rounded-2xl'
 };
 
