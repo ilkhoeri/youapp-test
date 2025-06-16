@@ -3,7 +3,7 @@ import { getCurrentUser } from '@/resource/db/user/get-accounts';
 import { pusherServer } from '@/resource/server/messages/pusher';
 import { NextResponse } from 'next/server';
 
-export async function GET(req: Request, { params }: { params: Promise<{ messageId: string }> }) {
+export async function GET(req: Request, { params }: { params: Promise<{ messageId?: string }> }) {
   try {
     const [currentUser, { messageId }] = await Promise.all([getCurrentUser(), params]);
 
@@ -26,6 +26,6 @@ export async function GET(req: Request, { params }: { params: Promise<{ messageI
     return NextResponse.json(chatGroup);
   } catch (error) {
     console.error('Error fetching chat group:', error);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    return new NextResponse('Internal server error', { status: 500 });
   }
 }

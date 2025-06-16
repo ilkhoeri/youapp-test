@@ -55,9 +55,7 @@ export async function GET(req: Request, { params }: { params: Promise<Params> })
     // Simulasi delay
     // await new Promise(resolve => setTimeout(resolve, 1000));
 
-    if (!currentUser?.id || !currentUser?.email) return new NextResponse('Unauthorized', { status: 401 });
-
-    if (!chatId) return [];
+    if (!currentUser?.id || !currentUser?.email || !chatId) return new NextResponse('Unauthorized', { status: 401 });
 
     const chatGroup: Array<Message> = await db.message.findMany({
       where: {
@@ -85,11 +83,11 @@ export async function GET(req: Request, { params }: { params: Promise<Params> })
     //   }
     // });
 
-    if (!chatGroup) return NextResponse.json({ error: 'Chat group not found' }, { status: 404 });
+    if (!chatGroup) return new NextResponse('Chat group not found', { status: 404 });
 
     return NextResponse.json(chatGroup);
   } catch (error) {
     console.error('Error fetching chat group:', error);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    return new NextResponse('Internal server error', { status: 500 });
   }
 }

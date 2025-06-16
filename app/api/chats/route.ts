@@ -111,11 +111,7 @@ export async function GET(req: Request) {
     // Simulasi delay
     // await new Promise(resolve => setTimeout(resolve, 1000));
 
-    if (!currentUser?.id) return [];
-
-    if (!currentUser?.id || !currentUser?.email) {
-      return new NextResponse('Unauthorized', { status: 401 });
-    }
+    if (!currentUser?.id || !currentUser?.email) return new NextResponse('Unauthorized', { status: 401 });
 
     const allChat: Array<AllChatProps> = await db.chat.findMany({
       orderBy: {
