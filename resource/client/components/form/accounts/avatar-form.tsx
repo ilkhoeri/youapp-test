@@ -3,14 +3,13 @@ import React from 'react';
 import * as z from 'zod';
 import axios from 'axios';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { useRouter } from 'next/navigation';
-import { toast } from 'sonner';
-import { Form, useForm } from '../../fields/form';
-import { Account } from '@/resource/types/user';
-import { Loader } from '../../loader';
 import { SettingAvatarImageSchema } from '@/resource/schemas/user';
 import { MotionImage } from '../../motion/motion-image';
+import { Form, useForm } from '../../fields/form';
+import { Account } from '@/resource/types/user';
 import { CameraRotateIcon } from '../../icons';
+import { Loader } from '../../loader';
+import { toast } from 'sonner';
 import { cvx } from 'xuxi';
 import { cn } from 'cn';
 
@@ -40,7 +39,7 @@ export function SettingAvatarForm({ account }: { account: Account }) {
   async function onSubmit(value: SettingsFormValues) {
     setLoading(true);
     try {
-      await axios.patch(`/api/auth/avatar/${account?.id}`, value);
+      await axios.patch(`/api/auth/avatar/${account?.id}`, { image: null });
       router.refresh();
     } catch (error: any) {
       toast.error('Error');
@@ -50,22 +49,16 @@ export function SettingAvatarForm({ account }: { account: Account }) {
     }
   }
 
-  // const lastUrlRef = React.useRef<string | null>(form.getValues('image'));
+  const lastUrlRef = React.useRef<string | null>(form.getValues('image'));
 
-  // React.useEffect(() => {
-  //   const currentUrl = form.getValues('image');
-  //   if (lastUrlRef?.current !== currentUrl) {
-  //     form.handleSubmit(onSubmit)();
-  //     lastUrlRef.current = currentUrl;
-  //     router.refresh();
-  //   }
-  // }, [form, onSubmit]);
-
-  const onUpload = async (formData: FormData) => {
-    const image = formData.get('image') as string;
-    form.setValue('image', image); // ← masukkan ke form react-hook-form
-    await form.handleSubmit(onSubmit)(); // ← jalankan submit
-  };
+  React.useEffect(() => {
+    const currentUrl = form.getValues('image');
+    if (lastUrlRef?.current !== currentUrl) {
+      form.handleSubmit(onSubmit)();
+      lastUrlRef.current = currentUrl;
+      router.refresh();
+    }
+  }, [form, onSubmit]);
 
   return (
     <Form.Provider {...form}>
@@ -74,28 +67,22 @@ export function SettingAvatarForm({ account }: { account: Account }) {
         name="image"
         key={account?.image}
         render={({ field }) => {
-          const label = field.value ? 'Change image' : 'Add Image';
+          const value = account?.image;
+          const label = value ? 'Change image' : 'Add Image';
 
           function RenderWidget() {
             return (
-              <Form.UnstyledAvatarField
-                uploadPreset={process.env.NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET}
-                disabled={loading}
-                value={field.value}
-                onChange={url => field.onChange(url)}
-                // formAction={onUpload}
-                formAction={async () => await form.handleSubmit(onSubmit)()}
-              >
-                {({ setOpenWidget }) => {
+              <Form.UnstyledAvatarField uploadPreset={process.env.NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET} disabled={loading} {...field}>
+                {({ open }) => {
                   return (
                     <button
                       type="button"
-                      onClick={() => setOpenWidget(true)}
+                      onClick={() => open()}
                       aria-label={label}
-                      className={cn(stylingImage({ hasValue: !!field.value }))}
-                      {...{ style: { '--bg-gradient': !field.value && '40% 40% / 200% no-repeat linear-gradient(33deg, #a08404, #f9f3b2)' } as React.CSSProperties }}
+                      className={cn(stylingImage({ hasValue: !!value }))}
+                      {...{ style: { '--bg-gradient': !value && '40% 40% / 200% no-repeat linear-gradient(33deg, #a08404, #f9f3b2)' } as React.CSSProperties }}
                     >
-                      {field.value && <CameraRotateIcon size={42} />}
+                      {value && <CameraRotateIcon size={42} />}
                     </button>
                   );
                 }}
@@ -105,13 +92,13 @@ export function SettingAvatarForm({ account }: { account: Account }) {
 
           return (
             <div {...{ 'aria-disabled': loading }} className="inline-flex aria-disabled:pointer-events-none flex-row items-center gap-4 -mt-2 mb-4">
-              {field.value ? (
-                <MotionImage src={field.value} name={field.name} disabled={loading} classNames={stylingMotionImage}>
+              {value ? (
+                <MotionImage key={account?.image} src={value} name={field.name} disabled={loading} classNames={stylingMotionImage}>
                   <RenderWidget />
                   {loading && (
                     <Loader
                       type="spinner"
-                      size={32}
+                      size={28}
                       className="left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2"
                       style={{ position: 'absolute', '--spinner-color': 'hsl(var(--color))' }}
                     />

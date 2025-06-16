@@ -55,10 +55,12 @@ async function GreetingSection({ user }: { user: Account }) {
 
       <div {...getStyles('greeting-inner')}>
         <Link href={linkByRole()} tabIndex={0} {...getStyles('greeting-action-1')}>
+          <SettingFillIcon size="200%" {...getStyles('greeting-action-filled')} />
           <SettingFillIcon size={24} />
           {isAdmin ? 'Manage Now' : 'Settings'}
         </Link>
         <Link href="/chat" tabIndex={0} {...getStyles('greeting-action-2')}>
+          <ChatMultipleFillIcon size="200%" {...getStyles('greeting-action-filled')} />
           <ChatMultipleFillIcon size={24} />
           Chat
         </Link>
@@ -72,6 +74,7 @@ async function GreetingSection({ user }: { user: Account }) {
             await signOut();
           }}
         >
+          <SignOutFillIcon size="200%" {...getStyles('greeting-action-filled')} />
           <SignOutFillIcon size={24} />
           Sign Out
         </button>
@@ -100,9 +103,10 @@ const classes = cvx({
       header: 'scroll-m-20 text-[clamp(1.25rem,0.75rem+4vw,2.25rem)] leading-9 font-bold tracking-tight pb-2 first:mt-0 whitespace-pre-line mb-2 truncate',
       paragraph: 'leading-7 [&:not(:first-child)]:mt-4 mb-6 max-w-1/2 opacity-[0.64]',
       inner: 'grid max-xl:grid-cols-2 xl:grid-flow-col xl:gap-4',
-      'action-1': cn(buttonVariants({ variant: 'green', size: 'sm' }), 'gap-2 h-12 rounded-xl max-xl:rounded-tr-none max-xl:rounded-b-none'),
-      'action-2': cn(buttonVariants({ variant: 'blue', size: 'sm' }), 'gap-2 h-12 rounded-xl max-xl:rounded-tl-none max-xl:rounded-b-none'),
-      'action-3': cn(buttonVariants({ variant: 'danger', size: 'sm' }), 'max-xl:col-span-2 gap-2 h-12 rounded-xl max-xl:rounded-t-none')
+      'action-1': cn(buttonVariants({ variant: 'green', size: 'sm' }), 'relative overflow-hidden gap-2 h-12 rounded-xl max-xl:rounded-tr-none max-xl:rounded-b-none'),
+      'action-2': cn(buttonVariants({ variant: 'blue', size: 'sm' }), 'relative overflow-hidden gap-2 h-12 rounded-xl max-xl:rounded-tl-none max-xl:rounded-b-none'),
+      'action-3': cn(buttonVariants({ variant: 'danger', size: 'sm' }), 'relative overflow-hidden max-xl:col-span-2 gap-2 h-12 rounded-xl max-xl:rounded-t-none'),
+      'action-filled': 'absolute opacity-20 right-[-15%]'
     }
   }
 });

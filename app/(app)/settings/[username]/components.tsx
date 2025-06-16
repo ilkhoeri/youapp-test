@@ -5,6 +5,7 @@ import { Button } from '@/resource/client/components/ui/button';
 import { HoroscopeIcon, ShioIcon } from '@/resource/client/components/icons';
 import { AccountLinks } from '@/resource/client/components/form/accounts/account-links';
 import { SettingPasswordForm } from '@/resource/client/components/form/accounts/password-form';
+import { useCloudinaryUpload } from '@/resource/client/components/fields/cloudinary-handler-client';
 import { SettingInterestsForm } from '@/resource/client/components/form/accounts/interests-form';
 import { SettingAboutForm } from '@/resource/client/components/form/accounts/account-form';
 import { useDeviceSession } from '@/resource/hooks/use-device-session';
@@ -14,11 +15,12 @@ import { useDeviceQuery } from '@/resource/hooks/use-device-query';
 import { Navigation } from '@/resource/client/components/actions';
 import { useApp } from '@/resource/client/contexts/app-provider';
 import { Badge } from '@/resource/client/components/ui/badge';
+import { getFromUser } from '@/resource/const/get-from-user';
+import { Loader } from '@/resource/client/components/loader';
 import { Card } from '@/resource/client/components/ui/card';
 import { getAge } from '@/resource/utils/age-generated';
 import { Account } from '@/resource/types/user';
 import { cn } from 'cn';
-import { getFromUser } from '@/resource/const/get-from-user';
 
 interface SettingsAccountsProps {}
 export function SettingsAccounts({}: SettingsAccountsProps) {
@@ -104,8 +106,23 @@ const UserInfo: React.FC<{ user: Account }> = ({ user }) => {
 };
 
 export function UserWidget({ account }: { account: Account }) {
+  const cld = useCloudinaryUpload(`/api/auth/avatar/${account?.id}`, { _prevent: !account || account?.image });
+
   return (
-    <Card suppressHydrationWarning className="bg-card-foreground flex flex-col p-4 pt-4 lg:p-6 gap-4 overflow-hidden h-[190px] lg:min-h-80">
+    <Card
+      suppressHydrationWarning
+      data-placeholder={!account?.image ? (cld.isDragging ? 'Drop your image' : 'Drag image here to upload') : undefined}
+      className={cn(
+        'bg-card-foreground flex flex-col p-4 pt-4 lg:p-6 gap-4 overflow-hidden h-[190px] lg:min-h-80',
+        !account?.image && [
+          'after:content-[attr(data-placeholder)] after:absolute after:z-[50] after:text-h4 after:font-bold after:left-1/2 after:top-1/2 after:-translate-x-1/2 after:-translate-y-1/2 after:text-nowrap after:duration-500',
+          cld.isDragging ? 'bg-blue-500/20 border-blue-400 text-blue-400 after:opacity-80' : 'after:opacity-0 hover:after:opacity-40'
+        ]
+      )}
+      onDrop={cld.handleDrop}
+      onDragOver={cld.handleDragOver}
+      onDragLeave={cld.handleDragLeave}
+    >
       <UserInfo user={account} />
 
       {account?.image && (
@@ -126,6 +143,10 @@ export function UserWidget({ account }: { account: Account }) {
             />
           )}
         </Avatar>
+      )}
+
+      {!account?.image && cld.loading && (
+        <Loader type="spinner" size={16} className="left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2" style={{ position: 'absolute', '--spinner-color': 'hsl(var(--color))' }} />
       )}
     </Card>
   );

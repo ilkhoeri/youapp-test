@@ -9,7 +9,6 @@ import { FolderFilesColorIcon } from '../icons-color';
 import { formatBytesToMB } from '@/resource/utils/text-parser';
 import { CldUploadWidget, CldUploadWidgetPropsChildren, CloudinaryUploadWidgetInfo, CloudinaryUploadWidgetOptions } from 'next-cloudinary';
 import { TrashFillIcon } from '../icons-fill';
-import { useRouter } from 'next/navigation';
 
 export interface ExtendedCldUploadWidget extends CloudinaryUploadWidgetOptions {}
 
@@ -121,10 +120,7 @@ export function ImageUpload(props: ImageUploadProps) {
   );
 }
 
-interface CldUploadWidgetChildrenProps extends CldUploadWidgetPropsChildren {
-  openWidget: boolean;
-  setOpenWidget: (open: boolean | ((prev: boolean) => boolean)) => void;
-}
+interface CldUploadWidgetChildrenProps extends CldUploadWidgetPropsChildren {}
 
 export interface __AvatarUploadProps {
   maxFileSize?: number | `${number}`;
@@ -138,7 +134,7 @@ export interface __AvatarUploadProps {
 }
 
 export interface UnstyledAvatarUploadProps extends Omit<React.ComponentProps<typeof CldUploadWidget>, 'children'>, __AvatarUploadProps {
-  formAction?: string | ((formData: FormData) => void | Promise<void>) | undefined;
+  onOpenDialog?: (open: boolean | ((prev: boolean) => boolean)) => void;
 }
 export function UnstyledAvatarUpload(_props: UnstyledAvatarUploadProps) {
   const {
@@ -151,54 +147,18 @@ export function UnstyledAvatarUpload(_props: UnstyledAvatarUploadProps) {
     onRemove,
     disabled,
     maxFileSize = 2097152,
-    formAction,
+    onOpenDialog,
     sources = ['local', 'camera', 'google_drive', 'instagram', 'url'],
     ...props
   } = _props;
 
-  const [openWidget, setOpenWidget] = React.useState(false);
-
-  const router = useRouter();
-  const lastUrlRef = React.useRef<typeof value>(value);
-
-  // React.useEffect(() => {
-  //   const cleanupTimeout = setTimeout(() => {
-  //     if (lastUrlRef?.current !== value) {
-  //       lastUrlRef.current = value;
-  //       document.body.style.overflow = '';
-  //     }
-  //     if (!value) setOpenWidget(false);
-  //   }, 1000);
-  //   return () => clearTimeout(cleanupTimeout);
-  // }, [value]);
-
   React.useEffect(() => {
-    if (lastUrlRef?.current !== value) {
-      lastUrlRef.current = value;
-      document.body.style.overflow = '';
-
-      const handleAction = async () => {
-        try {
-          if (typeof formAction === 'function' && value) {
-            const formData = new FormData();
-            formData.append('image', value); // ⬅key
-            await formAction(formData);
-            router.refresh();
-          }
-        } catch (err) {
-          console.error('FormAction failed:', err);
-        }
-      };
-
-      handleAction();
-    }
-
+    if (!onOpenDialog) return;
     const cleanupTimeout = setTimeout(() => {
-      if (!value) setOpenWidget(false);
+      if (!value) onOpenDialog?.(false);
     }, 1000);
-
     return () => clearTimeout(cleanupTimeout);
-  }, [value, formAction]);
+  }, [value, onOpenDialog]);
 
   return (
     <CldUploadWidget
@@ -206,6 +166,7 @@ export function UnstyledAvatarUpload(_props: UnstyledAvatarUploadProps) {
       onSuccess={(result, widget) => {
         onSuccess?.(result, widget);
         onChange?.((result?.info as CloudinaryUploadWidgetInfo)?.secure_url);
+        document.body.style.overflow = '';
       }}
       options={{
         ...options,
@@ -214,7 +175,7 @@ export function UnstyledAvatarUpload(_props: UnstyledAvatarUploadProps) {
         sources: options?.sources ?? sources
       }}
     >
-      {event => children({ openWidget, setOpenWidget, ...event })}
+      {event => children({ ...event })}
     </CldUploadWidget>
   );
 }
