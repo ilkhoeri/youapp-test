@@ -160,13 +160,25 @@ export function UnstyledAvatarUpload(_props: UnstyledAvatarUploadProps) {
     return () => clearTimeout(cleanupTimeout);
   }, [value, onOpenDialog]);
 
+  const lastUrlRef = React.useRef<typeof value>(value);
+
+  React.useEffect(() => {
+    const cleanupTimeout = setTimeout(() => {
+      if (lastUrlRef?.current !== value) {
+        lastUrlRef.current = value;
+        document.body.style.overflow = '';
+      }
+    }, 100);
+    return () => clearTimeout(cleanupTimeout);
+  }, [value]);
+
   return (
     <CldUploadWidget
       {...props}
       onSuccess={(result, widget) => {
         onSuccess?.(result, widget);
         onChange?.((result?.info as CloudinaryUploadWidgetInfo)?.secure_url);
-        document.body.style.overflow = '';
+        // document.body.style.overflow = '';
       }}
       options={{
         ...options,

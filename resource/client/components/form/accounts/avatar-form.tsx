@@ -39,7 +39,7 @@ export function SettingAvatarForm({ account }: { account: Account }) {
   async function onSubmit(value: SettingsFormValues) {
     setLoading(true);
     try {
-      await axios.patch(`/api/auth/avatar/${account?.id}`, { image: null });
+      await axios.patch(`/api/auth/avatar/${account?.id}`, value);
       router.refresh();
     } catch (error: any) {
       toast.error('Error');
