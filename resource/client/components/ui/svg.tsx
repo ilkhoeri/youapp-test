@@ -1,22 +1,30 @@
 import * as React from 'react';
 
-export enum InitialSize {
+export enum sizeEnum {
   unset = 'unset',
+  xs = 'xs',
   xxs = 'xxs',
   xxxs = 'xxxs',
-  xs = 'xs',
   base = 'base',
   sm = 'sm',
   md = 'md',
   lg = 'lg',
   xl = 'xl',
   xxl = 'xxl',
-  xxxl = 'xxxl'
+  xxxl = 'xxxl',
+  full = 'full'
 }
 
-export type IconType = (props: DetailedSvgProps) => React.JSX.Element;
-export type Sizes = `${InitialSize}` | (string & {}) | number | undefined;
+export type Value = (string & {}) | number | undefined;
+
+export type sizeInitials = (typeof sizeInitials)[number];
+
+export type Sizes = sizeInitials | Value;
+
 export type Colors = React.CSSProperties['color'] | 'currentColor';
+
+export type IconType = (props: DetailedSvgProps) => React.JSX.Element;
+
 export type SvgProps<OverrideProps = object> = Omit<DetailedSvgProps, 'children' | 'currentFill' | 'ratio'> & {
   ref?: React.Ref<SVGSVGElement>;
 } & OverrideProps;
@@ -34,20 +42,26 @@ export interface DetailedSvgProps extends Omit<React.SVGAttributes<SVGElement>, 
   currentFill?: 'fill' | 'stroke' | 'fill-stroke' | 'none';
 }
 
-export interface SizesProps {
+type SizeType = {
+  /** Menentukan `lebar`/`rasio lebar` area tampilan dalam unit yang digunakan. */
+  w?: Sizes;
+  /** Menentukan `tinggi`/`rasio tinggi` area tampilan dalam unit yang digunakan. */
+  h?: Sizes;
+};
+
+export interface SizesProps extends SizeType {
+  width?: string | number;
+  height?: string | number;
   /**
+   * @type
    * ```ts
-   * type Size = InitialSize | (string & {}) | number | undefined;
+   * Sizes | { h?: Sizes; w?: Sizes };
    * ```
    * Initial:
    *
-   * `unset: undefined` | `xs: "10px"` | `xxs: "12px"` | `xxxs: "14px"` | `base: "16px"` | `sm: "18px"` | `md: "22px"` | `lg: "32px"` | `xl: "48px"` | `xxl: "86px"` | `xxxl: "112px"`
+   * `unset: undefined` | `xs: "10px"` | `xxs: "12px"` | `xxxs: "14px"` | `base: "16px"` | `sm: "18px"` | `md: "22px"` | `lg: "32px"` | `xl: "48px"` | `xxl: "86px"` | `xxxl: "112px"` | `full: "100%"`
    */
-  size?: Sizes;
-  w?: string | number;
-  h?: string | number;
-  width?: string | number;
-  height?: string | number;
+  size?: Sizes | SizeType;
   /**
    * Nilai viewBox="0 0 24 24" merujuk pada sistem koordinat yang digunakan untuk menggambarkan ruang gambar dalam elemen SVG. Nilai ini terdiri dari empat angka:
    *
@@ -56,79 +70,182 @@ export interface SizesProps {
    * - **24** (nilai ketiga) – Lebar area tampilan dalam unit yang digunakan (biasanya pixel atau unit SVG). Dengan kata lain, lebar area tampilan adalah 24 unit.
    * - **24** (nilai keempat) – Tinggi area tampilan dalam unit yang digunakan (biasanya pixel atau unit SVG). Jadi, tinggi area tampilan adalah 24 unit.
    */
-  ratio?: {
-    /** Menentukan rasio lebar area tampilan dalam unit yang digunakan. */
-    w?: number;
-    /** Menentukan rasio tinggi area tampilan dalam unit yang digunakan. */
-    h?: number;
-  };
+  ratio?: Sizes | SizeType;
 }
 
 export declare function SvgIcon(data: IconTree): (props: DetailedSvgProps) => React.JSX.Element;
 export declare function SvgBase(props: DetailedSvgProps & { attr?: Record<string, string> }): React.JSX.Element;
 
-export const getInitialSizes = (size: Sizes): string | undefined => {
-  const sizeMap: Record<InitialSize, string | undefined> = {
-    unset: undefined,
-    xs: '10px',
-    xxs: '12px',
-    xxxs: '14px',
-    base: '16px',
-    sm: '18px',
-    md: '22px',
-    lg: '32px',
-    xl: '48px',
-    xxl: '86px',
-    xxxl: '112px'
-  };
-  return sizeMap[size as InitialSize];
-};
+export const colorRegex = /^[a-zA-Z]+$/;
+export const hexRegex = /^#[0-9A-Fa-f]{3,6}$/;
+export const rgbRegex = /^rgb\((\d{1,3}),\s*(\d{1,3}),\s*(\d{1,3})\)$/;
+export const rgbaRegex = /^rgba\((\d{1,3}),\s*(\d{1,3}),\s*(\d{1,3}),\s*(0|1|0?\.\d+)\)$/;
 
-// const isValidSize = typeof size === 'string' && (size.startsWith('calc(') || size.startsWith('clamp(') || size.startsWith('var('));
+export const emRemRegex = /^[-+]?(?:\d+|\d*\.\d+)(px|em|rem|%|vw|vh|vmin|vmax|svw|svh|ch|ex|cm|mm|in|pt|pc)$/;
 
-function isValidSize(size: number | string | undefined): boolean {
-  return typeof size === 'string' && /^(calc|clamp|var)\(/.test(size);
+/** `margin`, `padding`, etc. `%` → relative to parent */
+export const lengthUnits = ['px', 'em', 'rem', 'in', 'cm', 'mm', 'pt', 'pc', '%'] as const;
+/** `width`, `height`, etc. */
+export const viewportUnits = ['vh', 'vw', 'svh', 'svw', 'dvh', 'dvw', 'lvh', 'lvw', 'vmin', 'vmax'] as const;
+/** `font-size` etc. */
+export const typographicUnits = ['ch', 'ex', 'cap', 'ic', 'lh', 'rlh'] as const;
+/** `margin`, `padding`, `width`, `height`, `font-size` etc. */
+export const cssUnits = [...lengthUnits, ...viewportUnits, ...typographicUnits] as const;
+
+export const colorFunctions = ['rgb', 'hsl', 'hwb', 'lch', 'oklch', 'lab', 'oklab', 'color', 'rgba', 'hsla', 'hwba', 'lcha', 'laba'] as const;
+export const mathFunctions = ['calc', 'clamp', 'min', 'max'] as const;
+export const variableFunction = ['var'] as const;
+export const cssFunctions = [...colorFunctions, ...mathFunctions, ...variableFunction] as const;
+
+export const unitsRegex = getSuffixSizeRegex();
+
+export type lengthUnits = (typeof lengthUnits)[number];
+export type viewportUnits = (typeof viewportUnits)[number];
+export type typographicUnits = (typeof typographicUnits)[number];
+export type cssUnits = (typeof cssUnits)[number];
+export type colorFunctions = (typeof colorFunctions)[number];
+export type mathFunctions = (typeof mathFunctions)[number];
+export type variableFunction = (typeof variableFunction)[number];
+export type cssFunctions = (typeof cssFunctions)[number];
+
+type TRegExp<T> = (string & {}) | T | (T[] | readonly T[]);
+
+export function getPrefixSizeRegex(value: TRegExp<cssFunctions> = cssFunctions) {
+  const rg = typeof value === 'string' ? value : value?.join('|');
+  return new RegExp(`^(${rg})$`);
+}
+export function getSuffixSizeRegex(value: TRegExp<cssUnits> = cssUnits) {
+  const rg = typeof value === 'string' ? value : value?.join('|');
+  return new RegExp(`^([-+]?(?:\\d+|\\d*\\.\\d+))(${rg})$`);
 }
 
-function parseSize(sz: string | number): number {
-  return typeof sz === 'number' ? sz : parseFloat(sz.replace(/[^\d.-]/g, ''));
+export const sizeInitials = Object.values<`${sizeEnum}`>(sizeEnum);
+
+export const sizeMap: Record<sizeInitials, Value> = {
+  unset: undefined,
+  xs: '10px',
+  xxs: '12px',
+  xxxs: '14px',
+  base: '16px',
+  sm: '18px',
+  md: '22px',
+  lg: '32px',
+  xl: '48px',
+  xxl: '86px',
+  xxxl: '112px',
+  full: '100%'
+} as const;
+
+export function isNumber<T>(value: T): boolean {
+  return !isNaN(Number(value)) && Number(value) > 0;
 }
 
-function applyRatio(sz: string | number | undefined, ratio: number | undefined = 1): string | undefined {
-  if (!sz) return;
-  const newSize = parseSize(sz) * ratio;
-  return typeof sz === 'number' ? `${newSize / 16}rem` : sz;
+export function isString<T>(value: T): boolean {
+  const parseValue = String(value).trim().toLowerCase();
+  const _values = ['', 'undefined', 'false', 'null', 'NaN'].map(i => i.toLowerCase());
+  return typeof value === 'string' && !_values.includes(parseValue);
 }
 
-export function getSizes(Size: SizesProps) {
-  const { size = '16px', height, width, h, w, ratio } = Size;
-  const sizeMap = getInitialSizes(size);
-  const inSz = Object.values(InitialSize) as string[];
+export function isValidSize<T extends Value>(value: T): boolean {
+  switch (typeof value) {
+    case 'string':
+      return isString(value) && !getPrefixSizeRegex().test(value);
+    case 'number':
+      return isNumber(value);
+    default:
+      return false;
+  }
+}
 
-  const initialSize = (sz: string) => inSz.includes(sz);
+export function isColor<T>(value: T): boolean {
+  return typeof value === 'string' && isString(value) && (hexRegex.test(value) || rgbRegex.test(value) || rgbaRegex.test(value) || colorRegex.test(value));
+}
 
-  const sz = (sz: Sizes) => (initialSize(sz as string) ? sizeMap : sz);
+export function parseUnit(value: string): { value: number; unit: string } | null {
+  const match = value.match(unitsRegex);
+  return match ? { value: parseFloat(match[1]), unit: match[2] } : null;
+}
 
-  const sizer = (rt: number | undefined) => (initialSize(size as string) ? applyRatio(sizeMap, rt) : applyRatio(size, rt));
+export function parseSize(size: Sizes): Value {
+  const isInitial = sizeInitials.includes(size as sizeInitials);
+  return isInitial ? sizeMap[size as sizeInitials] : size;
+}
 
-  return {
-    sz,
-    h: height || h || sz(sizer(ratio?.h)),
-    w: width || w || sz(sizer(ratio?.w))
-  };
+interface toPxOpts {
+  shouldNumber?: number | boolean;
+  shouldPercent?: number | boolean;
+}
+export function toPixel<R extends Value>(size: Sizes, opts: toPxOpts = {}): R {
+  const { shouldNumber = true, shouldPercent = false } = opts;
+  const parseValue: Value = parseSize(size);
+  let newValue: Value = typeof shouldNumber === 'number' ? shouldNumber : 16;
+
+  switch (typeof parseValue) {
+    case 'string':
+      const mv = [...mathFunctions, ...variableFunction].join('|');
+      const rg = new RegExp(`^(${mv})\\(|auto|inherit`);
+      const isSfx = (rg: string) => parseValue.match(getSuffixSizeRegex(rg));
+      const em = isSfx('em|rem');
+      const px = isSfx('px');
+      const percent = isSfx('%');
+      if (rg.test(parseValue) && !shouldNumber) newValue = parseValue;
+      if (isNumber(parseValue)) newValue = Number(parseValue);
+      if (em) newValue = parseFloat(em[1]) * 16;
+      if (px) newValue = parseFloat(px[1]);
+      if (percent) newValue = !!shouldPercent ? (parseFloat(percent[1]) / 100) * ((shouldPercent as number) ?? 16) : parseValue;
+      break;
+
+    case 'number':
+      newValue = parseValue;
+      break;
+  }
+
+  return newValue as R;
+}
+
+export function ratio(size: Sizes, scale?: Sizes) {
+  const inValidSize = (typeof size === 'string' && !isString(size)) || (typeof size === 'number' && !isNumber(size));
+
+  const isInitial = sizeInitials.includes(size as sizeInitials);
+
+  if (!size || inValidSize) return;
+
+  const s = toPixel(size, { shouldNumber: false });
+  const r = toPixel(scale, { shouldNumber: 1, shouldPercent: true });
+
+  if (isInitial) return s;
+
+  if (scale) return typeof s === 'number' && typeof r === 'number' ? `${(s * r) / 16}rem` : s;
+
+  return typeof s === 'number' ? `${s / 16}rem` : s;
+}
+
+export function getSizes(props: SizesProps) {
+  const { size = '16px', ratio: r, ...rest } = props;
+
+  const getRatio = () => (typeof r === 'object' ? { h: parseSize(r?.h), w: parseSize(r?.w) } : { h: parseSize(r), w: parseSize(r) });
+  const getHeight = <T extends Sizes>(v: T) => ratio(rest.height || rest.h || v, getRatio().h);
+  const getWidth = <T extends Sizes>(v: T) => ratio(rest.width || rest.w || v, getRatio().w);
+
+  switch (typeof size) {
+    case 'object':
+      return { height: getHeight(size.h), width: getWidth(size.w) };
+    default:
+      return { height: getHeight(size), width: getWidth(size) };
+  }
 }
 
 export function svgProps(detail: DetailedSvgProps) {
   const {
+    size = '1rem',
+    width: _w,
+    height: _h,
+    w,
+    h,
     xmlns = 'http://www.w3.org/2000/svg',
     viewBox = '0 0 24 24',
     'aria-hidden': ariaHidden = 'true',
     currentFill = 'stroke',
-    w,
-    h,
-    size,
-    width,
-    height,
     fill,
     stroke,
     strokeWidth,
@@ -140,60 +257,57 @@ export function svgProps(detail: DetailedSvgProps) {
     ...props
   } = detail;
 
-  const sz = getSizes({ size, h, w, height, width, ratio });
-
-  // Check if stroke is a valid color or a valid number
-  const isNumber = (value: any): boolean => !isNaN(Number(value)) && Number(value) > 0;
-  const isColor = (value: any): boolean =>
-    typeof value === 'string' &&
-    (/^#[0-9A-Fa-f]{3,6}$/.test(value) || // Hex color
-      /^rgb\((\d{1,3}),\s*(\d{1,3}),\s*(\d{1,3})\)$/.test(value) || // RGB
-      /^rgba\((\d{1,3}),\s*(\d{1,3}),\s*(\d{1,3}),\s*(0|1|0?\.\d+)\)$/.test(value) || // RGBA
-      /^[a-zA-Z]+$/.test(value)); // Named color
+  const s = getSizes({ size, width: _w, height: _h, h, w, ratio });
 
   // Determine strokeIsColor and strokeIsWidth
   const strokeIsColor = typeof stroke === 'string' && isColor(stroke) ? stroke : undefined;
+  // Check if stroke is a valid color or a valid number
   const strokeIsWidth = strokeWidth || (isNumber(stroke) ? stroke : undefined);
+  const getColor: Record<typeof currentFill, Record<string, string | undefined> | undefined> = {
+    fill: { fill: fill || color },
+    stroke: { stroke: strokeIsColor || color },
+    'fill-stroke': { fill: fill || color, stroke: strokeIsColor || color },
+    none: undefined
+  };
 
   const __props = {
     fill,
-    stroke: strokeIsColor,
-    strokeWidth: strokeIsWidth,
+    stroke,
+    strokeWidth,
     strokeLinecap,
     strokeLinejoin,
     viewBox,
     xmlns,
-    height: !isValidSize(size) ? sz.h : undefined,
-    width: !isValidSize(size) ? sz.w : undefined,
-    style: { ...style, height: sz.h, width: sz.w, minHeight: sz.h, minWidth: sz.w },
+    /* height: !isValidSize(size) ? height : undefined, */
+    /* width: !isValidSize(size) ? width : undefined, */
+    style: { ...s, minHeight: s.height, minWidth: s.width, color, ...getColor[currentFill], ...style },
     'aria-hidden': ariaHidden,
     ...props
   } as React.SVGAttributes<SVGSVGElement>;
 
   switch (currentFill) {
     case 'stroke':
-      __props.fill = fill || 'none';
-      __props.stroke = strokeIsColor || color || 'currentColor';
+      __props.fill = !fill ? 'none' : undefined;
+      __props.stroke = !strokeIsColor ? 'currentColor' : undefined;
       __props.strokeWidth = strokeIsWidth || '2';
       __props.strokeLinecap = strokeLinecap || 'round';
       __props.strokeLinejoin = strokeLinejoin || 'round';
       break;
     case 'fill':
-      __props.fill = fill || color || 'currentColor';
+      __props.fill = !fill ? 'currentColor' : undefined;
       __props.stroke = strokeIsColor || 'none';
       __props.strokeWidth = strokeIsWidth || '0';
       __props.strokeLinecap = strokeLinecap;
       __props.strokeLinejoin = strokeLinejoin;
       break;
     case 'fill-stroke':
-      __props.fill = fill || color || 'currentColor';
-      __props.stroke = strokeIsColor || 'currentColor';
+      __props.fill = !fill ? 'currentColor' : undefined;
+      __props.stroke = !strokeIsColor ? 'currentColor' : undefined;
       __props.strokeWidth = strokeIsWidth || '2';
       __props.strokeLinecap = strokeLinecap || 'round';
       __props.strokeLinejoin = strokeLinejoin || 'round';
       break;
     case 'none':
-      __props.fill = fill || color;
       __props.stroke = strokeIsColor;
       __props.strokeWidth = strokeIsWidth;
       __props.strokeLinecap = strokeLinecap;
@@ -203,10 +317,10 @@ export function svgProps(detail: DetailedSvgProps) {
       break;
   }
 
-  return { props: __props, ...sz };
+  return __props;
 }
 
-export const Svg = React.forwardRef<React.ElementRef<'svg'>, DetailedSvgProps>((props, ref) => <svg {...{ ref, ...svgProps({ ...props }).props }} />);
+export const Svg = React.forwardRef<React.ComponentRef<'svg'>, DetailedSvgProps>((props, ref) => <svg ref={ref} {...svgProps(props)} />);
 Svg.displayName = 'Svg';
 
 export default Svg;

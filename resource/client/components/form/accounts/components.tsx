@@ -1,9 +1,9 @@
-'use client';
 import * as React from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { Button } from '../../ui/button';
 import { Loader } from '../../loader';
+import { Button } from '../../ui/button';
+import { Portal } from '@/resource/hooks/use-open-state';
 import { cn } from 'cn';
 
 interface Options {
@@ -46,13 +46,15 @@ export function styleForm() {
 
 interface ButtonSubmitProps extends React.ComponentPropsWithRef<typeof Button> {
   label: string;
+  loading?: boolean;
 }
 export function AuthButtonSubmit(_props: ButtonSubmitProps) {
-  const { label, className, ...props } = _props;
+  const { label, className, loading, disabled, ...props } = _props;
   return (
-    <Button {...props} type="submit" size="2xl" className={styleForm().auth().submit({ className })}>
-      <span className="text-white relative z-[3]">{label}</span>
+    <Button {...props} type="submit" size="2xl" disabled={disabled || loading} className={styleForm().auth().submit({ className })}>
+      {!loading && <span className="text-white relative z-[3]">{label}</span>}
       <span className="backdrop-gradient transition-[transform,opacity] duration-500 group-focus-within:opacity-100 group-has-[input[value='']]:opacity-0 group-has-[input[value='']]:[transform:translate(-50%,-50%)]" />
+      {loading && <Loader type="spinner" size="22px" color="white" />}
     </Button>
   );
 }
@@ -96,8 +98,13 @@ export function LoaderAuthPage(_props: LoaderAuthPageProps) {
   const { loading } = _props;
   if (!loading) return null;
   return (
-    <div className="fixed size-full centered bg-[linear-gradient(108.32deg,#62cdcb0a_24.88%,#4599db0a_78.49%)] top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-[120]">
-      <Loader type="spinner" size="22px" />
-    </div>
+    <Portal render={loading}>
+      <div
+        data-overlay-auth=""
+        className="fixed size-full centered bg-[linear-gradient(108.32deg,#62cdcb0a_24.88%,#4599db0a_78.49%)] top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-[120]"
+      >
+        {/* <Loader type="spinner" size="22px" /> */}
+      </div>
+    </Portal>
   );
 }

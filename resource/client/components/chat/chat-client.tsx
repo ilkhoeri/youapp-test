@@ -19,9 +19,7 @@ export type ChatDisplayProps = Nullable<ChatHeaderProps & ChatBodyProps, 'messag
 
 export function ChatClient({ chats }: { chats: Array<AllChatProps> | null }) {
   const { user } = useApp();
-  const searchParams = useSearchParams();
-  const { loading, setLoading, searchQuery: query } = useActiveChat();
-  const chatGroupId = searchParams.get(query!);
+  const { loading, setLoading, searchSlug: chatGroupId } = useActiveChat();
 
   // const [allChat, setAllChat] = React.useState<Array<AllChatProps> | null>(null);
   const [chatGroup, setChatGroup] = React.useState<Array<MessageProp> | null>(null);
@@ -43,8 +41,6 @@ export function ChatClient({ chats }: { chats: Array<AllChatProps> | null }) {
         // if (!response.ok) throw new Error('Failed to fetch chat group');
         // const data = await response.json();
         // setChatGroup(data);
-
-        // await getChats().then(data => setAllChat(data));
         await getMessages(chatGroupId).then(data => setChatGroup(data));
       } catch (err) {
         setError(err instanceof Error ? err.message : 'An error occurred');
@@ -82,7 +78,7 @@ export function ChatClient({ chats }: { chats: Array<AllChatProps> | null }) {
     );
   }
 
-  const chat = chats?.find(chat => chat.type === 'GROUP' && chat.id === chatGroupId);
+  const chat = chats?.find(chat => chat.id === chatGroupId);
   const members = chat?.users?.filter(find => find.email !== user?.email);
 
   return (

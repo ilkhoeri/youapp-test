@@ -111,16 +111,17 @@ export type DatePickerProps =
   | ({ type: 'range' } & DatePickerRangeProps);
 
 export const DatePicker = React.forwardRef<HTMLButtonElement, DatePickerProps>((_props, ref) => {
-  const { type, variant = 'filled', size = 'sm', placeholder = 'Pick a date', formItemId, formDescriptionId, formMessageId, error, name, openWith, ...props } = _props;
+  const { type, variant = 'filled', size = 'sm', placeholder = 'Pick a date', name, openWith, mobileBreakpoint, modal, defaultOpen, open, onOpenChange, ...props } = _props;
 
   const shareProps = {
     ref,
-    formItemId,
-    formDescriptionId,
-    formMessageId,
-    error,
     name,
     openWith,
+    mobileBreakpoint,
+    modal,
+    defaultOpen,
+    open,
+    onOpenChange,
     'data-field': '',
     className: classesInput({ variant, size })
   };
@@ -142,8 +143,8 @@ export const DatePicker = React.forwardRef<HTMLButtonElement, DatePickerProps>((
   if (type === 'single') {
     const { disabled, initialFocus = true, defaultValue: _defaultValue, value: _value, onChange, classNames, ...rest } = props as DatePickerSingleProps;
 
-    const defaultValue = typeof _defaultValue === 'string' ? new Date(_defaultValue) : _defaultValue;
     const value = typeof _value === 'string' ? new Date(_value) : _value;
+    const defaultValue = typeof _defaultValue === 'undefined' ? value : typeof _defaultValue === 'string' ? new Date(_defaultValue) : _defaultValue;
     const dateValue =
       value &&
       new Date(value).toLocaleString('id-ID', {

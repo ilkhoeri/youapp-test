@@ -45,6 +45,7 @@ export function SettingAvatarForm({ account }: { account: Account }) {
       toast.error('Error');
     } finally {
       setLoading(false);
+      document.body.style.overflow = '';
       router.refresh();
     }
   }

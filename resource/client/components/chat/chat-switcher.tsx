@@ -1,9 +1,9 @@
 'use client';
 import * as React from 'react';
 import { AllChatProps } from '@/resource/types/user';
+import { User3FillIcon } from '../icons-fill';
 import { Select } from '../ui/select';
 import { cn } from 'cn';
-import { User3FillIcon } from '../icons-fill';
 
 interface ChatSwitcherProps {
   chats: AllChatProps[] | null;
@@ -27,13 +27,15 @@ export function ChatSwitcher(_props: ChatSwitcherProps) {
       return;
     }
 
-    const stillValid = chats!.some(chat => chat.type === 'GROUP' && chat.id === selectedChat);
+    // const stillValid = chats!.some(chat => chat.type === 'GROUP' && chat.id === selectedChat);
+    const stillValid = chats!.some(chat => chat.id === selectedChat);
     if (!stillValid) {
       setSelectedChat(defaultSelectedChat);
     }
   }, [chats, selectedChat, defaultSelectedChat]);
 
-  const chat = chats?.find(chat => chat.type === 'GROUP' && chat.id === selectedChat);
+  // const chat = chats?.find(chat => chat.type === 'GROUP' && chat.id === selectedChat);
+  const chat = chats?.find(chat => chat.id === selectedChat);
 
   return (
     <Select key={chat?.id} value={selectedChat} onValueChange={setSelectedChat}>

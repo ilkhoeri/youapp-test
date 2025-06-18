@@ -48,9 +48,7 @@ export default async function Settings({ params, searchParams }: Params) {
 
   return (
     <section className="w-full max-w-5xl mx-auto">
-      <Suspense fallback="Load...">
-        <SettingsAccounts />
-      </Suspense>
+      <SettingsAccounts />
     </section>
   );
 }

@@ -75,15 +75,17 @@ interface ActiveChatStore extends UseChat, getChatId, InferType<typeof useScroll
   setLoading: (prev: boolean | ((prev: boolean) => boolean)) => void;
   expanded: (targetId?: string) => boolean;
   setExpanded: (value: string | null | boolean | undefined, opts?: ExpandedOptions) => void;
+  searchSlug: string | null | undefined;
 }
 
 const ActiveListContext = React.createContext<ActiveChatStore | undefined>(undefined);
 
 interface ActiveChatProviderProps extends getChatId {
+  searchSlug: string | null | undefined;
   children: React.ReactNode;
 }
 
-export function ActiveChatProvider({ children, searchQuery }: ActiveChatProviderProps) {
+export function ActiveChatProvider({ children, searchQuery, searchSlug }: ActiveChatProviderProps) {
   const [members, setMembers] = React.useState<string[]>([]);
   const [loading, setLoading] = React.useState<boolean>(false);
   const [_expanded, _setExpanded] = React.useState<ExpandedState>(false);
@@ -163,7 +165,7 @@ export function ActiveChatProvider({ children, searchQuery }: ActiveChatProvider
   );
 
   return (
-    <ActiveListContext.Provider value={{ members, add, searchQuery, remove, set, loading, setLoading, expanded, setExpanded, ...getChat, ...scrollIntoView }}>
+    <ActiveListContext.Provider value={{ members, add, searchQuery, searchSlug, remove, set, loading, setLoading, expanded, setExpanded, ...getChat, ...scrollIntoView }}>
       {children}
     </ActiveListContext.Provider>
   );

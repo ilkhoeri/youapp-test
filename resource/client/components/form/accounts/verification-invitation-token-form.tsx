@@ -105,7 +105,7 @@ export function InvitationVerificationTokenForm(_props: InvitationVerificationTo
             render={({ field }) => <Form.InputField size="lg" disabled={loading} label="Invitation Token" placeholder="Enter Your Token" classNames={classes.focused()} {...field} />}
           />
 
-          <AuthButtonSubmit label="Verify" disabled={loading} className="mt-2" />
+          <AuthButtonSubmit label="Verify" loading={loading} className="mt-2" />
 
           <DirectLink disabled={loading} href="/auth/sign-in" label={['Have an account?', 'Login here']} />
         </Form>

@@ -1,12 +1,15 @@
 'use client';
 
 import * as React from 'react';
+import { createPortal } from 'react-dom';
 import { cn } from 'cn';
 import DOMPurify from 'dompurify';
 import { EmojiEntry, User } from './types';
-
 import emojiJson from './emoji.json' with { type: 'json' };
+
 import './inline-editor.css';
+import { useElementRect } from '@/resource/hooks/use-element-info';
+import { getVarsPositions, useUpdatedPositions } from '@/resource/hooks/use-open-state';
 
 export type TValues<T extends unknown = string> = Record<string, T>;
 
@@ -131,12 +134,36 @@ export function InlineEditor<TData, TTag extends TTagPatterns = TTagPatterns>(_p
   const [mentionActive, setMentionActive] = React.useState(false);
   const [selectedIndex, setSelectedIndex] = React.useState(0);
   const [filteredUsers, setFilteredUsers] = React.useState<typeof users>([]);
-  const [mentionPosition, setMentionPosition] = React.useState<{ top: number; left: number } | null>(null);
+  // const [position, setPosition] = React.useState<{ top: number; left: number } | null>(null);
+
+  const rootRef = React.useRef<HTMLDivElement>(null);
+  const contentRef = React.useRef<HTMLUListElement>(null);
+  const root = useElementRect<HTMLDivElement>(rootRef?.current);
+  const content = useElementRect<HTMLUListElement>(contentRef?.current);
+
+  const { newAlign, newSide } = useUpdatedPositions({
+    triggerRect: root.rect,
+    contentRect: content.rect,
+    align: 'center',
+    side: 'top',
+    sideOffset: 8,
+    alignOffset: 0
+  });
+
+  const { vars } = getVarsPositions({
+    sideOffset: 8,
+    alignOffset: 0,
+    align: newAlign,
+    side: newSide,
+    triggerRect: root.rect,
+    contentRect: content.rect,
+    contentSize: content.size
+  });
 
   function emptyUsers() {
     setMentionActive(false);
     setFilteredUsers([]);
-    setMentionPosition(null);
+    // setPosition(null);
   }
 
   // Cek input untuk aktifkan mention mode
@@ -180,8 +207,8 @@ export function InlineEditor<TData, TTag extends TTagPatterns = TTagPatterns>(_p
           emptyUsers();
         }
         // Hitung posisi dropdown
-        const rect = sel.getRangeAt(0).getBoundingClientRect();
-        setMentionPosition({ top: rect.top, left: rect.left + window.scrollX });
+        // const rect = sel.getRangeAt(0).getBoundingClientRect();
+        // setPosition({ top: rect.top, left: rect.left + window.scrollX });
       } else {
         emptyUsers();
       }
@@ -230,8 +257,6 @@ export function InlineEditor<TData, TTag extends TTagPatterns = TTagPatterns>(_p
 
       // const caretOffset = getCaretOffset(el);
 
-      // setCaretOffset(el, caretOffset);
-
       // setTimeout(() => {
       //   inputTagFormatting(tagPattern);
       //   // handleTagFormatting(tagPattern);
@@ -242,6 +267,8 @@ export function InlineEditor<TData, TTag extends TTagPatterns = TTagPatterns>(_p
       inputMention(e);
 
       inputAutoEmoji(emoji);
+
+      // setCaretOffset(el, caretOffset);
 
       // console.log('[[ TEXT CONTENT ]]:', text);
 
@@ -298,19 +325,18 @@ export function InlineEditor<TData, TTag extends TTagPatterns = TTagPatterns>(_p
       if (isTagKey && !e.shiftKey) {
         inputTagFormatting(e, tagPattern);
         // handleTagFormatting(e, tagPattern);
-
         // Setelah DOM update
-        // if (isCaretAtEndOfInline(currentTags)) {
-        //   e.preventDefault(); // Mencegah spasi atau enter di dalam <tag> ditambahkan
-        //   moveCaretAfterInline(currentTags);
-        //   // Menambah spasi atau enter secara manual di luar tag
-        //   insertManualChar(e);
-        // }
-        // if (isCaretAtEndOfBlock()) {
-        //   e.preventDefault();
-        //   moveCaretAfterBlock();
-        // }
-        // cleanEmptyNodes(e.currentTarget, currentTags);
+        if (isCaretAtEndOfInline(currentTags)) {
+          e.preventDefault(); // Mencegah spasi atau enter di dalam <tag> ditambahkan
+          moveCaretAfterInline(currentTags);
+          // Menambah spasi atau enter secara manual di luar tag
+          insertManualChar(e);
+        }
+        if (isCaretAtEndOfBlock()) {
+          e.preventDefault();
+          moveCaretAfterBlock();
+        }
+        cleanEmptyNodes(e.currentTarget, currentTags);
       }
 
       if (isUndo(e) && undoStack.length > 1) {
@@ -363,25 +389,25 @@ export function InlineEditor<TData, TTag extends TTagPatterns = TTagPatterns>(_p
     [onBeforeInput]
   );
 
-  React.useEffect(() => {
-    const el = editorRef.current;
-    if (!el) return;
+  // React.useEffect(() => {
+  //   const el = editorRef.current;
+  //   if (!el) return;
 
-    if (value === '') {
-      el.innerHTML = '';
-      cleanEmptyNodes(el, currentTags);
-      el.append(document.createTextNode('')); // agar bisa diketik
-      // el.focus();
-    }
-  }, [value]);
+  //   if (value === '') {
+  //     el.innerHTML = '';
+  //     cleanEmptyNodes(el, currentTags);
+  //     el.append(document.createTextNode('')); // agar bisa diketik
+  //     // el.focus();
+  //   }
+  // }, [value]);
 
   // Render value (markdown) ke dalam HTML (formatted)
-  React.useEffect(() => {
-    if (editorRef.current && editorRef.current.innerHTML !== formattedHTML) {
-      editorRef.current.innerHTML = formattedHTML + '\n';
-      // moveCaretToEnd(editorRef.current);
-    }
-  }, [formattedHTML]);
+  // React.useEffect(() => {
+  //   if (editorRef.current && editorRef.current.innerHTML !== formattedHTML) {
+  //     editorRef.current.innerHTML = formattedHTML + '\n';
+  //     // moveCaretToEnd(editorRef.current);
+  //   }
+  // }, [formattedHTML]);
 
   // Handle autoFocus
   React.useEffect(() => {
@@ -393,59 +419,69 @@ export function InlineEditor<TData, TTag extends TTagPatterns = TTagPatterns>(_p
 
   const stylesApi = { unstyled, classNames, styles };
 
-  return (
-    <div onKeyDown={handleMentionKeyDown} {...getStyles('root', { className, style, ...stylesApi })}>
-      <div
-        {...{
-          ...props,
-          role,
-          contentEditable,
-          suppressHydrationWarning,
-          suppressContentEditableWarning,
-          'aria-disabled': arDisabled || disabled,
-          disabled,
-          dir
-        }}
-        // ref={editorRef}
-        ref={node => {
-          if (typeof ref === 'function') ref(node);
-          else if (ref) (ref as React.MutableRefObject<HTMLDivElement | null>).current = node;
-          (editorRef.current as HTMLDivElement | null) = node;
-        }}
-        onInput={handleInput}
-        onKeyDown={handleKeyDown}
-        onBeforeInput={handleBeforeInput}
-        data-placeholder={placeholder}
-        {...getStyles('editor', stylesApi)}
-      />
+  const isMentions = users && users.length > 0 && mentionActive && filteredUsers;
 
-      {users && users.length > 0 && mentionActive && mentionPosition && filteredUsers && (
-        <ul className="u-list">
-          {filteredUsers?.map((user, i) => (
-            <li
-              key={user.id}
-              dir="auto"
-              data-focused={i === selectedIndex}
-              className={cn('u-item')}
-              onMouseDown={e => {
-                e.preventDefault();
-                insertMention(user);
-                setMentionActive(false);
-              }}
-              ref={el => {
-                if (i === selectedIndex && el) {
-                  el.scrollIntoView({ block: 'nearest' });
-                }
-              }}
-            >
-              <i className="i-avatar" style={{ '--user-avatar': user?.image && `url("${user?.image}")` } as React.CSSProperties} />
-              <span dir="ltr">{user.name}</span>
-            </li>
-          ))}
-          {filteredUsers?.length === 0 && <li style={{ color: '#999' }}>No users</li>}
-        </ul>
+  return (
+    <>
+      <div ref={rootRef} onKeyDown={handleMentionKeyDown} {...getStyles('root', { className, style, ...stylesApi })}>
+        <div
+          {...{
+            ...props,
+            role,
+            contentEditable,
+            suppressHydrationWarning,
+            suppressContentEditableWarning,
+            'aria-disabled': arDisabled || disabled,
+            disabled,
+            dir
+          }}
+          // ref={editorRef}
+          ref={node => {
+            if (typeof ref === 'function') ref(node);
+            else if (ref) (ref as React.MutableRefObject<HTMLDivElement | null>).current = node;
+            (editorRef.current as HTMLDivElement | null) = node;
+          }}
+          onInput={handleInput}
+          onKeyDown={handleKeyDown}
+          onBeforeInput={handleBeforeInput}
+          data-placeholder={placeholder}
+          {...getStyles('editor', stylesApi)}
+        />
+      </div>
+
+      {createPortal(
+        <ul
+          ref={contentRef}
+          className={isMentions ? 'u-list' : undefined}
+          style={{ top: 'var(--top)', left: 'var(--left)', width: 'var(--measure-trigger-w)', ...vars.triggerSize, ...vars.triggerInset }}
+        >
+          {isMentions &&
+            filteredUsers?.map((user, i) => (
+              <li
+                key={user.id}
+                dir="auto"
+                data-focused={i === selectedIndex}
+                className={cn('u-item')}
+                onMouseDown={e => {
+                  e.preventDefault();
+                  insertMention(user);
+                  setMentionActive(false);
+                }}
+                ref={el => {
+                  if (i === selectedIndex && el) {
+                    el.scrollIntoView({ block: 'nearest' });
+                  }
+                }}
+              >
+                <i className="i-avatar" style={{ '--user-avatar': user?.image && `url("${user?.image}")` } as React.CSSProperties} />
+                <span dir="ltr">{user.name}</span>
+              </li>
+            ))}
+          {/* {filteredUsers?.length === 0 && <li style={{ color: '#999' }}>No users</li>} */}
+        </ul>,
+        document.body
       )}
-    </div>
+    </>
   );
 }
 InlineEditor.displayName = 'InlineEditor';

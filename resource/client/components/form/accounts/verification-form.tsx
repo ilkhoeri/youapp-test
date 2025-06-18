@@ -61,7 +61,7 @@ export function VerificationTokenForm({ className, ...props }: React.ComponentPr
           render={({ field }) => <Form.InputField label="Token" placeholder="Enter Your Token" size="lg" disabled={loading} classNames={classes.focused()} {...field} />}
         />
 
-        <AuthButtonSubmit label="Verify" disabled={loading} className="mt-2" />
+        <AuthButtonSubmit label="Verify" loading={loading} className="mt-2" />
       </Form>
     </Form.Provider>
   );

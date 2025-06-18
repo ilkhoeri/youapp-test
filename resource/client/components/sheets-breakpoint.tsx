@@ -6,12 +6,9 @@ import { Drawer } from './ui/drawer';
 import { Popover } from './ui/popover';
 import { twMerge as cn } from 'tailwind-merge';
 
-import type { FieldError } from 'react-hook-form';
-
 export interface ContentProps {
   modal?: boolean;
   disabled?: boolean;
-  error?: FieldError;
   open?: boolean;
   setOpen?: (prev: boolean | ((prev: boolean) => boolean)) => void;
 }
@@ -22,9 +19,6 @@ export interface __SheetsBreakpointProps extends Omit<ContentProps, 'setOpen'> {
   openWith?: 'popover' | 'dialog' | 'alert-dialog' | 'drawer';
   mobileBreakpoint?: number | `${number}`;
   name?: string;
-  formItemId?: string;
-  formDescriptionId?: string;
-  formMessageId?: string;
   classNames?: Partial<Record<'trigger' | 'content', string>>;
   defaultOpen?: boolean;
   onOpenChange?: ContentProps['setOpen'];
@@ -44,10 +38,6 @@ export const SheetsBreakpoint = React.forwardRef<HTMLButtonElement, SheetsBreakp
     role = 'button',
     disabled,
     'aria-disabled': ariaDisabled,
-    formItemId,
-    formDescriptionId,
-    formMessageId,
-    error,
     id,
     name,
     className,
@@ -116,7 +106,7 @@ export const SheetsBreakpoint = React.forwardRef<HTMLButtonElement, SheetsBreakp
     return () => window.removeEventListener('popstate', handlePopState);
   }, [isMobile, open, setOpen, hasPushedStateRef.current]);
 
-  const restProp: ContentProps = { setOpen, open, error, disabled, modal };
+  const restProp: ContentProps = { setOpen, open, disabled, modal };
 
   const content = typeof contentProp === 'function' ? contentProp(restProp) : contentProp;
   const triggerFn = typeof triggerProp === 'function' && triggerProp(restProp);
@@ -126,12 +116,10 @@ export const SheetsBreakpoint = React.forwardRef<HTMLButtonElement, SheetsBreakp
     ref,
     type,
     role,
-    id: id || name || formItemId,
-    name: name || formItemId,
-    'aria-invalid': !!error,
+    id: id || name,
+    name: name,
     disabled,
     'aria-disabled': ariaDisabled || (disabled ? 'true' : undefined),
-    'aria-describedby': !error ? cn(formDescriptionId) : cn(formDescriptionId, formMessageId),
     className: cn(className, classNames?.trigger),
     ...props
   };

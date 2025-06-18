@@ -84,7 +84,8 @@ export function SettingAboutForm({ account }: { account: Account }) {
     date: []
   });
 
-  const [isEdit, setIsEdit] = React.useState(false);
+  const [isEdit, setIsEdit] = React.useState<boolean>(false);
+  const [openCalendar, setOpenCalendar] = React.useState<boolean>(false);
 
   const { form, router, loading, setLoading } = useSettingsForm<SettingGeneralFormValues>(account, {
     schema: SettingGeneralSchema,
@@ -164,16 +165,18 @@ export function SettingAboutForm({ account }: { account: Account }) {
                 name="about.birthDay"
                 render={({ field }) => (
                   <Form.DateField
+                    open={openCalendar}
+                    onOpenChange={setOpenCalendar}
                     type="single"
-                    name="about.birthDay"
                     label="Birthday:"
                     openWith="drawer"
                     disabled={loading}
-                    value={field.value}
+                    {...field}
                     onChange={date => {
                       field.onChange(date);
                       form.setValue('about.horoscope', getHoroscopeSign(date), { shouldValidate: true });
                       form.setValue('about.zodiac', getShioEntry(date)?.animal, { shouldValidate: true });
+                      setOpenCalendar(false);
                     }}
                     placeholder="DD MM YYYY"
                     className={classes.className}

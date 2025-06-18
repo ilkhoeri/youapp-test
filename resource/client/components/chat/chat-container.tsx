@@ -3,13 +3,15 @@ import * as React from 'react';
 import Link from 'next/link';
 
 import { cn } from 'cn';
+import { x } from 'xuxi';
 import { Tabs } from '../ui/tabs';
 import { IconType } from '../ui/svg';
 import { SearchIcon } from '../icons';
 import { ChatList } from './chat-list';
 import { Input } from '../fields/input';
-import { ChatClient } from './chat-client';
+import { Skeleton } from './chat-skeleton';
 import { useMount } from '../client-mount';
+import { ChatClient } from './chat-client';
 import { Resizable } from '../ui/resizable';
 import { Separator } from '../ui/separator';
 import { buttonVariants } from '../ui/button';
@@ -17,93 +19,10 @@ import { ChatSwitcher } from './chat-switcher';
 import { CreateChatGroup } from './chat-group';
 import { UseChatOptions } from './chat-context';
 import { Tag2DuotoneIcon } from '../icons-duotone';
+import { useApp } from '../../contexts/app-provider';
 import { useDeviceQuery } from '@/resource/hooks/use-device-query';
 import { AllChatProps, MinimalAccount } from '@/resource/types/user';
 import { ArchiveFillIcon, ArchiveJunkFillIcon, CartShoppingFillIcon, FileDraftFillIcon, InboxFillIcon, MailFillIcon, SendFillIcon, TrashFillIcon, RefreshFillIcon } from '../icons-fill';
-import { Skeleton } from './chat-skeleton';
-import { getChats } from '@/resource/server/messages/get-chats';
-
-const links = {
-  '1': [
-    {
-      title: 'All',
-      label: '128',
-      icon: MailFillIcon,
-      variant: 'default'
-    },
-    {
-      title: 'Inbox',
-      label: '128',
-      icon: InboxFillIcon,
-      variant: 'ghost'
-    },
-    {
-      title: 'Drafts',
-      label: '9',
-      icon: FileDraftFillIcon,
-      variant: 'ghost'
-    },
-    {
-      title: 'Sent',
-      label: '',
-      icon: SendFillIcon,
-      variant: 'ghost'
-    },
-    {
-      title: 'Junk',
-      label: '23',
-      icon: ArchiveJunkFillIcon,
-      variant: 'ghost'
-    },
-    {
-      title: 'Trash',
-      label: '',
-      icon: TrashFillIcon,
-      variant: 'ghost'
-    },
-    {
-      title: 'Archive',
-      label: '',
-      icon: ArchiveFillIcon,
-      variant: 'ghost'
-    }
-  ] as ChatNavProps['links'],
-  '2': [
-    {
-      title: 'Updates',
-      label: '342',
-      icon: RefreshFillIcon,
-      variant: 'ghost'
-    },
-    {
-      title: 'Shopping',
-      label: '8',
-      icon: CartShoppingFillIcon,
-      variant: 'ghost'
-    },
-    {
-      title: 'Social',
-      label: '972',
-      icon: Tag2DuotoneIcon,
-      color: '#00a76f',
-      variant: 'ghost'
-    },
-    {
-      title: 'Forums',
-      label: '128',
-      icon: Tag2DuotoneIcon,
-      color: '#ffab00',
-      variant: 'ghost'
-    },
-    {
-      title: 'Promotions',
-      label: '21',
-      icon: Tag2DuotoneIcon,
-      color: '#ff5630',
-      variant: 'ghost'
-    }
-  ] as ChatNavProps['links']
-};
 
 const classTabs = {
   list: 'inline-flex h-9 items-center justify-center rounded-lg bg-background-theme border p-1 aria-disabled:opacity-50',
@@ -119,45 +38,112 @@ interface ChatContainerProps extends UseChatOptions {
   navCollapsedSize?: number;
 }
 
+type ContainerActionsProps = Pick<ChatContainerProps, 'accounts' | 'chats'>;
+
+function useContainerActions(props: ContainerActionsProps) {
+  const { accounts, chats: allChat } = props;
+  const app = useApp();
+
+  const inbox = allChat?.flatMap(chat => chat.messages.filter(msg => (app.user?.id ? msg.seenIds?.includes(app.user?.id) : [])));
+
+  const links = {
+    '1': [
+      {
+        title: 'All',
+        label: x.cnx(allChat?.length),
+        icon: MailFillIcon,
+        variant: 'default'
+      },
+      {
+        title: 'Inbox',
+        label: x.cnx(inbox?.length),
+        icon: InboxFillIcon,
+        variant: 'ghost'
+      },
+      {
+        title: 'Drafts',
+        label: x.cnx(0),
+        icon: FileDraftFillIcon,
+        variant: 'ghost'
+      },
+      {
+        title: 'Sent',
+        label: x.cnx(0),
+        icon: SendFillIcon,
+        variant: 'ghost'
+      },
+      {
+        title: 'Junk',
+        label: x.cnx(0),
+        icon: ArchiveJunkFillIcon,
+        variant: 'ghost'
+      },
+      {
+        title: 'Trash',
+        label: x.cnx(0),
+        icon: TrashFillIcon,
+        variant: 'ghost'
+      },
+      {
+        title: 'Archive',
+        label: x.cnx(0),
+        icon: ArchiveFillIcon,
+        variant: 'ghost'
+      }
+    ] as ChatNavProps['links'],
+
+    '2': [
+      {
+        title: 'Updates',
+        label: x.cnx(0),
+        icon: RefreshFillIcon,
+        variant: 'ghost'
+      },
+      {
+        title: 'Shopping',
+        label: x.cnx(0),
+        icon: CartShoppingFillIcon,
+        variant: 'ghost'
+      },
+      {
+        title: 'Social',
+        label: x.cnx(0),
+        icon: Tag2DuotoneIcon,
+        color: '#00a76f',
+        variant: 'ghost'
+      },
+      {
+        title: 'Forums',
+        label: x.cnx(0),
+        icon: Tag2DuotoneIcon,
+        color: '#ffab00',
+        variant: 'ghost'
+      },
+      {
+        title: 'Promotions',
+        label: x.cnx(0),
+        icon: Tag2DuotoneIcon,
+        color: '#ff5630',
+        variant: 'ghost'
+      }
+    ] as ChatNavProps['links']
+  };
+
+  return links;
+}
+
 export function ChatContainer(_props: ChatContainerProps) {
   const desktopQuery = useDeviceQuery('xl');
   const { accounts, chats: allChat, searchQuery, defaultLayout = desktopQuery ? [20, 32, 48] : [19, 31, 50], defaultCollapsed = false, navCollapsedSize } = _props;
   const [isCollapsed, setIsCollapsed] = React.useState(defaultCollapsed);
 
-  // const { loading, setLoading, searchQuery: query } = useActiveChat();
-  // const [allChat, setAllChat] = React.useState<Array<AllChatProps> | null>(null);
-  // // const [loading, setLoading] = React.useState<boolean>(false);
-  // const [error, setError] = React.useState<string | null>(null);
-
-  // React.useEffect(() => {
-  //   const fetchChatGroup = async () => {
-  //     setLoading(true);
-  //     setError(null);
-
-  //     try {
-  //       const response = await fetch('/api/chats');
-  //       if (!response.ok) throw new Error('Failed to fetch chat group');
-  //       const data = await response.json();
-  //       setAllChat(data);
-  //       // await getChats().then(data => setAllChat(data));
-  //     } catch (err) {
-  //       setError(err instanceof Error ? err.message : 'An error occurred');
-  //     } finally {
-  //       setLoading(false);
-  //     }
-  //   };
-
-  //   fetchChatGroup();
-  // }, []);
-
   const chatsIsDefined = allChat && allChat.length > 0;
 
+  const links = useContainerActions({ accounts, chats: allChat });
   // const members = chat?.users;
   const mount = useMount();
 
-  if (!mount) {
-    return <Skeleton.Container layouts={defaultLayout} />;
-  }
+  if (!mount) return <Skeleton.Container layouts={defaultLayout} />;
 
   return (
     <Resizable
@@ -243,6 +229,7 @@ interface ChatNavProps {
     icon?: IconType;
     color?: React.CSSProperties['color'];
     variant: 'default' | 'ghost';
+    disabled?: boolean;
   }[];
   className?: string;
 }
@@ -250,30 +237,19 @@ interface ChatNavProps {
 export function ChatNav({ links, isCollapsed, className }: ChatNavProps) {
   return (
     <div data-collapsed={isCollapsed} className={cn('group flex flex-col gap-4 py-2 data-[collapsed=true]:py-2', className)}>
-      <nav className="grid gap-1 px-2 group-[[data-collapsed=true]]:justify-center group-[[data-collapsed=true]]:px-2">
-        {links.map((link, index) => {
-          if (isCollapsed) {
-            return (
-              <Link
-                key={link.title}
-                href="#"
-                className={cn(buttonVariants({ variant: link.variant, size: 'icon' }), 'h-9 w-9', link.variant === 'default' && 'transition-colors bg-color text-background')}
-              >
-                {link?.icon && <link.icon color={link?.color} />}
-                <span className="sr-only">{link.title}</span>
-              </Link>
-            );
-          }
+      <nav className={cn('grid gap-1 px-2', isCollapsed && 'justify-center px-2')}>
+        {links.map(({ title, label, icon: Icon, color, variant, disabled }, index) => {
+          const isIconOnly = isCollapsed;
+          const isDefault = variant === 'default';
+
+          const baseClasses = buttonVariants({ variant, size: isIconOnly ? 'icon' : 'sm' });
+          const stateClasses = cn(isDefault && 'transition-colors bg-color text-background', isIconOnly ? 'h-9 w-9' : 'justify-start gap-2');
 
           return (
-            <Link
-              key={index}
-              href="#"
-              className={cn(buttonVariants({ variant: link.variant, size: 'sm' }), link.variant === 'default' && 'transition-colors bg-color text-background', 'justify-start gap-2')}
-            >
-              {link?.icon && <link.icon color={link?.color} />}
-              {link.title}
-              {link.label && <span className={cn('ml-auto', link.variant === 'default' && 'text-background')}>{link.label}</span>}
+            <Link key={index} href="#" aria-disabled={disabled} className={cn(baseClasses, stateClasses)}>
+              {Icon && <Icon color={color} />}
+              {isIconOnly ? <span className="sr-only">{title}</span> : title}
+              {!isIconOnly && label && <span className={cn('ml-auto', isDefault && 'text-background')}>{label}</span>}
             </Link>
           );
         })}

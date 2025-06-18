@@ -1101,15 +1101,18 @@
         @apply block relative size-[var(--ring-size)];
       }
       & [data-ring='ring'] {
-        @apply block absolute size-full opacity-100 rounded-full border-transparent border-t-[var(--ring-color,#757575)] [animation:rotate_var(--ring-duration)_cubic-bezier(0.5,0,0.5,1)_var(--delay,0s)_infinite_normal_none_running];
+        @apply block absolute size-full opacity-100 rounded-full border-[calc(var(--ring-size)*(18.25/100))] border-transparent border-t-[var(--ring-color,#757575)] [animation:rotate_var(--ring-duration)_cubic-bezier(0.5,0,0.5,1)_var(--delay,0s)_infinite_normal_none_running];
         &:nth-child(1) {
-          animation-delay: -0.45s;
+          --delay: -0.45s;
         }
         &:nth-child(2) {
-          animation-delay: -0.3s;
+          --delay: -0.3s;
         }
         &:nth-child(3) {
-          animation-delay: -0.15s;
+          --delay: -0.15s;
+        }
+        &:nth-child(4) {
+          --delay: 0s;
         }
       }
     }

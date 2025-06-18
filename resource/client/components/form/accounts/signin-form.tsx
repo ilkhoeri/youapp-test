@@ -4,11 +4,11 @@ import Link from 'next/link';
 import { Button } from '@/resource/client/components/ui/button';
 import { AuthButtonSubmit, DirectLink, LoaderAuthPage, styleForm } from './components';
 import { RequirementPassword, requirements } from './requirements-password';
+import { containerVariants } from '@/resource/styles/motion-styles';
 import { useSignIn } from '@/auth/handler-client';
 import * as motion from 'motion/react-client';
 import { Form } from '../../fields/form';
 import { cn } from 'cn';
-import { containerVariants } from '@/resource/styles/motion-styles';
 
 const classes = styleForm().auth();
 
@@ -89,7 +89,7 @@ export function SignInForm({ className, ...props }: React.ComponentPropsWithoutR
           />
         </div>
 
-        <AuthButtonSubmit label="Login" disabled={loading} />
+        <AuthButtonSubmit label="Login" loading={loading} />
 
         <Link
           aria-disabled={loading}

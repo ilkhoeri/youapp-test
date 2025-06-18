@@ -21,30 +21,26 @@ import {
   User2FillIcon,
   User3FillIcon
 } from '../icons-fill';
-import { Form, useForm } from '../fields/form';
 import { Chat } from '@prisma/client';
-import { EmptyChat } from './chat-room';
+import { Form, useForm } from '../fields/form';
 import { useApp } from '../../contexts/app-provider';
 import { SheetsBreakpoint } from '../sheets-breakpoint';
 import { pusherClient } from '@/resource/server/messages/pusher';
 import { formatPrettyDate } from '@/resource/const/times-helper';
-import { Account, Message as MessageProp, MinimalAccount } from '@/resource/types/user';
-import { useScrollIntoView } from '@/resource/hooks/use-scroll-into-view';
 import { ChatSchema, ChatValues } from '@/resource/schemas/chat';
-import { useChat, UseChatOptions, useOtherUser, ActiveChatProvider, useActiveChat } from './chat-context';
-import { formatDayLabel, getLastMessage, groupMessagesByDate } from './messages/helper';
-import { InlineEditor, limitedMarkdown } from '../inline-editor/inline-editor';
+import { Message as MessageProp, MinimalAccount } from '@/resource/types/user';
+import { UseChatOptions, useOtherUser, useActiveChat } from './chat-context';
+import { formatDayLabel, groupMessagesByDate } from './messages/helper';
 import { useIsMobile } from '@/resource/hooks/use-device-query';
+import { useMergedRef } from '@/resource/hooks/use-merged-ref';
+import { InlineEditor } from '../inline-editor/inline-editor';
 import { DateDivider } from './messages/date-divider';
-import { ClientMount } from '../client-mount';
 import { MessageBubble } from './messages/message-bubble';
 import { ChatAvatars } from './chat-avatar';
+import { find, debounce } from 'lodash';
 import { AlertModal } from '../alert';
 import { toast } from 'sonner';
-import { find, debounce } from 'lodash';
 import { cn } from 'cn';
-import { useMergedRef } from '@/resource/hooks/use-merged-ref';
-import { markMessagesAsSeenSequentially } from './messages/actions';
 
 const ICON_SIZE: number = 20;
 
@@ -289,13 +285,14 @@ interface DeleteGroupAlertProps extends UseChatOptions {
 function DeleteGroupAlert({ confirm, onConfirm, searchQuery }: DeleteGroupAlertProps) {
   const [loading, setLoading] = React.useState(false);
 
-  const chat = useChat({ searchQuery });
+  // const chat = useChat({ searchQuery });
+  const { searchSlug: chatId } = useActiveChat();
   const router = useRouter();
 
   const onDelete = React.useCallback(() => {
     setLoading(true);
     axios
-      .delete(`/api/chats/${chat.chatId}`)
+      .delete(`/api/chats/${chatId}`)
       .then(() => {
         onConfirm(false);
         router.push('/chat');
@@ -303,7 +300,7 @@ function DeleteGroupAlert({ confirm, onConfirm, searchQuery }: DeleteGroupAlertP
       })
       .catch(() => toast.error('Something went wrong!'))
       .finally(() => setLoading(false));
-  }, [router, chat.chatId]);
+  }, [router, chatId]);
 
   return (
     <AlertModal
@@ -332,13 +329,13 @@ export function ChatBody({ messages: initialMessages = [], searchQuery, members 
 
   const bottomRef = React.useRef<HTMLDivElement>(null);
 
-  const seenMessageIds = React.useRef<Set<string>>(new Set());
+  // const seenMessageIds = React.useRef<Set<string>>(new Set());
 
-  const { scrollableRef, targetRef } = useActiveChat();
+  const { scrollableRef, targetRef, searchSlug: chatId } = useActiveChat();
 
   const [messages, setMessages] = React.useState(initialMessages);
 
-  const { chatId } = useChat({ searchQuery });
+  // const { chatId } = useChat({ searchQuery });
 
   const { totalCount, byDate, dateKeys, lastMessage } = groupMessagesByDate(messages, user!!);
 
@@ -467,9 +464,9 @@ interface ChatFormProps extends UseChatOptions {
   members?: (MinimalAccount | null)[] | null | undefined;
 }
 export function ChatForm({ searchQuery, messages, members: initialMembers }: ChatFormProps) {
-  const { chatId } = useChat({ searchQuery });
+  // const { chatId } = useChat({ searchQuery });
 
-  const { scrollIntoView, isInView, targetRef } = useActiveChat();
+  const { scrollIntoView, isInView, targetRef, searchSlug: chatId } = useActiveChat();
 
   const { form } = useForm<ChatValues>({
     schema: ChatSchema,
@@ -567,7 +564,7 @@ export function ChatForm({ searchQuery, messages, members: initialMembers }: Cha
                   console.log('[VALUE]:', JSON.stringify(i));
                   field.onChange(i);
                 }}
-                onSubmit={onSubmit}
+                // onSubmit={onSubmit}
                 classNames={{
                   root: 'px-3 mt-2 overflow-y-auto min-h-20 max-h-[calc(100%-(0.5rem+3.5rem))]',
                   editor: 'my-0 w-full max-w-full text-sm md:text-[15px] bg-transparent h-auto resize-none leading-normal rounded-none border-0'
@@ -614,36 +611,6 @@ export function ChatForm({ searchQuery, messages, members: initialMembers }: Cha
         </Button>
       </Form>
     </Form.Provider>
-  );
-}
-
-export type ChatDisplayProps = Nullable<ChatHeaderProps & ChatBodyProps, 'messages.required' | 'chat.required'>;
-
-export function ChatDisplay(_props: ChatDisplayProps) {
-  const { chat, messages, searchQuery, members } = _props;
-  const today = new Date();
-
-  if (!chat || !messages || !searchQuery) {
-    return (
-      <div className="flex h-full flex-col">
-        <EmptyChat />
-      </div>
-    );
-  }
-
-  return (
-    <ClientMount>
-      <ActiveChatProvider searchQuery={searchQuery}>
-        <div className="flex h-full flex-col">
-          <div className="h-full flex flex-col relative z-[9]">
-            <ChatHeader key={`head-${chat?.id}`} chat={chat} searchQuery={searchQuery} />
-            <ChatBody key={`body-${chat?.id}`} members={members} messages={messages} searchQuery={searchQuery} />
-            <ChatForm key={`form-${chat?.id}`} members={members} messages={messages} searchQuery={searchQuery} />
-          </div>
-          <ChatBackground />
-        </div>
-      </ActiveChatProvider>
-    </ClientMount>
   );
 }
 

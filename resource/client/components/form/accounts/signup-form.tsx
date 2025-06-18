@@ -95,7 +95,7 @@ export function RegisterWithTokenForm(_props: RegisterWithTokenForm) {
           />
         </div>
 
-        <AuthButtonSubmit label="Register" disabled={loading} />
+        <AuthButtonSubmit label="Register" loading={loading} />
 
         <DirectLink disabled={loading} href="/auth/sign-in" label={['Have an account?', 'Login here']} />
       </Form>
@@ -207,7 +207,7 @@ export function RegisterForm({ className, ...props }: RegisterFormProps) {
           />
         </div>
 
-        <AuthButtonSubmit label="Register" disabled={loading} />
+        <AuthButtonSubmit label="Register" loading={loading} />
 
         <DirectLink disabled={loading} href="/auth/sign-in" label={['Have an account?', 'Login here']} />
       </Form>

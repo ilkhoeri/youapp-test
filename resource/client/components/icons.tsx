@@ -157,9 +157,7 @@ const horoscopeMap: Record<Horoscope, string[]> = {
 export function HoroscopeIcon({ horoscope, ...props }: SvgProps<{ horoscope: Horoscope }>) {
   return (
     <Svg {...props} stroke={1.75}>
-      {horoscopeMap[horoscope].map((path, key) => (
-        <path key={key} d={path} />
-      ))}
+      {horoscopeMap[horoscope]?.map((path, key) => <path key={key} d={path} />)}
     </Svg>
   );
 }
@@ -213,9 +211,7 @@ const shioMap: Record<ShioAnimals, string[]> = {
 export function ShioIcon({ shio, ...props }: SvgProps<{ shio: keyof typeof shioMap }>) {
   return (
     <Svg {...props} stroke={3.5} viewBox="0 0 48 48">
-      {shioMap[shio].map((path, key) => (
-        <path key={key} d={path} />
-      ))}
+      {shioMap[shio]?.map((path, key) => <path key={key} d={path} />)}
     </Svg>
   );
 }

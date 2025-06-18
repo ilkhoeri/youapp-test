@@ -81,7 +81,7 @@ interface ChatListItemProps {
 
 export function ChatListItem(_props: ChatListItemProps) {
   const { data } = _props,
-    { chatId, setLoading, searchQuery: query } = useActiveChat(),
+    { searchSlug: chatId, setLoading, searchQuery: query } = useActiveChat(),
     // searchParams = useSearchParams(),
     otherUser = useOtherUser(data),
     router = useRouter(),

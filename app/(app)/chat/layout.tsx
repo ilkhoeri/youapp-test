@@ -1,15 +1,11 @@
 import { Navigation } from '@/resource/client/components/actions';
-// import { getUsers } from '@/resource/db/user/get-accounts';
-// import { getChats } from '@/resource/server/messages/get-chats';
 
 interface LayoutProps {
   children: React.ReactNode;
 }
 export default function ChatsLayout({ children }: Readonly<LayoutProps>) {
-  // const [chats, users] = await Promise.all([getChats(), getUsers()]);
-
   return (
-    <section className="relative w-full min-h-screen max-w-screen-2xl mx-auto flex flex-col">
+    <section className="relative w-full min-h-screen max-w-screen-2xl mx-auto flex flex-col [&_[data-panel-group]]:mb-[55svh]">
       <div className="mb-6 mt-8 grid grid-cols-3 justify-items-center items-center">
         <Navigation instance="back" className="mr-auto" />
         <p className="text-sm font-semibold"></p>
