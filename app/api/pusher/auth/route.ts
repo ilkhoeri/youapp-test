@@ -24,7 +24,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 }
 */
 
-export async function POST(request: NextRequest) {
+export async function POST(req: NextRequest) {
   try {
     const session = await currentUser();
 
@@ -35,14 +35,15 @@ export async function POST(request: NextRequest) {
     }
 
     // Parse request body
-    const body = await request.json();
+    const body = await req.json();
     const socketId = body.socket_id;
     const channel = body.channel_name;
 
     const data = {
-      user_id: session.email,
-      // user_id: session.id,
+      // user_id: session.email,
+      user_id: session.id,
       user_info: {
+        email: session.email,
         name: session.username,
         avatar: session.image
       }

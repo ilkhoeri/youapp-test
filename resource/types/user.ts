@@ -29,6 +29,8 @@ export type ElaboratedUser = {
   favoriteIds?: string[] | null;
   /**  */
   saveIds?: string[] | null;
+  lastOnline?: Date;
+  lastSeen?: Date;
 };
 
 type UserAbout = Omit<user.About, 'gender'> & { gender?: UserGender };

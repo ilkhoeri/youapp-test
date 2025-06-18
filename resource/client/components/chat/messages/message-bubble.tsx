@@ -22,13 +22,12 @@ import { Popover } from '../../ui/popover';
 import { useIsMobile } from '@/resource/hooks/use-device-query';
 import { Svg, SvgProps } from '../../ui/svg';
 
-import css from './msg.module.css';
-import { debounce } from 'lodash';
 import axios from 'axios';
-import { useActiveChat, useChat, UseChatOptions } from '../chat-context';
-import { useMergedRef } from '@/resource/hooks/use-merged-ref';
+import { mergeRefs } from '@/resource/hooks/use-merged-ref';
 import { useApp } from '@/resource/client/contexts/app-provider';
 import { useRouter } from 'next/navigation';
+
+import css from './msg.module.css';
 
 const reactions: MessageReaction[] = [
   { emoji: '❤️', createdAt: new Date(Date.now()), id: '1', messageId: '1', userId: '1', user: null },
@@ -51,7 +50,7 @@ interface MessageBubbleProps extends React.ComponentPropsWithRef<'div'> {
   data: EnrichedMessage;
   lastMessage: EnrichedMessage | undefined;
   members?: (MinimalAccount | null)[] | null | undefined;
-  targetRef: React.RefObject<HTMLDivElement> | null;
+  targetRef?: React.RefObject<HTMLDivElement> | null;
   // classNames?: Partial<Record<MCTrees, string>>;
 }
 
@@ -60,9 +59,6 @@ export function MessageBubble(_props: MessageBubbleProps) {
   const [openMenu, setOpenMenu] = React.useState<boolean>(false);
 
   const isMediaQuery = useIsMobile();
-  const { user } = useApp();
-
-  const { searchSlug: chatId } = useActiveChat();
 
   const refAvatar = React.useRef<HTMLDivElement>(null);
   const refContent = React.useRef<HTMLDivElement>(null);
@@ -93,29 +89,10 @@ export function MessageBubble(_props: MessageBubbleProps) {
     cntpict = defFloat({ in: css._pictin, out: css._pictout }),
     emoji = defFloat({ in: css._emjin, out: css._emjout });
 
-  const markAsSeen = debounce((chatId: string, messageId: string) => {
-    axios.post(`/api/chats/${chatId}/seen`, { messageId });
-  }, 500); // delay 500ms agar tidak terlalu sering
-
-  React.useEffect(() => {
-    if (!targetRef?.current || (!!targetRef?.current && !!chatId && lastMessage?.id === data.id && data.senderId === user?.id)) return;
-
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        if (entry.isIntersecting && chatId && lastMessage?.id) markAsSeen(chatId, lastMessage?.id); // kirim ID terakhir
-      },
-      { threshold: 1.0 } // hanya saat 100% terlihat
-    );
-
-    observer.observe(targetRef?.current);
-
-    return () => observer.disconnect();
-  }, [chatId, lastMessage?.id]);
-
   return (
     <CtxMenu>
-      {seenBy}
-      <article key={data?.id} {...{ ...props, role: 'row', suppressHydrationWarning: true, tabIndex: -1 }} ref={targetRef}>
+      {/* <span className="text-sm">{data.senderId}</span> */}
+      <article key={data?.id} {...{ ...props, role: 'row', suppressHydrationWarning: true, tabIndex: -1 }} ref={mergeRefs(ref, targetRef)}>
         <div tabIndex={-1} className={container}>
           <div ref={refRootHovered} className={root}>
             <div
@@ -464,8 +441,6 @@ function useMenuMap(data: EnrichedMessage) {
       router.refresh();
     }
   }, [data.id, router]);
-
-  console.log('MESSAGE_ID', data.id);
 
   const opts = <T,>(params: T, obj: MenuMap) => (params ? [obj] : []);
 

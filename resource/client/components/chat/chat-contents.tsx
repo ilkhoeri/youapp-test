@@ -29,10 +29,9 @@ import { pusherClient } from '@/resource/server/messages/pusher';
 import { formatPrettyDate } from '@/resource/const/times-helper';
 import { ChatSchema, ChatValues } from '@/resource/schemas/chat';
 import { Message as MessageProp, MinimalAccount } from '@/resource/types/user';
-import { UseChatOptions, useOtherUser, useActiveChat } from './chat-context';
+import { useOtherUser, useActiveChat } from './chat-context';
 import { formatDayLabel, groupMessagesByDate } from './messages/helper';
 import { useIsMobile } from '@/resource/hooks/use-device-query';
-import { useMergedRef } from '@/resource/hooks/use-merged-ref';
 import { InlineEditor } from '../inline-editor/inline-editor';
 import { DateDivider } from './messages/date-divider';
 import { MessageBubble } from './messages/message-bubble';
@@ -319,6 +318,78 @@ export function DeleteGroupAlert({ confirm, onConfirm, url }: DeleteGroupAlertPr
   );
 }
 
+interface ChatSubscriptionProps {
+  data: MessageProp[];
+  targetRef: React.RefObject<HTMLDivElement>;
+  chatId: string | null | undefined;
+}
+interface ChatSubscriptionProps {
+  chatId: string | null | undefined;
+  data: MessageProp[];
+  userId: string | undefined;
+  // refs: React.RefObject<HTMLElement>[];
+  // containerRef: React.RefObject<HTMLElement>;
+}
+
+function useChatSubscription(props: ChatSubscriptionProps) {
+  const { data, chatId, targetRef } = props;
+  const [messages, setMessages] = React.useState(data);
+
+  const lastMessage = messages?.[messages.length - 1];
+
+  const markAsSeen = React.useCallback(
+    debounce((messageId: string) => {
+      axios.post(`/api/chats/${chatId}/seen`, { messageId });
+    }, 500),
+    []
+  );
+
+  // 👁️ Intersection observer to mark as seen
+  React.useEffect(() => {
+    if (!targetRef.current || !chatId || !lastMessage?.id) return;
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) markAsSeen(lastMessage.id); // kirim ID terakhir
+      },
+      { threshold: 1.0 } // hanya saat 100% terlihat
+    );
+
+    observer.observe(targetRef.current);
+
+    return () => observer.disconnect();
+  }, [chatId, lastMessage?.id]);
+
+  // 🔔 Realtime pusher events
+  React.useEffect(() => {
+    if (!chatId) return;
+
+    pusherClient.subscribe(chatId);
+
+    const handleNew = (message: MessageProp) => {
+      setMessages(current => {
+        if (find(current, { id: message.id })) return current;
+        return [...current, message];
+      });
+    };
+
+    const handleUpdate = (newMessage: MessageProp) => {
+      setMessages(current => current.map(m => (m.id === newMessage.id ? newMessage : m)));
+    };
+
+    pusherClient.bind('messages:new', handleNew);
+    pusherClient.bind('message:update', handleUpdate);
+
+    return () => {
+      pusherClient.unsubscribe(chatId);
+      pusherClient.unbind('messages:new', handleNew);
+      pusherClient.unbind('message:update', handleUpdate);
+    };
+  }, [chatId]);
+
+  return messages;
+}
+
 export interface ChatBodyProps {
   messages: MessageProp[];
   members?: (MinimalAccount | null)[] | null | undefined;
@@ -332,11 +403,9 @@ export function ChatBody({ messages: initialMessages = [], members }: ChatBodyPr
 
   const { scrollableRef, targetRef, searchSlug: chatId } = useActiveChat();
 
-  const [messages, setMessages] = React.useState(initialMessages);
+  const messages = useChatSubscription({ data: initialMessages, chatId, targetRef, userId: user?.id });
 
-  // const { chatId } = useChat({ searchQuery });
-
-  const { totalCount, byDate, dateKeys, lastMessage } = groupMessagesByDate(messages, user!!);
+  const { byDate, dateKeys, lastMessage } = groupMessagesByDate(messages, user!!);
 
   /**
   React.useEffect(() => {
@@ -380,55 +449,6 @@ export function ChatBody({ messages: initialMessages = [], members }: ChatBodyPr
   }, [chatId]);
  */
 
-  // const markAsSeen = debounce((chatId: string, messageId: string) => {
-  //   axios.post(`/api/chats/${chatId}/seen`, { messageId });
-  // }, 500); // delay 500ms agar tidak terlalu sering
-
-  // React.useEffect(() => {
-  //   if (!targetRef.current || !chatId || !lastMessage?.id) return;
-
-  //   const observer = new IntersectionObserver(
-  //     ([entry]) => {
-  //       if (entry.isIntersecting) markAsSeen(chatId, lastMessage.id); // kirim ID terakhir
-  //     },
-  //     { threshold: 1.0 } // hanya saat 100% terlihat
-  //   );
-
-  //   observer.observe(targetRef.current);
-
-  //   return () => observer.disconnect();
-  // }, [chatId, lastMessage?.id]);
-
-  React.useEffect(() => {
-    if (chatId) {
-      pusherClient.subscribe(chatId);
-
-      const messageHandler = (message: MessageProp) => {
-        setMessages(current => {
-          if (find(current, { id: message.id })) return current;
-          return [...current, message];
-        });
-      };
-
-      const updateMessageHandler = (newMessage: MessageProp) => {
-        setMessages(current => current.map(m => (m.id === newMessage.id ? newMessage : m)));
-      };
-
-      pusherClient.bind('messages:new', messageHandler);
-      pusherClient.bind('message:update', updateMessageHandler);
-
-      return () => {
-        pusherClient.unsubscribe(chatId);
-        pusherClient.unbind('messages:new', messageHandler);
-        pusherClient.unbind('message:update', updateMessageHandler);
-      };
-    }
-  }, [chatId]);
-
-  React.useEffect(() => {
-    bottomRef?.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages.length]);
-
   return (
     <div className="relative h-full contents overflow-y-auto">
       <div ref={scrollableRef} className="overflow-y-auto flex-1">
@@ -439,13 +459,16 @@ export function ChatBody({ messages: initialMessages = [], members }: ChatBodyPr
         {dateKeys.map(date => (
           <React.Fragment key={date}>
             <DateDivider date={formatDayLabel(date, { options: { dateStyle: 'short' } })} count={byDate[date].count} />
-            {byDate[date].messages.map(msg => (
+            {byDate[date].messages.map((msg, i) => (
               <MessageBubble
                 key={msg.id}
                 data={msg}
                 members={members}
+                // id={`msg-${msg.id}`}
+                // data-message-id={msg.id}
+                // ref={refs[i]}
                 // targetRef={msg.senderId === user?.id ? null : targetRef}
-                targetRef={lastMessage?.id === msg.id ? (msg.senderId === user?.id ? bottomRef : targetRef) : null}
+                targetRef={lastMessage?.senderId !== user?.id ? (msg.senderId === user?.id ? null : targetRef) : null}
                 lastMessage={lastMessage}
                 // ref={lastMessage?.id === msg.id ? (msg.senderId === user?.id ? bottomRef : targetRef) : undefined}
               />
@@ -508,7 +531,7 @@ export function ChatForm({ messages, members: initialMembers }: ChatFormProps) {
   return (
     <Form.Provider {...form}>
       <Form onSubmit={form.handleSubmit(onSubmit)} className="bg-background-theme flex flex-col max-h-[35%] w-full border-t [--inset-x:0.75rem] [--inset-b:0.75rem]">
-        {messagesIsDefined && targetRef.current && <ScrollToBottom visible={!isInView} onClick={() => scrollIntoView()} />}
+        {messagesIsDefined && !!targetRef.current && <ScrollToBottom visible={!isInView} onClick={() => scrollIntoView()} />}
 
         {/* <CldUploadButton
           options={{ maxFiles: 1 }}

@@ -70,7 +70,7 @@ export function ChatClient({ chats }: { chats: Array<AllChatProps> | null }) {
     );
   }
 
-  if (!chats || !chatGroup) {
+  if ((!chats || !chatGroup) && !loading) {
     return (
       <div className="flex h-full flex-col py-8">
         <EmptyChat content="Chat group tidak ditemukan" className="text-red-500 dark:text-red-600" />
@@ -85,8 +85,8 @@ export function ChatClient({ chats }: { chats: Array<AllChatProps> | null }) {
     <div className="flex h-full flex-col">
       <div className="h-full flex flex-col relative z-[9]">
         <ChatHeader chat={chat} />
-        <ChatBody members={members} messages={chatGroup} />
-        <ChatForm members={members} messages={chatGroup} />
+        <ChatBody members={members} messages={chatGroup!} />
+        <ChatForm members={members} messages={chatGroup!} />
       </div>
       <ChatBackground />
     </div>
