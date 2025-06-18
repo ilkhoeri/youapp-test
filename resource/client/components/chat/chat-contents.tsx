@@ -511,7 +511,7 @@ export function ChatForm({ searchQuery, messages, members: initialMembers }: Cha
 
   return (
     <Form.Provider {...form}>
-      <Form onSubmit={form.handleSubmit(onSubmit)} className="bg-background-theme block max-h-[35%] w-full border-t [--inset-x:0.75rem] [--inset-b:0.75rem]">
+      <Form onSubmit={form.handleSubmit(onSubmit)} className="bg-background-theme flex flex-col max-h-[35%] w-full border-t [--inset-x:0.75rem] [--inset-b:0.75rem]">
         {messagesIsDefined && targetRef.current && <ScrollToBottom visible={!isInView} onClick={() => scrollIntoView()} />}
 
         {/* <CldUploadButton
@@ -561,7 +561,7 @@ export function ChatForm({ searchQuery, messages, members: initialMembers }: Cha
                 {...field}
                 // value={`_text italic_ *text bold* _*italic and bold*_\n\`\`\`\nconstructor(props) {\n  super(props)\n\n  this.state = {\n\n  }\n\n  this.handleEvent = this.handleEvent.bind(this)\n  }\n\`\`\`\n> blockQuotes\u200B> xxx\n\n\n`}
                 onChange={i => {
-                  console.log('[VALUE]:', JSON.stringify(i));
+                  // console.log('[VALUE]:', JSON.stringify(i));
                   field.onChange(i);
                 }}
                 // onSubmit={onSubmit}
@@ -574,41 +574,43 @@ export function ChatForm({ searchQuery, messages, members: initialMembers }: Cha
           }}
         />
 
-        <Form.Field
-          control={form.control}
-          name="mediaUrl"
-          render={({ field }) => {
-            if (field.value) return <React.Fragment />;
-            return (
-              <Form.UnstyledAvatarField uploadPreset={process.env.NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET} value={field.value} onChange={url => field.onChange(url)}>
-                {({ open }) => {
-                  return (
-                    <button
-                      type="button"
-                      role="button"
-                      tabIndex={-1}
-                      onClick={() => open()}
-                      className="bg-background-theme/70 backdrop-blur rounded-full p-2 text-muted-foreground hover:text-color transition-colors z-[9] cursor-pointer absolute bottom-[var(--inset-b)] left-[var(--inset-x)] focus-visible:outline-0 focus-visible:ring-0 focus-visible:border-0"
-                    >
-                      <PhotoPlusFillIcon size={24} />
-                      <span className="hidden sr-only">Upload Image</span>
-                    </button>
-                  );
-                }}
-              </Form.UnstyledAvatarField>
-            );
-          }}
-        />
+        <div className="relative w-full flex flex-row items-center justify-between px-[var(--inset-x)] pt-[calc(var(--inset-b)/2)] pb-[var(--inset-b)]">
+          <Form.Field
+            control={form.control}
+            name="mediaUrl"
+            render={({ field }) => {
+              if (field.value) return <React.Fragment />;
+              return (
+                <Form.UnstyledAvatarField uploadPreset={process.env.NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET} value={field.value} onChange={url => field.onChange(url)}>
+                  {({ open }) => {
+                    return (
+                      <button
+                        type="button"
+                        role="button"
+                        tabIndex={-1}
+                        onClick={() => open()}
+                        className="bg-background-theme/70 backdrop-blur rounded-full p-2 text-muted-foreground hover:text-color transition-colors z-[9] cursor-pointer focus-visible:outline-0 focus-visible:ring-0 focus-visible:border-0"
+                      >
+                        <PhotoPlusFillIcon size={24} />
+                        <span className="hidden sr-only">Upload Image</span>
+                      </button>
+                    );
+                  }}
+                </Form.UnstyledAvatarField>
+              );
+            }}
+          />
 
-        <Button
-          type="submit"
-          tabIndex={-1}
-          unstyled
-          disabled={isMessage}
-          className="bg-background-theme/70 backdrop-blur rounded-full p-2 text-color hover:text-color transition-colors z-[9] cursor-pointer absolute bottom-[var(--inset-b)] right-[var(--inset-x)] disabled:text-color/50"
-        >
-          <PaperPlaneFillIcon size={24} />
-        </Button>
+          <Button
+            type="submit"
+            tabIndex={-1}
+            unstyled
+            disabled={isMessage}
+            className="bg-background-theme/70 backdrop-blur rounded-full p-2 text-color hover:text-color transition-colors z-[9] cursor-pointer disabled:text-color/50"
+          >
+            <PaperPlaneFillIcon size={24} />
+          </Button>
+        </div>
       </Form>
     </Form.Provider>
   );

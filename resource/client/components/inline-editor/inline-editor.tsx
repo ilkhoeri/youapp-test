@@ -134,7 +134,6 @@ export function InlineEditor<TData, TTag extends TTagPatterns = TTagPatterns>(_p
   const [mentionActive, setMentionActive] = React.useState(false);
   const [selectedIndex, setSelectedIndex] = React.useState(0);
   const [filteredUsers, setFilteredUsers] = React.useState<typeof users>([]);
-  // const [position, setPosition] = React.useState<{ top: number; left: number } | null>(null);
 
   const rootRef = React.useRef<HTMLDivElement>(null);
   const contentRef = React.useRef<HTMLUListElement>(null);
@@ -203,12 +202,9 @@ export function InlineEditor<TData, TTag extends TTagPatterns = TTagPatterns>(_p
 
         const user = users.find(u => u.name === query);
         if (user) {
-          insertMention(user);
+          // insertMention(user);
           emptyUsers();
         }
-        // Hitung posisi dropdown
-        // const rect = sel.getRangeAt(0).getBoundingClientRect();
-        // setPosition({ top: rect.top, left: rect.left + window.scrollX });
       } else {
         emptyUsers();
       }
@@ -255,7 +251,7 @@ export function InlineEditor<TData, TTag extends TTagPatterns = TTagPatterns>(_p
       if (!el) return;
       const text = el.textContent;
 
-      // const caretOffset = getCaretOffset(el);
+      const caretOffset = getCaretOffset(el);
 
       // setTimeout(() => {
       //   inputTagFormatting(tagPattern);
@@ -268,7 +264,7 @@ export function InlineEditor<TData, TTag extends TTagPatterns = TTagPatterns>(_p
 
       inputAutoEmoji(emoji);
 
-      // setCaretOffset(el, caretOffset);
+      setCaretOffset(el, caretOffset);
 
       // console.log('[[ TEXT CONTENT ]]:', text);
 
@@ -326,17 +322,17 @@ export function InlineEditor<TData, TTag extends TTagPatterns = TTagPatterns>(_p
         inputTagFormatting(e, tagPattern);
         // handleTagFormatting(e, tagPattern);
         // Setelah DOM update
-        if (isCaretAtEndOfInline(currentTags)) {
-          e.preventDefault(); // Mencegah spasi atau enter di dalam <tag> ditambahkan
-          moveCaretAfterInline(currentTags);
-          // Menambah spasi atau enter secara manual di luar tag
-          insertManualChar(e);
-        }
-        if (isCaretAtEndOfBlock()) {
-          e.preventDefault();
-          moveCaretAfterBlock();
-        }
-        cleanEmptyNodes(e.currentTarget, currentTags);
+        // if (isCaretAtEndOfInline(currentTags)) {
+        //   e.preventDefault(); // Mencegah spasi atau enter di dalam <tag> ditambahkan
+        //   moveCaretAfterInline(currentTags);
+        //   // Menambah spasi atau enter secara manual di luar tag
+        //   insertManualChar(e);
+        // }
+        // if (isCaretAtEndOfBlock()) {
+        //   e.preventDefault();
+        //   moveCaretAfterBlock();
+        // }
+        // cleanEmptyNodes(e.currentTarget, currentTags);
       }
 
       if (isUndo(e) && undoStack.length > 1) {
@@ -452,8 +448,9 @@ export function InlineEditor<TData, TTag extends TTagPatterns = TTagPatterns>(_p
       {createPortal(
         <ul
           ref={contentRef}
+          data-portal-ie=""
           className={isMentions ? 'u-list' : undefined}
-          style={{ top: 'var(--top)', left: 'var(--left)', width: 'var(--measure-trigger-w)', ...vars.triggerSize, ...vars.triggerInset }}
+          style={isMentions ? { top: 'var(--top)', left: 'var(--left)', width: 'var(--measure-trigger-w)', ...vars.triggerSize, ...vars.triggerInset } : undefined}
         >
           {isMentions &&
             filteredUsers?.map((user, i) => (
