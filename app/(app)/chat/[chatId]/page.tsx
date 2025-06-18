@@ -59,7 +59,7 @@ export default async function ChatIdPage({ params, searchParams }: Params) {
   }
 
   return (
-    <ActiveChatProvider searchQuery="">
+    <ActiveChatProvider searchQuery="" searchSlug={chatId}>
       <section className="w-full max-w-5xl mx-auto">
         <div className="lg:pl-80 h-full">
           <div className="h-full flex flex-col">
