@@ -1009,7 +1009,7 @@ export type FormDateFieldProps<TName extends string = string> = Omit<AssertField
 export const FormDateField = React.forwardRef<HTMLButtonElement, FormDateFieldProps>((_props, ref) => {
   const { disabled, label, name, description, className, classNames, formItemProps, placeholder, errorMessage, ...props } = _props;
 
-  const { error, formItemId, formDescriptionId, formMessageId } = useFormField(),
+  const { error } = useFormField(),
     messageInPlaceholder = error && typeof errorMessage === 'string' && errorMessage === 'placeholder',
     placeholderMessage = messageInPlaceholder ? (error.message ?? placeholder) : placeholder;
 
@@ -1026,10 +1026,10 @@ export const FormDateField = React.forwardRef<HTMLButtonElement, FormDateFieldPr
       <DatePicker
         disabled={disabled}
         ref={ref}
-        formItemId={formItemId}
-        formDescriptionId={formDescriptionId}
-        formMessageId={formMessageId}
-        error={error}
+        // formItemId={formItemId}
+        // formDescriptionId={formDescriptionId}
+        // formMessageId={formMessageId}
+        // error={error}
         name={name}
         placeholder={placeholderMessage}
         classNames={{ ...classNames, trigger: cn(classNames?.input, classNames?.trigger) }}
