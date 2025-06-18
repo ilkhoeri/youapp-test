@@ -37,11 +37,11 @@ export function ChatClient({ chats }: { chats: Array<AllChatProps> | null }) {
       setError(null);
 
       try {
-        // const response = await fetch(`/api/chats/${chatGroupId}`);
-        // if (!response.ok) throw new Error('Failed to fetch chat group');
-        // const data = await response.json();
-        // setChatGroup(data);
-        await getMessages(chatGroupId).then(data => setChatGroup(data));
+        const response = await fetch(`api/chats/${chatGroupId}`);
+        if (!response.ok) throw new Error('Failed to fetch chat group');
+        const data = await response.json();
+        setChatGroup(data);
+        // await getMessages(chatGroupId).then(data => setChatGroup(data));
       } catch (err) {
         setError(err instanceof Error ? err.message : 'An error occurred');
       } finally {
@@ -84,9 +84,9 @@ export function ChatClient({ chats }: { chats: Array<AllChatProps> | null }) {
   return (
     <div className="flex h-full flex-col">
       <div className="h-full flex flex-col relative z-[9]">
-        <ChatHeader chat={chat} searchQuery={chatGroupId} />
-        <ChatBody members={members} messages={chatGroup} searchQuery={chatGroupId} />
-        <ChatForm members={members} messages={chatGroup} searchQuery={chatGroupId} />
+        <ChatHeader chat={chat} />
+        <ChatBody members={members} messages={chatGroup} />
+        <ChatForm members={members} messages={chatGroup} />
       </div>
       <ChatBackground />
     </div>

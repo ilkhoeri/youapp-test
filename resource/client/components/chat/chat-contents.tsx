@@ -44,9 +44,9 @@ import { cn } from 'cn';
 
 const ICON_SIZE: number = 20;
 
-export type ChatHeaderProps = Pick<GroupProfileProps, 'chat' | 'searchQuery'>;
+export type ChatHeaderProps = Pick<GroupProfileProps, 'chat'>;
 
-export function ChatHeader({ chat, searchQuery }: ChatHeaderProps) {
+export function ChatHeader({ chat }: ChatHeaderProps) {
   const otherUser = useOtherUser(chat);
   const isMediaQuery = useIsMobile();
 
@@ -65,7 +65,7 @@ export function ChatHeader({ chat, searchQuery }: ChatHeaderProps) {
 
   return (
     <>
-      <DeleteGroupAlert searchQuery={searchQuery} confirm={confirm} onConfirm={onConfirm} />
+      <DeleteGroupAlert confirm={confirm} onConfirm={onConfirm} />
 
       <div className="relative z-[8] border-b p-2 flex items-center bg-background-theme [&>*>button]:rounded-full">
         <div className="flex items-center gap-1">
@@ -277,22 +277,21 @@ function GroupProfile({ chat: data, confirm, onConfirm }: GroupProfileProps) {
   );
 }
 
-interface DeleteGroupAlertProps extends UseChatOptions {
+interface DeleteGroupAlertProps {
   confirm: boolean;
   onConfirm: (value: React.SetStateAction<boolean>) => void;
+  url?: string;
 }
 
-function DeleteGroupAlert({ confirm, onConfirm, searchQuery }: DeleteGroupAlertProps) {
-  const [loading, setLoading] = React.useState(false);
-
-  // const chat = useChat({ searchQuery });
-  const { searchSlug: chatId } = useActiveChat();
+export function DeleteGroupAlert({ confirm, onConfirm, url }: DeleteGroupAlertProps) {
   const router = useRouter();
+  const [loading, setLoading] = React.useState(false);
+  const { searchSlug: chatId } = useActiveChat();
 
   const onDelete = React.useCallback(() => {
     setLoading(true);
     axios
-      .delete(`/api/chats/${chatId}`)
+      .delete(url || `/api/chats/${chatId}`)
       .then(() => {
         onConfirm(false);
         router.push('/chat');
@@ -300,7 +299,7 @@ function DeleteGroupAlert({ confirm, onConfirm, searchQuery }: DeleteGroupAlertP
       })
       .catch(() => toast.error('Something went wrong!'))
       .finally(() => setLoading(false));
-  }, [router, chatId]);
+  }, [router, chatId, url]);
 
   return (
     <AlertModal
@@ -320,11 +319,11 @@ function DeleteGroupAlert({ confirm, onConfirm, searchQuery }: DeleteGroupAlertP
   );
 }
 
-export interface ChatBodyProps extends UseChatOptions {
+export interface ChatBodyProps {
   messages: MessageProp[];
   members?: (MinimalAccount | null)[] | null | undefined;
 }
-export function ChatBody({ messages: initialMessages = [], searchQuery, members }: ChatBodyProps) {
+export function ChatBody({ messages: initialMessages = [], members }: ChatBodyProps) {
   const { user } = useApp();
 
   const bottomRef = React.useRef<HTMLDivElement>(null);
@@ -437,7 +436,6 @@ export function ChatBody({ messages: initialMessages = [], searchQuery, members 
           <MessageBubble key={message.id} index={i} dataLength={messages.length} ref={i === messages.length - 1 ? targetRef : undefined} user={user} data={message} />
         ))} */}
         {/* ref={lastMessage?.id === msg.id ? (msg.senderId === user?.id ? bottomRef : targetRef) : undefined} */}
-
         {dateKeys.map(date => (
           <React.Fragment key={date}>
             <DateDivider date={formatDayLabel(date, { options: { dateStyle: 'short' } })} count={byDate[date].count} />
@@ -446,10 +444,10 @@ export function ChatBody({ messages: initialMessages = [], searchQuery, members 
                 key={msg.id}
                 data={msg}
                 members={members}
-                targetRef={targetRef}
+                // targetRef={msg.senderId === user?.id ? null : targetRef}
+                targetRef={lastMessage?.id === msg.id ? (msg.senderId === user?.id ? bottomRef : targetRef) : null}
                 lastMessage={lastMessage}
-                searchQuery={searchQuery}
-                ref={lastMessage?.id === msg.id ? useMergedRef(msg.senderId === user?.id ? bottomRef : targetRef) : undefined}
+                // ref={lastMessage?.id === msg.id ? (msg.senderId === user?.id ? bottomRef : targetRef) : undefined}
               />
             ))}
           </React.Fragment>
@@ -459,13 +457,11 @@ export function ChatBody({ messages: initialMessages = [], searchQuery, members 
   );
 }
 
-interface ChatFormProps extends UseChatOptions {
+interface ChatFormProps {
   messages: MessageProp[];
   members?: (MinimalAccount | null)[] | null | undefined;
 }
-export function ChatForm({ searchQuery, messages, members: initialMembers }: ChatFormProps) {
-  // const { chatId } = useChat({ searchQuery });
-
+export function ChatForm({ messages, members: initialMembers }: ChatFormProps) {
   const { scrollIntoView, isInView, targetRef, searchSlug: chatId } = useActiveChat();
 
   const { form } = useForm<ChatValues>({
@@ -601,15 +597,16 @@ export function ChatForm({ searchQuery, messages, members: initialMembers }: Cha
             }}
           />
 
-          <Button
+          <button
             type="submit"
-            tabIndex={-1}
-            unstyled
+            role="button"
+            tabIndex={0}
             disabled={isMessage}
-            className="bg-background-theme/70 backdrop-blur rounded-full p-2 text-color hover:text-color transition-colors z-[9] cursor-pointer disabled:text-color/50"
+            className="bg-background-theme/70 backdrop-blur rounded-full p-2 text-color hover:text-color transition-colors z-[9] cursor-pointer disabled:text-color/50 lg:focus-visible:ring-2 lg:focus-visible:ring-cyan-500/50 max-lg:focus-visible:text-cyan-500"
           >
             <PaperPlaneFillIcon size={24} />
-          </Button>
+            <span className="hidden sr-only">Send Message</span>
+          </button>
         </div>
       </Form>
     </Form.Provider>

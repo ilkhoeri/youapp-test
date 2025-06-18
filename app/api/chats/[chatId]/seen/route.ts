@@ -7,7 +7,7 @@ interface Params {
   chatId?: string;
 }
 
-export async function POST(request: Request, { params }: { params: Promise<Params> }) {
+export async function POST(req: Request, { params }: { params: Promise<Params> }) {
   try {
     const [currentUser, { chatId }] = await Promise.all([getCurrentUser(), params]);
 

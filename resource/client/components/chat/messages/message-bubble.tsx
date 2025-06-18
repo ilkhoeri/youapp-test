@@ -25,7 +25,7 @@ import { Svg, SvgProps } from '../../ui/svg';
 import css from './msg.module.css';
 import { debounce } from 'lodash';
 import axios from 'axios';
-import { useChat, UseChatOptions } from '../chat-context';
+import { useActiveChat, useChat, UseChatOptions } from '../chat-context';
 import { useMergedRef } from '@/resource/hooks/use-merged-ref';
 import { useApp } from '@/resource/client/contexts/app-provider';
 import { useRouter } from 'next/navigation';
@@ -47,7 +47,7 @@ interface DefFloat<T> {
 }
 
 // type MCTrees = 'container' | 'root' | 'wrapper' | 'box' | 'icon';
-interface MessageBubbleProps extends React.ComponentPropsWithRef<'div'>, UseChatOptions {
+interface MessageBubbleProps extends React.ComponentPropsWithRef<'div'> {
   data: EnrichedMessage;
   lastMessage: EnrichedMessage | undefined;
   members?: (MinimalAccount | null)[] | null | undefined;
@@ -56,13 +56,13 @@ interface MessageBubbleProps extends React.ComponentPropsWithRef<'div'>, UseChat
 }
 
 export function MessageBubble(_props: MessageBubbleProps) {
-  const { ref, data, className, members, lastMessage, searchQuery, targetRef, ...props } = _props;
+  const { ref, data, className, members, lastMessage, targetRef, ...props } = _props;
   const [openMenu, setOpenMenu] = React.useState<boolean>(false);
 
   const isMediaQuery = useIsMobile();
   const { user } = useApp();
 
-  const { chatId } = useChat({ searchQuery });
+  const { searchSlug: chatId } = useActiveChat();
 
   const refAvatar = React.useRef<HTMLDivElement>(null);
   const refContent = React.useRef<HTMLDivElement>(null);
@@ -98,23 +98,24 @@ export function MessageBubble(_props: MessageBubbleProps) {
   }, 500); // delay 500ms agar tidak terlalu sering
 
   React.useEffect(() => {
-    if (!targetRef?.current || !chatId || !lastMessage?.id || data.senderId === user?.id) return;
+    if (!targetRef?.current || (!!targetRef?.current && !!chatId && lastMessage?.id === data.id && data.senderId === user?.id)) return;
 
     const observer = new IntersectionObserver(
       ([entry]) => {
-        if (entry.isIntersecting) markAsSeen(chatId, lastMessage.id); // kirim ID terakhir
+        if (entry.isIntersecting && chatId && lastMessage?.id) markAsSeen(chatId, lastMessage?.id); // kirim ID terakhir
       },
       { threshold: 1.0 } // hanya saat 100% terlihat
     );
 
-    observer.observe(targetRef.current);
+    observer.observe(targetRef?.current);
 
     return () => observer.disconnect();
   }, [chatId, lastMessage?.id]);
 
   return (
     <CtxMenu>
-      <article ref={useMergedRef(ref, targetRef)} {...{ ...props, role: 'row', suppressHydrationWarning: true, tabIndex: -1 }}>
+      {seenBy}
+      <article key={data?.id} {...{ ...props, role: 'row', suppressHydrationWarning: true, tabIndex: -1 }} ref={targetRef}>
         <div tabIndex={-1} className={container}>
           <div ref={refRootHovered} className={root}>
             <div
@@ -400,6 +401,7 @@ interface UseMenuMapOptions {}
 
 function useMenuMap(data: EnrichedMessage) {
   const router = useRouter();
+  const app = useApp();
   const isMediaQuery = useIsMobile();
 
   const handleCopy = React.useCallback(() => {
@@ -455,37 +457,37 @@ function useMenuMap(data: EnrichedMessage) {
     if (!confirmDelete) return;
 
     try {
-      await axios.delete(`/api/chats/${data.id}`);
-      router.replace('/chat');
-      router.refresh();
+      await axios.delete(`/api/chats/messages/${data.id}`);
     } catch (_e) {
       console.error('Gagal menghapus Pesan', _e);
+    } finally {
+      router.refresh();
     }
   }, [data.id, router]);
 
+  console.log('MESSAGE_ID', data.id);
+
+  const opts = <T,>(params: T, obj: MenuMap) => (params ? [obj] : []);
+
   const menuMap: MenuMap[] = [
-    { label: 'Message info', shortcut: '⌘+I', onAction: () => {} },
-    ...(data.mediaUrl ? [{ label: 'Save Media', onAction: handleSaveMedia }] : []),
-    { label: 'Reply', shortcut: '⌘+R', onAction: () => {} },
+    { label: 'Message info', shortcut: '⌘+I', disabled: true, onAction: () => {} },
+    ...opts(data.mediaUrl, { label: 'Save Media', onAction: handleSaveMedia }),
+    { label: 'Reply', shortcut: '⌘+R', disabled: true, onAction: () => {} },
     { label: 'Copy', shortcut: '⌘+P', onAction: handleCopy },
-    { label: 'React', shortcut: '⌘+E', onAction: () => {} },
-    { label: 'Forward', shortcut: '⌘+F', onAction: () => {} },
-    { label: 'Pin', shortcut: '', onAction: () => {} },
-    { label: 'Star', shortcut: '', onAction: () => {} },
-    { label: 'Delete', variant: 'destructive', onAction: handleDelete },
-    ...(!isMediaQuery
-      ? [
-          {
-            label: 'More',
-            separator: true,
-            sub: [
-              { label: 'Save Page', shortcut: '⇧⌘+S', onAction: handleSavePage },
-              { label: 'Create Shortcut', onAction: () => {} },
-              { label: 'Developer', separator: true, onAction: () => {} }
-            ]
-          }
-        ]
-      : [])
+    { label: 'React', shortcut: '⌘+E', disabled: true, onAction: () => {} },
+    { label: 'Forward', shortcut: '⌘+F', disabled: true, onAction: () => {} },
+    { label: 'Pin', shortcut: '', disabled: true, onAction: () => {} },
+    { label: 'Star', shortcut: '', disabled: true, onAction: () => {} },
+    ...opts(data.senderId === app.user?.id, { label: 'Delete', variant: 'destructive', onAction: handleDelete }),
+    ...opts(!isMediaQuery, {
+      label: 'More',
+      separator: true,
+      sub: [
+        { label: 'Save Page', shortcut: '⇧⌘+S', onAction: handleSavePage },
+        { label: 'Create Shortcut', disabled: true, onAction: () => {} },
+        { label: 'Developer', separator: true, disabled: true, onAction: () => {} }
+      ]
+    })
   ];
 
   return menuMap;
@@ -585,7 +587,10 @@ interface MessageMenuProps {
 }
 function MessageMenu({ opened, ...props }: MessageMenuProps) {
   const menuMap = useMenuMap(props.data);
-  // const event = open ? 'click' : 'contextmenu';
+
+  const [confirm, onConfirm] = React.useState(false);
+
+  const dialogDelete = menuMap.find(item => item.label)?.label;
 
   if (opened) return renderMenuItems(menuMap, 'click');
 

@@ -12,6 +12,7 @@ import { useApp } from '../../contexts/app-provider';
 import { ChatGroupAvatar } from './chat-avatar';
 import { find } from 'lodash';
 import { cn } from 'cn';
+import { useSwitchChat } from './chat-hooks';
 
 interface ChatListProps extends UseChatOptions {
   items: AllChatProps[];
@@ -78,57 +79,16 @@ interface ChatListItemProps {
   data: AllChatProps;
   // selected?: boolean;
 }
-
 export function ChatListItem(_props: ChatListItemProps) {
-  const { data } = _props,
-    { searchSlug: chatId, setLoading, searchQuery: query } = useActiveChat(),
-    // searchParams = useSearchParams(),
-    otherUser = useOtherUser(data),
-    router = useRouter(),
-    app = useApp(),
-    // chatId = searchParams?.get(query!),
-    // chatGroupId = searchParams.has(query!),
-    selected = chatId === data.id;
+  const { data } = _props;
 
-  const handleClick = React.useCallback(() => {
-    if (selected) return;
-    const route = query ? `/chat?${query}=${data.id}` : `/chat/${data.id}`;
-    // if (!chatGroupId) setLoading(true);
-    setLoading(true);
-    router.push(route, { scroll: false });
-  }, [data, query, selected]);
-
-  const lastMessage = React.useMemo(() => {
-    const messages = data.messages || [];
-
-    return messages[messages.length - 1];
-  }, [data.messages]);
-
-  const userEmail = React.useMemo(() => app.session?.user?.email, [app.session?.user?.email]);
-
-  const hasSeen = React.useMemo(() => {
-    if (!lastMessage) return false;
-
-    const seenArray = lastMessage.seen || [];
-
-    if (!userEmail) return false;
-
-    return seenArray.filter(user => user.email === userEmail).length !== 0;
-  }, [userEmail, lastMessage]);
-
-  const lastMessageText = React.useMemo(() => {
-    if (lastMessage?.mediaUrl) return 'Sent an image';
-
-    if (lastMessage?.body) return lastMessage?.body;
-
-    return 'Started a conversation';
-  }, [lastMessage]);
+  const { setValueChange, selected, otherUser, lastMessage, hasSeen, lastMessageText } = useSwitchChat(data);
 
   return (
     <CtxMenu>
       <CtxMenu.Trigger asChild>
         <div
-          onClick={handleClick}
+          onClick={() => setValueChange()}
           className={cn(
             'w-full relative flex items-center space-x-3 py-3 px-4 rounded-lg transition cursor-pointer [--bg:#e4ebf1] dark:[--bg:#1c252e] hover:bg-[var(--bg)]',
             selected && 'bg-[var(--bg)]'

@@ -170,7 +170,7 @@ export function ChatContainer(_props: ChatContainerProps) {
         className={cn('max-xl:grid max-xl:grid-cols-2 relative', isCollapsed && 'min-w-[50px] transition-all duration-300 ease-in-out')}
       >
         <div className={cn('max-xl:col-span-full flex h-[52px] items-center justify-center', isCollapsed ? 'h-[52px]' : 'px-2')}>
-          <ChatSwitcher isCollapsed={isCollapsed} chats={allChat} />
+          <ChatSwitcher isCollapsed={isCollapsed} accounts={accounts} chats={allChat} />
         </div>
         <Separator className="max-xl:absolute max-xl:top-[52px] max-xl:w-full max-xl:inset-x-0" />
         <ChatNav isCollapsed={isCollapsed} links={links[1]} className="max-xl:border-r overflow-y-auto" />
