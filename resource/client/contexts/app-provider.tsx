@@ -4,7 +4,6 @@ import { Cookies } from './cookies-types';
 import { Session } from 'next-auth';
 import { usePathname } from 'next/navigation';
 import { setCookies } from './cookies-client';
-
 import { Account } from '@/resource/types/user';
 import { SessionProvider } from 'next-auth/react';
 

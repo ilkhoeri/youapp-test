@@ -4,6 +4,8 @@ import { useParams, useSearchParams } from 'next/navigation';
 import { Account, AllChatProps, MinimalAccount } from '@/resource/types/user';
 import { useSession } from 'next-auth/react';
 import { ScrollIntoViewAnimation, useScrollIntoView } from '@/resource/hooks/use-scroll-into-view';
+import { useReload } from '@/resource/hooks/use-reload';
+import { ChatQuerys, slugQuerys } from './types';
 
 interface getChatId {
   searchQuery: string;
@@ -64,7 +66,7 @@ export function useOtherUser(chats: (AllChatProps | { users: MinimalAccount[] })
 export type ExpandedState = string | string[] | null | boolean;
 export type ExpandedOptions = { multiple?: boolean | undefined };
 
-interface ActiveChatStore extends UseChat, getChatId, InferType<typeof useScrollIntoView> {
+interface ActiveChatStore extends UseChat, InferType<typeof useScrollIntoView>, InferType<typeof useReload> {
   members: string[];
   add: (id: string) => void;
   remove: (id: string) => void;
@@ -75,24 +77,29 @@ interface ActiveChatStore extends UseChat, getChatId, InferType<typeof useScroll
   setLoading: (prev: boolean | ((prev: boolean) => boolean)) => void;
   expanded: (targetId?: string) => boolean;
   setExpanded: (value: string | null | boolean | undefined, opts?: ExpandedOptions) => void;
-  searchSlug: string | null | undefined;
+  querys: ChatQuerys;
+  slug: string | undefined;
 }
 
 const ActiveListContext = React.createContext<ActiveChatStore | undefined>(undefined);
 
-interface ActiveChatProviderProps extends getChatId {
-  searchSlug: string | null | undefined;
+interface ActiveChatProviderProps {
   children: React.ReactNode;
+  querys: ChatQuerys;
 }
 
-export function ActiveChatProvider({ children, searchQuery, searchSlug }: ActiveChatProviderProps) {
+export function ActiveChatProvider({ children, querys }: ActiveChatProviderProps) {
   const [members, setMembers] = React.useState<string[]>([]);
-  const [loading, setLoading] = React.useState<boolean>(false);
+  // const [loading, setLoading] = React.useState<boolean>(false);
   const [_expanded, _setExpanded] = React.useState<ExpandedState>(false);
 
   const scrollIntoView = useScrollIntoView<HTMLDivElement, HTMLDivElement>();
 
-  const getChat = useChat({ searchQuery });
+  const reload = useReload();
+
+  const slug = querys.private || querys.group || querys.channel || querys.bot;
+
+  const getChat = useChat({ searchQuery: slug });
 
   const add = React.useCallback((id: string) => {
     setMembers(prev => [...prev, id]);
@@ -165,7 +172,7 @@ export function ActiveChatProvider({ children, searchQuery, searchSlug }: Active
   );
 
   return (
-    <ActiveListContext.Provider value={{ members, add, searchQuery, searchSlug, remove, set, loading, setLoading, expanded, setExpanded, ...getChat, ...scrollIntoView }}>
+    <ActiveListContext.Provider value={{ members, add, querys, slug, remove, set, expanded, setExpanded, ...getChat, ...scrollIntoView, ...reload }}>
       {children}
     </ActiveListContext.Provider>
   );

@@ -1,37 +1,59 @@
 'use client';
 import * as React from 'react';
 import axios from 'axios';
-import { useRouter, useSearchParams } from 'next/navigation';
-import { Account, AllChatProps, MinimalAccount } from '@/resource/types/user';
-import { pusherClient } from '@/resource/server/messages/pusher';
-import { useActiveChat, useChat, useOtherUser, type UseChatOptions } from './chat-context';
+import { useRouter } from 'next/navigation';
+import { pusherClient } from '@/resource/configs/pusher/pusher';
+import { AllChatProps, MinimalAccount } from '@/resource/types/user';
 import { ContextMenu as CtxMenu } from '@/resource/client/components/ui/context-menu';
+import { useDebounceSearch } from '@/resource/hooks/use-debounce-search';
 import { formatShortTime } from '@/resource/const/times-helper';
 import { truncate } from '@/resource/utils/text-parser';
+import { ChatListItemSkeleton } from './chat-skeleton';
 import { useApp } from '../../contexts/app-provider';
-import { ChatGroupAvatar } from './chat-avatar';
+import { useSwitchChat } from './chat-hooks';
+import { classTabs } from './chat-container';
+import { ChatAvatars } from './chat-avatar';
+import { Input } from '../fields/input';
+import { SearchIcon } from '../icons';
+import { Tabs } from '../ui/tabs';
 import { find } from 'lodash';
 import { cn } from 'cn';
-import { useSwitchChat } from './chat-hooks';
+import { chattype } from './types';
 
-interface ChatListProps extends UseChatOptions {
+interface ChatListProps {
   items: AllChatProps[];
   accounts: MinimalAccount[];
   title?: string;
 }
 
 export function ChatList(_props: ChatListProps) {
-  const { items: initialItems, accounts: users, searchQuery } = _props;
+  const { items: initialItems, accounts: users } = _props;
+
+  const mockApiSearch = async (query: string): Promise<AllChatProps[]> => {
+    const normalizedData = initialItems.filter(c => {
+      const data = {
+        ...c,
+        name: c.name ?? c?.users.find(u => u?.username?.toLowerCase().includes(query.toLowerCase()))?.username
+      };
+      return data?.name?.toLowerCase().includes(query.toLowerCase());
+    });
+    return new Promise(resolve => setTimeout(() => resolve(normalizedData), 1000));
+  };
+
+  const { query, setQuery, isSearching, results, error } = useDebounceSearch<AllChatProps[]>({
+    delay: 400,
+    minLength: 2,
+    onSearch: mockApiSearch
+  });
+
   const [items, setItems] = React.useState(initialItems);
 
   // const router = useRouter();
-  const { session } = useApp();
-
-  // const { chatId } = useChat({ searchQuery });
+  const { user } = useApp();
 
   const pusherKey = React.useMemo(() => {
-    return session?.user?.email;
-  }, [session?.user?.email]);
+    return user?.email;
+  }, [user?.email]);
 
   React.useEffect(() => {
     if (!pusherKey) return;
@@ -70,9 +92,32 @@ export function ChatList(_props: ChatListProps) {
     pusherClient.bind('chat:update', updateHandler);
     pusherClient.bind('chat:new', newHandler);
     pusherClient.bind('chat:remove', removeHandler);
-  }, [pusherKey]);
+  }, [pusherKey, query]);
 
-  return items?.map(item => <ChatListItem key={item.id} data={item} />);
+  const newItems = !!query && results ? results : items;
+  const unreadItems = newItems.filter(item => !item.messages?.map(ms => ms.seenIds.length > 0));
+
+  const listItems = (chats: AllChatProps[]) => (isSearching ? <ChatListItemSkeleton /> : chats?.map(item => <ChatListItem key={item.id} data={item} />));
+
+  return (
+    <>
+      <div className="bg-background/95 p-4 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+        <form>
+          <div className="relative">
+            <SearchIcon className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+            <Input placeholder="Search" variant="outline" className="pl-8" value={query} onChange={e => setQuery(e.target.value)} />
+          </div>
+        </form>
+      </div>
+      <Tabs.Panel value="all" className={classTabs.panel}>
+        {listItems(newItems)}
+      </Tabs.Panel>
+      <Tabs.Panel value="unread" className={classTabs.panel}>
+        {listItems(unreadItems)}
+      </Tabs.Panel>
+    </>
+  );
+  // return items?.map(item => <ChatListItem key={item.id} data={item} />);
 }
 
 interface ChatListItemProps {
@@ -82,20 +127,21 @@ interface ChatListItemProps {
 export function ChatListItem(_props: ChatListItemProps) {
   const { data } = _props;
 
-  const { setValueChange, selected, otherUser, lastMessage, hasSeen, lastMessageText } = useSwitchChat(data);
+  const { onSwitch, isSelect, otherUser, lastMessage, hasSeen, lastMessageText } = useSwitchChat(data);
+
+  const query = data.type.toLowerCase() as chattype;
 
   return (
     <CtxMenu>
       <CtxMenu.Trigger asChild>
         <div
-          onClick={() => setValueChange()}
+          onClick={() => onSwitch(query, data.id)}
           className={cn(
             'w-full relative flex items-center space-x-3 py-3 px-4 rounded-lg transition cursor-pointer [--bg:#e4ebf1] dark:[--bg:#1c252e] hover:bg-[var(--bg)]',
-            selected && 'bg-[var(--bg)]'
+            isSelect && 'bg-[var(--bg)]'
           )}
         >
-          {/* <ChatAvatars data={data} otherUser={otherUser} /> */}
-          <ChatGroupAvatar data={data} />
+          <ChatAvatars data={data} otherUser={otherUser} />
           <div className="min-w-0 flex-1">
             <div className="focus:outline-none">
               <span className="absolute inset-0" aria-hidden="true" />

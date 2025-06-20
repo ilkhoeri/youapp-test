@@ -5,14 +5,13 @@ import { toast } from 'sonner';
 import { Button } from '../ui/button';
 import { useForm, Form } from '../fields/form';
 import { MinimalAccount } from '@/resource/types/user';
-import { ChatGroupSchema, ChatGroupValues } from '@/resource/schemas/chat';
-import { MotionButton, MotionButtonModal } from '../motion/motion-button';
+import { CreateChatSchema, CreateChatTypes } from '@/resource/schemas/chat';
 import { styleForm } from '../form/accounts/components';
 import { MotionCardModal } from '../motion/motion-card';
-import { PeopleChatFillIcon, PeopleIcon } from '../icons-fill';
-import { useChat } from './chat-context';
+import { PeopleChatFillIcon } from '../icons-fill';
 import { Navigation } from '../actions';
 import { cn } from 'cn';
+import { SheetsBreakpoint } from '../sheets-breakpoint';
 
 const classes = styleForm().auth().focused();
 
@@ -23,19 +22,19 @@ interface GroupChatModalProps extends Pick<React.ComponentProps<typeof MotionCar
 export function ChatGroup(_props: GroupChatModalProps) {
   const { open, onOpenChange, users = [] } = _props;
 
-  const { form, router, loading, setLoading } = useForm<ChatGroupValues>({
-    schema: ChatGroupSchema,
+  const { form, router, loading, setLoading } = useForm<CreateChatTypes>({
+    schema: CreateChatSchema,
     defaultValues: {
       name: '',
       members: [],
       type: 'GROUP',
-      userId: ''
+      userId: undefined
     }
   });
 
   // const members = form.watch('members');
 
-  function onSubmit(data: ChatGroupValues) {
+  function onSubmit(data: CreateChatTypes) {
     setLoading(true);
 
     axios
@@ -64,6 +63,9 @@ export function ChatGroup(_props: GroupChatModalProps) {
             <Form.InputField
               label="Create a group chat"
               placeholder="Group name"
+              autoFocus
+              required
+              aria-required
               disabled={loading}
               {...field}
               classNames={{ item: 'mb-6', label: classes.label, input: cn('min-h-[46px] ') }}
@@ -79,6 +81,7 @@ export function ChatGroup(_props: GroupChatModalProps) {
               disabled={loading}
               variant="chip"
               placeholder="Add members"
+              autoFocus
               {...field}
               isMulti
               options={options}
@@ -117,25 +120,23 @@ interface CreateChatGroupProps {
 export function CreateChatGroup({ accounts }: CreateChatGroupProps) {
   const [isModalOpen, setIsModalOpen] = React.useState(false);
   return (
-    <>
-      <MotionButton name="chat-group" className={cn('flex items-center justify-center border rounded-lg ml-auto p-0.5 size-9')} onClick={() => setIsModalOpen(true)}>
-        <PeopleChatFillIcon size={24} className="transition-colors" />
-        <span className="sr-only hidden">Create Chat Group</span>
-      </MotionButton>
-
-      <MotionButtonModal
-        name="chat-group"
-        open={isModalOpen}
-        onOpenChange={setIsModalOpen}
-        classNames={{
-          container: 'bg-gradient-theme flex items-center justify-center px-2.5 !mt-0 z-[150]',
-          root: 'mb-auto w-full max-h-[100dvh]',
-          content: '',
-          header: 'mb-6 mt-8 grid grid-cols-3 justify-items-center items-center',
-          body: 'mt-16 size-full'
-        }}
-        header={
-          <>
+    <SheetsBreakpoint
+      openWith="drawer"
+      open={isModalOpen}
+      onOpenChange={setIsModalOpen}
+      classNames={{
+        content:
+          'bg-gradient-theme px-2.5 w-full max-w-full h-full max-lg:max-w-full max-h-[100dvh] border-0 rounded-none sm:rounded-none flex flex-col [&_[data-role=button-close]]:sr-only [&_[data-role=button-close]]:hidden'
+      }}
+      trigger={
+        <button type="button" role="button" name="chat-group" className={cn('flex items-center justify-center border rounded-lg ml-auto p-0.5 size-9')}>
+          <PeopleChatFillIcon size={24} className="transition-colors" />
+          <span className="sr-only hidden">Create Chat Group</span>
+        </button>
+      }
+      content={
+        <>
+          <div role="group" className="mb-6 mt-8 grid grid-cols-3 justify-items-center items-center">
             <Navigation instance="break" onClick={() => setIsModalOpen(false)} className="mr-auto" />
             <p className="text-sm font-semibold"></p>
             <Button
@@ -149,11 +150,10 @@ export function CreateChatGroup({ accounts }: CreateChatGroupProps) {
             >
               Create
             </Button>
-          </>
-        }
-      >
-        <ChatGroup users={accounts} open={isModalOpen} onOpenChange={setIsModalOpen} />
-      </MotionButtonModal>
-    </>
+          </div>
+          <ChatGroup users={accounts} open={isModalOpen} onOpenChange={setIsModalOpen} />
+        </>
+      }
+    />
   );
 }

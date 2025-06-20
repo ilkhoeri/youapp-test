@@ -2,16 +2,25 @@ import { Avatar } from '../ui/avatar-oeri';
 import { UserFillIcon, User3FillIcon, User2FillIcon } from '../icons-fill';
 import type { Chat } from '@prisma/client';
 import type { MinimalAccount } from '@/resource/types/user';
-import { useOnlinePresence } from './chat-hooks';
 
 interface ChatAvatarsProps {
   data: (Chat & { users: MinimalAccount[] }) | null;
   otherUser: MinimalAccount | null | undefined;
+  grouping?: boolean;
 }
-export function ChatAvatars({ data, otherUser }: ChatAvatarsProps) {
-  const { isOnline } = useOnlinePresence();
+export function ChatAvatars({ data, otherUser, grouping }: ChatAvatarsProps) {
+  const imageUrl = data?.type === 'PRIVATE' ? otherUser?.image : data?.avatarUrl;
+  const fallbackIcon = data ? (
+    data?.userIds.length === 2 && data.type === 'GROUP' ? (
+      <User2FillIcon size={28} />
+    ) : data?.userIds.length > 2 ? (
+      <User3FillIcon size={28} />
+    ) : (
+      <UserFillIcon size={28} />
+    )
+  ) : undefined;
 
-  if (data?.type === 'GROUP') {
+  if (data?.type === 'GROUP' && grouping) {
     const MAX_VISIBLE = 3,
       users = data.users ?? [],
       visibleUsers = users.slice(0, MAX_VISIBLE),
@@ -27,32 +36,20 @@ export function ChatAvatars({ data, otherUser }: ChatAvatarsProps) {
     );
   }
 
-  // return (
-  //   <div className="flex items-center gap-2">
-  //     <Avatar src={otherUser?.image} fallback={otherUser?.name} alt={otherUser?.firstName} />
-  //     {otherUser && isOnline(otherUser?.id) ? <span className="text-green-500 text-sm">Online</span> : <span className="text-gray-400 text-sm">Offline</span>}
-  //   </div>
-  // );
-
   // 1-on-1 avatar
-  return <Avatar src={otherUser?.image} fallback={otherUser?.name} alt={otherUser?.firstName} />;
-}
-
-export function ChatGroupAvatar({ data }: Pick<ChatAvatarsProps, 'data'>) {
-  const fallbackIcon = data?.userIds.length === 2 ? <User2FillIcon size={28} /> : data && data?.userIds.length > 2 ? <User3FillIcon size={28} /> : <UserFillIcon size={28} />;
-
   return (
     <Avatar
-      src={data?.avatarUrl}
+      src={imageUrl}
       fallback={fallbackIcon}
-      alt={data?.name ?? ''}
+      alt={otherUser?.username}
       size={32}
       rootProps={{
         role: 'button',
         tabIndex: 0,
-        'aria-label': `Group - ${data?.name}`,
+        'aria-label': otherUser?.firstName,
         className: 'rounded-full bg-muted/35 text-color/50'
       }}
     />
   );
+  // return <Avatar src={otherUser?.image} fallback={otherUser?.name} alt={otherUser?.firstName} />;
 }

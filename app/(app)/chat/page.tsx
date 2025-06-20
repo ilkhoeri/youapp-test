@@ -1,15 +1,16 @@
 import { cookies } from 'next/headers';
-import { getChats } from '@/resource/server/messages/get-chats';
+import { getChats, getMessages } from '@/resource/server/messages/get-chats';
 import { currentUser, getUsers } from '@/resource/db/user/get-accounts';
 import { ChatContainer } from '@/resource/client/components/chat/chat-container';
 import { ActiveChatProvider } from '@/resource/client/components/chat/chat-context';
+import { ChatQuerys, slugQuerys } from '@/resource/client/components/chat/types';
 
 import type { Metadata } from 'next';
 
-const QUERY = 'chatgroup';
+// const QUERY: chattype = '';
 
 interface Params {
-  searchParams: Promise<{ [QUERY]: string }>;
+  searchParams: Promise<ChatQuerys>;
 }
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -41,7 +42,9 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 export default async function ChatPage(params: Params) {
-  const [chats, users, { chatgroup: groupChatId }] = await Promise.all([getChats(), getUsers(), params.searchParams]);
+  const [chats, users, querys] = await Promise.all([getChats(), getUsers(), params.searchParams]);
+
+  const messages = await getMessages(querys.private || querys.group || querys.channel || querys.bot);
 
   const cookieStore = await cookies();
   const layout = cookieStore.get('__resizable-panels:layout:chat_container');
@@ -51,8 +54,8 @@ export default async function ChatPage(params: Params) {
   const defaultCollapsed = collapsed ? JSON.parse(collapsed.value) : undefined;
 
   return (
-    <ActiveChatProvider searchQuery={QUERY} searchSlug={groupChatId}>
-      <ChatContainer searchQuery={QUERY} accounts={users} chats={chats} defaultLayout={defaultLayout} defaultCollapsed={defaultCollapsed} navCollapsedSize={4} />
+    <ActiveChatProvider querys={querys}>
+      <ChatContainer messages={messages} accounts={users} chats={chats} defaultLayout={defaultLayout} defaultCollapsed={defaultCollapsed} navCollapsedSize={4} />
     </ActiveChatProvider>
   );
 }

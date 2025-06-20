@@ -52,3 +52,20 @@ export async function updateAccount<T extends KeyMap = KeyMap>(userId: string | 
     return { success: false, error: 'INTERNAL_SERVER_ERROR', status: 500 };
   }
 }
+
+type UserId = string | null | undefined;
+type PingData = { lastSeen?: Date; lastOnline?: Date };
+
+export async function dbPing(userId: UserId, body: PingData) {
+  try {
+    if (!userId || !body) return null;
+    await user_db.user.update({
+      where: { id: userId },
+      data: body
+    });
+
+    return { status: 200 };
+  } catch (err) {
+    return null;
+  }
+}

@@ -1,11 +1,11 @@
-import { redirect } from 'next/navigation';
-import { currentUser, getUserByRefId } from '@/resource/db/user/get-accounts';
-
-import type { Metadata, ResolvingMetadata } from 'next';
 import { EmptyChat } from '@/resource/client/components/chat/chat-room';
+import { currentUser, getUserByRefId } from '@/resource/db/user/get-accounts';
 import { getChatById, getMessages } from '@/resource/server/messages/get-chats';
 import { ChatBody, ChatForm, ChatHeader } from '@/resource/client/components/chat/chat-contents';
 import { ActiveChatProvider } from '../../../../resource/client/components/chat/chat-context';
+import { queryEntries } from '@/resource/client/components/chat/types';
+
+import type { Metadata, ResolvingMetadata } from 'next';
 
 interface Params {
   params: Promise<{ chatId: string }>;
@@ -43,10 +43,9 @@ export async function generateMetadata({ params, searchParams }: Params, parent:
   };
 }
 
-export default async function ChatIdPage({ params, searchParams }: Params) {
-  const [session, searchAccount, { chatId }] = await Promise.all([currentUser(), getUserByRefId((await searchParams).getAccount), params]);
+export default async function ChatIdPage({ params }: Params) {
+  const [{ chatId }] = await Promise.all([params]);
   const [chat, messages] = await Promise.all([getChatById(chatId), getMessages(chatId)]);
-  // if (!session) redirect('/auth/sign-in');
 
   if (!chat) {
     return (
@@ -59,7 +58,7 @@ export default async function ChatIdPage({ params, searchParams }: Params) {
   }
 
   return (
-    <ActiveChatProvider searchQuery="" searchSlug={chatId}>
+    <ActiveChatProvider querys={queryEntries(chatId)}>
       <section className="w-full max-w-5xl mx-auto">
         <div className="lg:pl-80 h-full">
           <div className="h-full flex flex-col">

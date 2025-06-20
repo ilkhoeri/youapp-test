@@ -2,6 +2,8 @@
 import * as React from 'react';
 import { urlBase64ToUint8Array } from './base64String';
 import { sendNotification, subscribeUser, unsubscribeUser } from './actions';
+import { beamsClient } from '@/resource/configs/pusher/beams';
+import { toast } from 'sonner';
 
 export function PushNotificationManager() {
   const [isSupported, setIsSupported] = React.useState(false);
@@ -48,12 +50,27 @@ export function PushNotificationManager() {
     }
   }
 
+  const pushBeams = React.useCallback(() => {
+    // if (typeof window === 'undefined') return;
+    beamsClient
+      .start()
+      .then(() => beamsClient.addDeviceInterest('notification'))
+      .then(() => {
+        console.log('Successfully registered and subscribed!');
+        toast('Successfully registered and subscribed!');
+      })
+      .catch(console.error);
+  }, []);
+
   if (!isSupported) {
     return <p>Push notifications are not supported in this browser.</p>;
   }
 
   return (
     <div>
+      <button type="button" onClick={pushBeams}>
+        Push Beams
+      </button>
       <h3>Push Notifications</h3>
       {subscription ? (
         <>

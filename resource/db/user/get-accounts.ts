@@ -1,12 +1,14 @@
 import user_db from '@/resource/db/user';
 import { auth } from '@/auth/auth';
-import { Prisma, UserRole } from '@prisma/client';
-import { DefaultArgs } from '@prisma/client/runtime/library';
+import { Prisma } from '@prisma/client';
 import { Account } from '@/resource/types/user';
+import { isEmail } from '@/resource/utils/text-parser';
 import { strictRole } from '@/resource/const/role-status';
-import { isEmail, sanitizedWord } from '@/resource/utils/text-parser';
+import { DefaultArgs } from '@prisma/client/runtime/library';
 
-export async function getUsers() {
+type GetUsersOptions = Prisma.UserWhereInput;
+
+export async function getUsers(where: GetUsersOptions = {}) {
   const session = await auth();
 
   if (!session?.user?.email) return [];
@@ -19,7 +21,8 @@ export async function getUsers() {
       where: {
         NOT: {
           email: session.user.email
-        }
+        },
+        ...where
       }
     });
   } catch (error: any) {

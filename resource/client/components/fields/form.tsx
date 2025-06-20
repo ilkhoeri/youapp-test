@@ -727,13 +727,13 @@ export type FormReactSelectFieldProps<
 export function FormSelectField<T extends SelectDataOption[], Option, IsMulti extends boolean, Group extends ReactSelect.GroupBase<Option>, TName extends string>(
   _props: FormReactSelectFieldProps<T, Option, IsMulti, Group, TName>
 ) {
-  const { variant = 'default', data, name, label, description, disabled, className, defaultValue, required, classNames, styles, placeholder, components, ...props } = _props;
+  const { variant = 'default', data, name, label, description, disabled, className, defaultValue, required, classNames, styles, placeholder, components, autoFocus, ...props } = _props;
 
   const inputPlaceholder = typeof placeholder === 'string' ? placeholder : undefined;
 
   function CustomInput<Option_7, IsMulti_7 extends boolean, Group_7 extends ReactSelect.GroupBase<Option_7>>(props: ReactSelect.InputProps<Option_7, IsMulti_7, Group_7>) {
     if (inputPlaceholder) {
-      return <ReactSelect.components.Input {...props} innerRef={props.innerRef} placeholder={inputPlaceholder} />;
+      return <ReactSelect.components.Input {...props} innerRef={props.innerRef} autoFocus={autoFocus} placeholder={inputPlaceholder} />;
     }
     return undefined;
   }
@@ -755,6 +755,7 @@ export function FormSelectField<T extends SelectDataOption[], Option, IsMulti ex
           name={name}
           isDisabled={disabled}
           placeholder={placeholder}
+          autoFocus={autoFocus}
           components={{ ...components, Input: components?.Input ?? CustomInput }}
           {...classesReactSelect<Option, IsMulti, Group>({ classNames, styles, variant, inputPlaceholder })}
         />

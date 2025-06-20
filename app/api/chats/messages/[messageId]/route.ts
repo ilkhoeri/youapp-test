@@ -1,6 +1,6 @@
 import db from '@/resource/db/user';
 import { getCurrentUser } from '@/resource/db/user/get-accounts';
-import { pusherServer } from '@/resource/server/messages/pusher';
+import { pusherServer } from '@/resource/configs/pusher/pusher';
 import { NextResponse } from 'next/server';
 
 interface Params {

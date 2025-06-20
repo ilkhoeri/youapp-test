@@ -1,13 +1,13 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { pusherServer } from '@/resource/server/messages/pusher';
-import { currentUser } from '@/resource/db/user/get-accounts';
+import { NextResponse } from 'next/server';
+import { getCurrentUser } from '@/resource/db/user/get-accounts';
+import { pusherServer } from '@/resource/configs/pusher/pusher';
 
 /**
 import { auth } from '@/auth/auth';
 import { NextApiRequest, NextApiResponse } from 'next';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
-  const session = await auth(req, res);
+  const session = await auth();
 
   if (!session?.user?.email) {
     return res.status(401);
@@ -16,7 +16,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   const socketId = req.body.socket_id;
   const channel = req.body.channel_name;
   const data = {
-    user_id: session.user.email
+    user_id: session?.user?.email,
+    user_info: {
+      id: session?.user?.id!,
+      email: session?.user?.email!,
+      name: session?.user?.username!,
+      avatar: session?.user?.image!
+    }
   };
 
   const authResponse = pusherServer.authorizeChannel(socketId, channel, data);
@@ -24,43 +30,47 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 }
 */
 
-export async function POST(req: NextRequest) {
+export async function POST(req: Request) {
   try {
-    const session = await currentUser();
-
-    if (!session || !session.email) return new NextResponse('Unauthorized', { status: 401 });
-
-    if (!session?.email) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
     // Parse request body
-    const body = await req.json();
-    const socketId = body.socket_id;
-    const channel = body.channel_name;
+    const currentUser = await getCurrentUser();
+
+    // const body = await req.json() // to → req.formData();
+    // const socketId = body.socket_id;
+    // const channelName = body.channel_name;
+
+    const formData = await req.formData();
+    const socketId = formData.get('socket_id') as string;
+    const channelName = formData.get('channel_name') as string;
+
+    if (!currentUser) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+
+    if (!currentUser || !currentUser.email) return new NextResponse('Unauthorized', { status: 401 });
 
     const data = {
-      // user_id: session.email,
-      user_id: session.id,
+      user_id: currentUser?.email!,
+      // user_id: currentUser?.id!,
       user_info: {
-        email: session.email,
-        name: session.username,
-        avatar: session.image
+        id: currentUser?.id!,
+        email: currentUser?.email!,
+        name: currentUser?.username!,
+        avatar: currentUser?.image!
       }
     };
 
-    // Authorize channel dengan Pusher
-    const authResponse = pusherServer.authorizeChannel(socketId, channel, data);
+    // Authorize channel
+    const authResponse = pusherServer.authorizeChannel(socketId, channelName, data);
 
     // Return response
     return new Response(JSON.stringify(authResponse), {
       status: 200,
-      headers: {
-        'Content-Type': 'application/json'
-      }
+      headers: { 'Content-Type': 'application/json' }
     });
+
+    // return NextResponse.json(authResponse);
   } catch (error) {
     console.error('Pusher auth error:', error);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    // return NextResponse.json({ error: 'Internal Error' }, { status: 500 });
+    return new NextResponse('Internal server error', { status: 500 });
   }
 }

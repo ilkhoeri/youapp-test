@@ -9,7 +9,7 @@ export default auth(req => {
   const isLoggedIn = !!req.auth;
 
   // Add exceptions to routes /api/client/:path*
-  const isApiClientRoute = nextUrl.pathname.startsWith('/api/client/*');
+  const isApiClientRoute = nextUrl.pathname.startsWith('/api/pusher/auth');
 
   const isApiAuthRoute = nextUrl.pathname.startsWith(API_AUTH_PREFIX);
   const isPublicRoute = publicRoutes.includes(nextUrl.pathname);

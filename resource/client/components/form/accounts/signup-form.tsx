@@ -1,107 +1,16 @@
 'use client';
 import React from 'react';
+import * as motion from 'motion/react-client';
 import { Form } from '@/resource/client/components/fields/form';
 import { useRegisterWithToken, useSignUp } from '@/auth/handler-client';
-import { decrypt } from '@/resource/const/encrypt-decrypt';
-import { InvitationToken } from '@prisma/client';
 import { LoaderAuthPage, AuthButtonSubmit, DirectLink, styleForm } from './components';
 import { RequirementPassword, requirements } from './requirements-password';
+import { containerVariants } from '@/resource/styles/motion-styles';
+import { decrypt } from '@/resource/const/encrypt-decrypt';
+import { InvitationToken } from '@prisma/client';
 import { cn } from 'cn';
-import * as motion from 'motion/react-client';
-import { containerVariants, itemVariants } from '@/resource/styles/motion-styles';
 
 const classes = styleForm().auth();
-
-interface SignUpFormProps {
-  invitation: InvitationToken | null;
-}
-
-type RegisterWithTokenForm = React.ComponentProps<'form'> & SignUpFormProps;
-export function RegisterWithTokenForm(_props: RegisterWithTokenForm) {
-  const { className, invitation, ...props } = _props;
-  const [open, setOpen] = React.useState(false);
-  const [email, setEmail] = React.useState('');
-  const { form, loading, onSubmit } = useRegisterWithToken({ emailParam: email });
-
-  // get invitation_token from query
-  React.useEffect(() => {
-    const urlParams = new URLSearchParams(window.location.search);
-    const encryptedToken = urlParams.get('invitation_token');
-
-    if (encryptedToken) {
-      try {
-        const originalToken = decrypt(encryptedToken);
-        form.setValue('token', originalToken);
-      } catch (error) {
-        console.error('Token tidak valid');
-      }
-    }
-  }, [form]);
-
-  return (
-    <Form.Provider {...form}>
-      <LoaderAuthPage loading={loading} />
-      <Form {...props} onSubmit={form.handleSubmit(onSubmit)} className={cn('group flex flex-col gap-6 w-full min-h-max [--eye-color:#f1eba4]', className)}>
-        <div className="grid gap-4">
-          <Form.Field
-            control={form.control}
-            name="email"
-            render={({ field }) => (
-              <Form.InputField
-                size="lg"
-                disabled={loading}
-                label="Register"
-                placeholder="Enter Email"
-                classNames={classes.focused()}
-                {...field}
-                onChange={e => {
-                  field.onChange(e);
-                  setEmail(e.target.value);
-                }}
-              />
-            )}
-          />
-
-          <Form.Field
-            control={form.control}
-            name="name"
-            render={({ field }) => <Form.InputField placeholder="Create Username" size="lg" disabled={loading} className={classes.item()} {...field} />}
-          />
-
-          <Form.Field
-            control={form.control}
-            name="password"
-            render={({ field }) => (
-              <Form.InputPasswordField autoComplete="off" disabled={loading} placeholder="Create Password" className={classes.item()} {...field} open={open} onOpenChange={setOpen} />
-            )}
-          />
-
-          <Form.Field
-            control={form.control}
-            name="confirmPassword"
-            render={({ field }) => (
-              <Form.InputPasswordField
-                id="confirmPassword"
-                autoComplete="off"
-                size="lg"
-                placeholder="Confirm Password"
-                className={classes.item()}
-                disabled={loading}
-                {...field}
-                open={open}
-                onOpenChange={setOpen}
-              />
-            )}
-          />
-        </div>
-
-        <AuthButtonSubmit label="Register" loading={loading} />
-
-        <DirectLink disabled={loading} href="/auth/sign-in" label={['Have an account?', 'Login here']} />
-      </Form>
-    </Form.Provider>
-  );
-}
 
 type RegisterFormProps = React.ComponentPropsWithoutRef<'form'>;
 
@@ -204,6 +113,97 @@ export function RegisterForm({ className, ...props }: RegisterFormProps) {
                 </motion.div>
               );
             }}
+          />
+        </div>
+
+        <AuthButtonSubmit label="Register" loading={loading} />
+
+        <DirectLink disabled={loading} href="/auth/sign-in" label={['Have an account?', 'Login here']} />
+      </Form>
+    </Form.Provider>
+  );
+}
+
+interface SignUpFormProps {
+  invitation: InvitationToken | null;
+}
+
+type RegisterWithTokenForm = React.ComponentProps<'form'> & SignUpFormProps;
+export function RegisterWithTokenForm(_props: RegisterWithTokenForm) {
+  const { className, invitation, ...props } = _props;
+  const [open, setOpen] = React.useState(false);
+  const [email, setEmail] = React.useState('');
+  const { form, loading, onSubmit } = useRegisterWithToken({ emailParam: email });
+
+  // get invitation_token from query
+  React.useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const encryptedToken = urlParams.get('invitation_token');
+
+    if (encryptedToken) {
+      try {
+        const originalToken = decrypt(encryptedToken);
+        form.setValue('token', originalToken);
+      } catch (error) {
+        console.error('Token tidak valid');
+      }
+    }
+  }, [form]);
+
+  return (
+    <Form.Provider {...form}>
+      <LoaderAuthPage loading={loading} />
+      <Form {...props} onSubmit={form.handleSubmit(onSubmit)} className={cn('group flex flex-col gap-6 w-full min-h-max [--eye-color:#f1eba4]', className)}>
+        <div className="grid gap-4">
+          <Form.Field
+            control={form.control}
+            name="email"
+            render={({ field }) => (
+              <Form.InputField
+                size="lg"
+                disabled={loading}
+                label="Register"
+                placeholder="Enter Email"
+                classNames={classes.focused()}
+                {...field}
+                onChange={e => {
+                  field.onChange(e);
+                  setEmail(e.target.value);
+                }}
+              />
+            )}
+          />
+
+          <Form.Field
+            control={form.control}
+            name="name"
+            render={({ field }) => <Form.InputField placeholder="Create Username" size="lg" disabled={loading} className={classes.item()} {...field} />}
+          />
+
+          <Form.Field
+            control={form.control}
+            name="password"
+            render={({ field }) => (
+              <Form.InputPasswordField autoComplete="off" disabled={loading} placeholder="Create Password" className={classes.item()} {...field} open={open} onOpenChange={setOpen} />
+            )}
+          />
+
+          <Form.Field
+            control={form.control}
+            name="confirmPassword"
+            render={({ field }) => (
+              <Form.InputPasswordField
+                id="confirmPassword"
+                autoComplete="off"
+                size="lg"
+                placeholder="Confirm Password"
+                className={classes.item()}
+                disabled={loading}
+                {...field}
+                open={open}
+                onOpenChange={setOpen}
+              />
+            )}
           />
         </div>
 

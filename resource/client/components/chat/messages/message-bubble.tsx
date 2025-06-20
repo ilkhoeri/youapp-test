@@ -1,33 +1,34 @@
 'use client';
 import * as React from 'react';
-// import * as CtxMenu from '@radix-ui/react-context-menu';
-import { CheckIcon, DoubleCheckIcon } from '../../icons';
-import { cn } from 'cn';
+import axios from 'axios';
+import * as x from 'xuxi';
+import * as motion from 'motion/react-client';
 import { MotionImage } from '../../motion/motion-image';
+import { CheckIcon, DoubleCheckIcon } from '../../icons';
 import { ChevronFillIcon, StickerSmileFillIcon } from '../../icons-fill';
 import { formatPrettyDate, formatShortTime } from '@/resource/const/times-helper';
-import { Account, Message as MessageProp, MessageReaction, MinimalAccount } from '@/resource/types/user';
+import { MessageReaction, MinimalAccount } from '@/resource/types/user';
 import { ContextMenu as CtxMenu } from '@/resource/client/components/ui/context-menu';
-import * as motion from 'motion/react-client';
 import { Avatar, getInitialsColor } from '../../ui/avatar-oeri';
 import { useHover } from '@/resource/hooks/use-hover';
 import { getEmoji } from '../emoji/config';
-import { toast } from 'sonner';
-import { x } from 'xuxi';
 
 import { EnrichedMessage } from './helper';
 import { SafeInlineDisplay } from '../../inline-editor/inline-display';
-import { SheetsBreakpoint } from '../../sheets-breakpoint';
-import { Popover } from '../../ui/popover';
 import { useIsMobile } from '@/resource/hooks/use-device-query';
+import { SheetsBreakpoint } from '../../sheets-breakpoint';
 import { Svg, SvgProps } from '../../ui/svg';
+import { Popover } from '../../ui/popover';
 
-import axios from 'axios';
+import { cn } from 'cn';
+import { toast } from 'sonner';
 import { mergeRefs } from '@/resource/hooks/use-merged-ref';
 import { useApp } from '@/resource/client/contexts/app-provider';
+import { useOnlinePresence } from '../chat-hooks';
 import { useRouter } from 'next/navigation';
 
 import css from './msg.module.css';
+import { debounce } from 'lodash';
 
 const reactions: MessageReaction[] = [
   { emoji: '❤️', createdAt: new Date(Date.now()), id: '1', messageId: '1', userId: '1', user: null },
@@ -50,12 +51,17 @@ interface MessageBubbleProps extends React.ComponentPropsWithRef<'div'> {
   data: EnrichedMessage;
   lastMessage: EnrichedMessage | undefined;
   members?: (MinimalAccount | null)[] | null | undefined;
-  targetRef?: React.RefObject<HTMLDivElement> | null;
+  targetRef?: React.RefObject<HTMLElement> | null;
   // classNames?: Partial<Record<MCTrees, string>>;
+  isInView?: boolean;
 }
 
 export function MessageBubble(_props: MessageBubbleProps) {
-  const { ref, data, className, members, lastMessage, targetRef, ...props } = _props;
+  const { ref, data, className, members, lastMessage, targetRef, isInView, ...props } = _props;
+  const { user } = useApp();
+
+  // if (!user) return null;
+
   const [openMenu, setOpenMenu] = React.useState<boolean>(false);
 
   const isMediaQuery = useIsMobile();
@@ -72,8 +78,8 @@ export function MessageBubble(_props: MessageBubbleProps) {
 
   const seenBy = JSON.stringify(`Seen by: [${seenList}]`, null, 2);
 
-  const dateTime = formatShortTime(new Date(data.createdAt)),
-    dateMessage = formatPrettyDate(new Date(data.createdAt), { locale: 'en-US', year: 'numeric', month: '2-digit' });
+  const dateTime = formatShortTime(new Date(data.createdAt));
+  const dateMessage = formatPrettyDate(new Date(data.createdAt), { locale: 'en-US', year: 'numeric', month: '2-digit' });
   const plaintext = x.cnx(`[${dateTime}, ${dateMessage}]`, `${data.sender.name}:`);
   const isSend = seenList.length > 0;
 
@@ -89,9 +95,30 @@ export function MessageBubble(_props: MessageBubbleProps) {
     cntpict = defFloat({ in: css._pictin, out: css._pictout }),
     emoji = defFloat({ in: css._emjin, out: css._emjout });
 
+  const { isOnline } = useOnlinePresence();
+
+  const cc = data.senderId !== user?.id && (data.seenIds ?? []).includes(user?.id!);
+
+  React.useEffect(() => {
+    if (cc && !isInView) return;
+    async function markSeen() {
+      try {
+        try {
+          await axios.patch(`/api/chats/messages/${data.id}`, {
+            messageIds: [data.id],
+            seenIds: [user?.id]
+          });
+        } catch (err) {
+          console.error('Failed to mark messages as seen:', err);
+        }
+      } catch (_e) {}
+    }
+    markSeen();
+  }, [user?.id, data.seenIds, cc, isInView]);
+
   return (
     <CtxMenu>
-      {/* <span className="text-sm">{data.senderId}</span> */}
+      {/* {stt && <span className="text-sm">{JSON.stringify(stt, null, 2)}</span>} */}
       <article key={data?.id} {...{ ...props, role: 'row', suppressHydrationWarning: true, tabIndex: -1 }} ref={mergeRefs(ref, targetRef)}>
         <div tabIndex={-1} className={container}>
           <div ref={refRootHovered} className={root}>
@@ -118,7 +145,9 @@ export function MessageBubble(_props: MessageBubbleProps) {
                   fallback={data.sender.name}
                   className={avatar}
                   rootProps={{ ref: refAvatar, tabIndex: 0, onContextMenu: onPrevent }}
-                />
+                >
+                  {() => isOnline(data.senderId) && <span aria-hidden className={css._dot} />}
+                </Avatar>
               )}
               <CtxMenu.Trigger asChild>
                 <div ref={refContent} className={box} {...{ style: { backgroundColor: 'var(--bg-themes)', boxShadow: '0 1px .5px var(--shadow)' } }}>
@@ -377,9 +406,9 @@ function ActionOnHovered(_props: ActionOnHoveredProps) {
 interface UseMenuMapOptions {}
 
 function useMenuMap(data: EnrichedMessage) {
-  const router = useRouter();
   const app = useApp();
   const isMediaQuery = useIsMobile();
+  const router = useRouter();
 
   const handleCopy = React.useCallback(() => {
     if (data.body) {
@@ -435,12 +464,13 @@ function useMenuMap(data: EnrichedMessage) {
 
     try {
       await axios.delete(`/api/chats/messages/${data.id}`);
+      router.refresh();
     } catch (_e) {
       console.error('Gagal menghapus Pesan', _e);
     } finally {
       router.refresh();
     }
-  }, [data.id, router]);
+  }, [data.id]);
 
   const opts = <T,>(params: T, obj: MenuMap) => (params ? [obj] : []);
 

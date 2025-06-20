@@ -43,7 +43,7 @@ const DrawerContent = React.forwardRef<React.ElementRef<typeof DrawerPrimitive.C
       className={cn('fixed inset-x-0 bottom-0 z-50 mt-24 flex h-auto flex-col rounded-t-[10px] border bg-background-theme', className, classNames?.content)}
       {...props}
     >
-      <div className={cn('mx-auto mt-4 h-2 w-[100px] rounded-full bg-muted', classNames?.close)} />
+      <div className={cn('mx-auto mt-4 h-2 w-[100px] rounded-full bg-muted-foreground cursor-grab active:cursor-grabbing', classNames?.close)} />
       {children}
     </DrawerPrimitive.Content>
     <DrawerPrimitive.Title className="hidden sr-only" />

@@ -10,6 +10,7 @@ import emojiJson from './emoji.json' with { type: 'json' };
 import './inline-editor.css';
 import { useElementRect } from '@/resource/hooks/use-element-info';
 import { getVarsPositions, useUpdatedPositions } from '@/resource/hooks/use-open-state';
+import { mergeRefs } from '@/resource/hooks/use-merged-ref';
 
 export type TValues<T extends unknown = string> = Record<string, T>;
 
@@ -385,17 +386,17 @@ export function InlineEditor<TData, TTag extends TTagPatterns = TTagPatterns>(_p
     [onBeforeInput]
   );
 
-  // React.useEffect(() => {
-  //   const el = editorRef.current;
-  //   if (!el) return;
+  React.useEffect(() => {
+    const el = editorRef.current;
+    if (!el) return;
 
-  //   if (value === '') {
-  //     el.innerHTML = '';
-  //     cleanEmptyNodes(el, currentTags);
-  //     el.append(document.createTextNode('')); // agar bisa diketik
-  //     // el.focus();
-  //   }
-  // }, [value]);
+    if (value === '') {
+      el.innerHTML = '';
+      cleanEmptyNodes(el, currentTags);
+      el.append(document.createTextNode('')); // agar bisa diketik
+      // el.focus();
+    }
+  }, [value]);
 
   // Render value (markdown) ke dalam HTML (formatted)
   // React.useEffect(() => {
@@ -431,12 +432,12 @@ export function InlineEditor<TData, TTag extends TTagPatterns = TTagPatterns>(_p
             disabled,
             dir
           }}
-          // ref={editorRef}
-          ref={node => {
-            if (typeof ref === 'function') ref(node);
-            else if (ref) (ref as React.MutableRefObject<HTMLDivElement | null>).current = node;
-            (editorRef.current as HTMLDivElement | null) = node;
-          }}
+          ref={mergeRefs(ref, editorRef)}
+          // ref={node => {
+          //   if (typeof ref === 'function') ref(node);
+          //   else if (ref) (ref as React.MutableRefObject<HTMLDivElement | null>).current = node;
+          //   (editorRef.current as HTMLDivElement | null) = node;
+          // }}
           onInput={handleInput}
           onKeyDown={handleKeyDown}
           onBeforeInput={handleBeforeInput}

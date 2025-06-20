@@ -1,106 +1,60 @@
 import db from '@/resource/db/user';
 import { NextResponse } from 'next/server';
-import { pusherServer } from '@/resource/server/messages/pusher';
+import { pusherServer } from '@/resource/configs/pusher/pusher';
 import { getCurrentUser } from '@/resource/db/user/get-accounts';
-import { ChatGroupValues } from '@/resource/schemas/chat';
+import { CreateChatTypes } from '@/resource/schemas/chat';
 import { AllChatProps, pickFromOtherUser } from '@/resource/types/user';
+
+const getResponse = (body: BodyInit, status: number) => new NextResponse(body, { status });
+
+type ID = { id: string };
+
+type ConnectProps = Omit<CreateChatTypes, 'type'> & { currentUser: ID };
+
+function getConnect(type: CreateChatTypes['type'], props: ConnectProps) {
+  const { currentUser, userId, members, name } = props;
+  const self = { id: currentUser.id };
+  const memberIds = members.map(m => ({ id: m.value! }));
+  const membersMap = [self, ...memberIds];
+  const connectMap: Record<CreateChatTypes['type'], ID[]> = {
+    PRIVATE: userId ? [self, { id: userId }] : membersMap,
+    GROUP: membersMap,
+    CHANNEL: [self],
+    BOT: [self]
+  };
+
+  return {
+    type,
+    name: type === 'GROUP' ? name : undefined,
+    users: { connect: connectMap[type] }
+  };
+}
 
 export async function POST(req: Request) {
   try {
     const [currentUser, data] = await Promise.all([getCurrentUser(), req.json()]);
 
-    const { userId, type, members, name } = data as ChatGroupValues;
+    const { userId, type, members, name } = data as CreateChatTypes;
 
-    if (!currentUser?.id || !currentUser?.email) {
-      return new NextResponse('Unauthorized', { status: 401 });
-    }
+    if (!currentUser || !currentUser?.email) return getResponse('Unauthorized', 401);
 
-    if (type === 'GROUP' && (!members || members.length < 1 || !name)) {
-      return new NextResponse('Invalid data', { status: 402 });
-    }
+    if (type === 'GROUP' && (!members || members.length < 1 || !name)) return getResponse('Invalid Group Fields', 402);
 
-    if (type === 'GROUP') {
-      const newChat = await db.chat.create({
-        data: {
-          name,
-          type,
-          users: {
-            connect: [
-              ...members.map(member => ({
-                id: member.value
-              })),
-              {
-                id: currentUser.id
-              }
-            ]
-          }
-        },
-        include: {
-          users: true
-        }
-      });
-
-      // Update all connections with new chat
-      newChat.users.forEach(user => {
-        if (user.email) {
-          pusherServer.trigger(user.email, 'chat:new', newChat);
-        }
-      });
-
-      return NextResponse.json(newChat);
-    }
-
-    const existingChats = await db.chat.findMany({
-      where: {
-        OR: [
-          {
-            userIds: {
-              equals: [currentUser.id, userId]
-            }
-          },
-          {
-            userIds: {
-              equals: [userId, currentUser.id]
-            }
-          }
-        ]
-      }
-    });
-
-    const singleChat = existingChats[0];
-
-    if (singleChat) {
-      return NextResponse.json(singleChat);
-    }
+    if (type === 'PRIVATE' && !userId && (!members || members.length !== 2)) return getResponse('Invalid Private Fields', 402);
 
     const newChat = await db.chat.create({
-      data: {
-        users: {
-          connect: [
-            {
-              id: currentUser.id
-            },
-            {
-              id: userId
-            }
-          ]
-        }
-      },
-      include: {
-        users: true
-      }
+      data: getConnect(type, { currentUser, userId, members, name }),
+      include: { users: true }
     });
 
-    // Update all connections with new chat
+    /** Update all connections with new chat */
     newChat.users.map(user => {
-      if (user.email) {
-        pusherServer.trigger(user.email, 'chat:new', newChat);
-      }
+      if (user.email) pusherServer.trigger(user.email, 'chat:new', newChat);
     });
 
     return NextResponse.json(newChat);
   } catch (error) {
-    return new NextResponse('Internal Error', { status: 500 });
+    return getResponse('Internal Error', 500);
   }
 }
 
@@ -111,7 +65,7 @@ export async function GET(req: Request) {
     // Simulasi delay
     // await new Promise(resolve => setTimeout(resolve, 1000));
 
-    if (!currentUser?.id || !currentUser?.email) return new NextResponse('Unauthorized', { status: 401 });
+    if (!currentUser?.id || !currentUser?.email) return getResponse('Unauthorized', 401);
 
     const allChat: Array<AllChatProps> = await db.chat.findMany({
       orderBy: {
@@ -138,6 +92,6 @@ export async function GET(req: Request) {
     return NextResponse.json(allChat);
   } catch (error) {
     console.error('Error fetching chat group:', error);
-    return new NextResponse('Internal Error', { status: 500 });
+    return getResponse('Internal Error', 500);
   }
 }

@@ -25,7 +25,7 @@ import { Chat } from '@prisma/client';
 import { Form, useForm } from '../fields/form';
 import { useApp } from '../../contexts/app-provider';
 import { SheetsBreakpoint } from '../sheets-breakpoint';
-import { pusherClient } from '@/resource/server/messages/pusher';
+import { pusherClient } from '@/resource/configs/pusher/pusher';
 import { formatPrettyDate } from '@/resource/const/times-helper';
 import { ChatSchema, ChatValues } from '@/resource/schemas/chat';
 import { Message as MessageProp, MinimalAccount } from '@/resource/types/user';
@@ -40,6 +40,7 @@ import { find, debounce } from 'lodash';
 import { AlertModal } from '../alert';
 import { toast } from 'sonner';
 import { cn } from 'cn';
+import { useOnlinePresence } from './chat-hooks';
 
 const ICON_SIZE: number = 20;
 
@@ -53,12 +54,15 @@ export function ChatHeader({ chat }: ChatHeaderProps) {
 
   const { members } = useActiveChat();
 
+  const { isOnline } = useOnlinePresence();
+
   const isActive = members.indexOf(otherUser?.email!) !== -1;
 
   const statusText = React.useMemo(() => {
     if (chat?.type === 'GROUP') return `${chat?.users.length} members`;
-    return isActive ? 'Active' : 'Offline';
-  }, [chat, isActive]);
+    if ((otherUser && isOnline(otherUser?.id)) || isActive) return 'Online';
+    return 'Offline';
+  }, [chat, otherUser?.id, isOnline, isActive]);
 
   const sheetsContent = <GroupProfile chat={chat} confirm={confirm} onConfirm={() => onConfirm(true)} />;
 
@@ -69,23 +73,7 @@ export function ChatHeader({ chat }: ChatHeaderProps) {
       <div className="relative z-[8] border-b p-2 flex items-center bg-background-theme [&>*>button]:rounded-full">
         <div className="flex items-center gap-1">
           <div className="flex gap-3 items-center">
-            {/* <ChatAvatars data={chat} otherUser={otherUser} /> */}
-            {otherUser && chat?.userIds && (
-              <SheetsBreakpoint
-                openWith="drawer"
-                trigger={
-                  <span
-                    role="button"
-                    tabIndex={0}
-                    aria-label={`Group - ${chat?.name}`}
-                    className="cursor-pointer [--sz:32px] size-[var(--sz)] min-h-[var(--sz)] min-w-[var(--sz)] bg-muted/35 text-color/50 centered rounded-full overflow-hidden"
-                  >
-                    {chat?.userIds.length === 2 ? <User2FillIcon size={28} /> : chat.userIds.length > 2 ? <User3FillIcon size={28} /> : <UserFillIcon size={28} />}
-                  </span>
-                }
-                content={sheetsContent}
-              />
-            )}
+            {otherUser && chat?.userIds && <SheetsBreakpoint openWith="drawer" trigger={<ChatAvatars data={chat} otherUser={otherUser} />} content={sheetsContent} />}
             <div className="flex flex-col">
               <h4 className="text-sm font-semibold">{chat?.name || otherUser?.name}</h4>
               <p className="text-xs font-light text-neutral-500">{statusText}</p>
@@ -113,6 +101,7 @@ export function ChatHeader({ chat }: ChatHeaderProps) {
               <Separator orientation="vertical" className="mx-1 h-6 max-md:hidden max-md:sr-only" />
             </>
           )}
+
           {/* <Tooltip>
         <Popover>
           <PopoverTrigger asChild>
@@ -285,7 +274,7 @@ interface DeleteGroupAlertProps {
 export function DeleteGroupAlert({ confirm, onConfirm, url }: DeleteGroupAlertProps) {
   const router = useRouter();
   const [loading, setLoading] = React.useState(false);
-  const { searchSlug: chatId } = useActiveChat();
+  const { slug: chatId } = useActiveChat();
 
   const onDelete = React.useCallback(() => {
     setLoading(true);
@@ -297,7 +286,10 @@ export function DeleteGroupAlert({ confirm, onConfirm, url }: DeleteGroupAlertPr
         router.refresh();
       })
       .catch(() => toast.error('Something went wrong!'))
-      .finally(() => setLoading(false));
+      .finally(() => {
+        setLoading(false);
+        router.refresh();
+      });
   }, [router, chatId, url]);
 
   return (
@@ -327,40 +319,85 @@ interface ChatSubscriptionProps {
   chatId: string | null | undefined;
   data: MessageProp[];
   userId: string | undefined;
+  key: number;
   // refs: React.RefObject<HTMLElement>[];
   // containerRef: React.RefObject<HTMLElement>;
 }
 
-function useChatSubscription(props: ChatSubscriptionProps) {
-  const { data, chatId, targetRef } = props;
+function useChatSubscriptionXX(props: ChatSubscriptionProps) {
+  const { data, chatId, targetRef, userId } = props;
   const [messages, setMessages] = React.useState(data);
 
-  const lastMessage = messages?.[messages.length - 1];
+  const lastMessage = data?.[data.length - 1];
 
-  const markAsSeen = React.useCallback(
-    debounce((messageId: string) => {
-      axios.post(`/api/chats/${chatId}/seen`, { messageId });
-    }, 500),
-    []
-  );
+  // Ambil semua message yang belum dilihat oleh current user
+  // const unseenMessages = messages.filter(m => !m.seenIds?.includes(userId!));
 
-  // 👁️ Intersection observer to mark as seen
+  // React.useEffect(() => {
+  //   if (!chatId || prevent) return;
+
+  //   const observers: IntersectionObserver[] = [];
+
+  //   unseenMessages.forEach(msg => {
+  //     const el = document.getElementById(`message-${msg.id}`);
+  //     if (!el) return;
+
+  //     const observer = new IntersectionObserver(
+  //       ([entry]) => {
+  //         if (entry.isIntersecting) {
+  //           markAsSeen(msg.id);
+  //         }
+  //       },
+  //       { threshold: 1.0 }
+  //     );
+
+  //     observer.observe(el);
+  //     observers.push(observer);
+  //   });
+
+  //   return () => {
+  //     observers.forEach(observer => observer.disconnect());
+  //   };
+  // }, [chatId, unseenMessages]);
+
+  const seenMap = React.useRef(new Set<string>()); // simpan ID yang sudah dikirim seen
+
+  const markAsSeen = debounce((ids: string[]) => {
+    if (!chatId || ids.length === 0) return;
+    axios.post(`/api/chats/${chatId}/seen`, { seenIds: ids });
+  }, 300);
+
   React.useEffect(() => {
-    if (!targetRef.current || !chatId || !lastMessage?.id) return;
+    if (!chatId) return;
 
     const observer = new IntersectionObserver(
-      ([entry]) => {
-        if (entry.isIntersecting) markAsSeen(lastMessage.id); // kirim ID terakhir
+      entries => {
+        const newlySeenIds: string[] = [];
+
+        for (const entry of entries) {
+          const el = entry.target as HTMLElement;
+          const messageId = el.dataset.messageId;
+          if (!messageId) continue;
+
+          if (entry.isIntersecting && !seenMap.current.has(messageId)) {
+            seenMap.current.add(messageId);
+            newlySeenIds.push(messageId);
+          }
+        }
+
+        if (newlySeenIds.length > 0) {
+          markAsSeen(newlySeenIds);
+        }
       },
-      { threshold: 1.0 } // hanya saat 100% terlihat
+      { threshold: 1 }
     );
 
-    observer.observe(targetRef.current);
+    const bubbleEls = document.querySelectorAll('[data-message-id]');
+    bubbleEls.forEach(el => observer.observe(el));
 
     return () => observer.disconnect();
-  }, [chatId, lastMessage?.id]);
+  }, [chatId, messages]);
 
-  // 🔔 Realtime pusher events
   React.useEffect(() => {
     if (!chatId) return;
 
@@ -390,6 +427,83 @@ function useChatSubscription(props: ChatSubscriptionProps) {
   return messages;
 }
 
+function preventedMessage(messages: Array<MessageProp>, userId: string | undefined) {
+  const lastMessage = messages?.[messages.length - 1];
+
+  const unseenMessages = messages.map(i => ({
+    // body: i.body,
+    // seenIds: i.seenIds,
+    isLastMessage: i.id === lastMessage?.id,
+    hasUserId: i.seenIds?.includes(userId!),
+    isFromCurrentUser: i.senderId === userId
+  }));
+
+  const isMessages = messages && messages?.length > 0;
+
+  const isPrevent = unseenMessages.some(msg => msg.isFromCurrentUser || msg.hasUserId);
+
+  return { lastMessage, isPrevent, isMessages };
+}
+
+function useChatSubscription(props: ChatSubscriptionProps) {
+  const { data, chatId, targetRef, userId, key } = props;
+  const [messages, setMessages] = React.useState(data);
+
+  const { isPrevent, lastMessage, ...rest } = preventedMessage(messages, userId);
+
+  const markAsSeen = React.useCallback(
+    debounce((messageId: string) => {
+      axios.post(`/api/chats/${chatId}/seen`, { messageId });
+    }, 500),
+    []
+  );
+
+  // 👁️ Intersection observer to mark as seen
+  React.useEffect(() => {
+    if (!targetRef.current || !chatId || !lastMessage?.id || isPrevent) return;
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) markAsSeen(lastMessage.id); // kirim ID terakhir
+      },
+      { threshold: 0.8 } // hanya saat 100% terlihat
+    );
+
+    observer.observe(targetRef.current);
+
+    return () => observer.disconnect();
+  }, [chatId, lastMessage?.id]);
+
+  // 🔔 Realtime pusher events
+  React.useEffect(() => {
+    if (!chatId || isPrevent) return;
+
+    pusherClient.subscribe(chatId);
+
+    const handleNew = (message: MessageProp) => {
+      setMessages(current => {
+        if (find(current, { id: message.id })) return current;
+        return [...current, message];
+      });
+    };
+
+    const handleUpdate = (newMessage: MessageProp) => {
+      setMessages(current => current.map(m => (m.id === newMessage.id ? newMessage : m)));
+    };
+
+    pusherClient.bind('messages:new', handleNew);
+    pusherClient.bind('message:update', handleUpdate);
+
+    return () => {
+      pusherClient.unsubscribe(chatId);
+      pusherClient.unbind('messages:new', handleNew);
+      pusherClient.unbind('message:update', handleUpdate);
+    };
+  }, [chatId, key]);
+
+  return { messages, isPrevent, lastMessage, ...rest };
+}
+
 export interface ChatBodyProps {
   messages: MessageProp[];
   members?: (MinimalAccount | null)[] | null | undefined;
@@ -397,15 +511,49 @@ export interface ChatBodyProps {
 export function ChatBody({ messages: initialMessages = [], members }: ChatBodyProps) {
   const { user } = useApp();
 
-  const bottomRef = React.useRef<HTMLDivElement>(null);
+  const { scrollableRef, targetRef, slug: chatId, key } = useActiveChat();
 
-  // const seenMessageIds = React.useRef<Set<string>>(new Set());
-
-  const { scrollableRef, targetRef, searchSlug: chatId } = useActiveChat();
-
-  const messages = useChatSubscription({ data: initialMessages, chatId, targetRef, userId: user?.id });
+  const { messages } = useChatSubscription({ data: initialMessages, chatId, targetRef, userId: user?.id, key });
 
   const { byDate, dateKeys, lastMessage } = groupMessagesByDate(messages, user!!);
+
+  // const bubleRef = React.useRef<HTMLDivElement>(null);
+
+  // const seenMessageIds = React.useRef<Set<string>>(new Set());
+  // const messageRefs = React.useRef<MessageProp[]>([]);
+  const [inViewMap, setInViewMap] = React.useState<boolean[]>([]);
+
+  const refs = React.useMemo(() => messages.map(() => React.createRef<HTMLDivElement>()), [messages]);
+
+  React.useEffect(() => {
+    const scrollContainer = scrollableRef.current;
+    if (!scrollContainer) return;
+
+    const observers: IntersectionObserver[] = [];
+    const inViewStatus = Array(refs.length).fill(false);
+
+    refs.forEach((ref, index) => {
+      if (!ref.current) return;
+
+      const observer = new IntersectionObserver(
+        ([entry]) => {
+          inViewStatus[index] = entry.isIntersecting;
+          setInViewMap([...inViewStatus]); // Trigger re-render with new state
+        },
+        {
+          root: scrollContainer,
+          threshold: 1.0 // Trigger when 100% is visible
+        }
+      );
+
+      observer.observe(ref.current);
+      observers.push(observer);
+    });
+
+    return () => {
+      observers.forEach(observer => observer.disconnect());
+    };
+  }, [refs, scrollableRef]);
 
   /**
   React.useEffect(() => {
@@ -449,6 +597,12 @@ export function ChatBody({ messages: initialMessages = [], members }: ChatBodyPr
   }, [chatId]);
  */
 
+  // React.useEffect(() => {
+  //   if (isPrevent) {
+  //     targetRef?.current?.scrollIntoView({ behavior: 'smooth' });
+  //   }
+  // }, [isPrevent, targetRef?.current, messages.length]);
+
   return (
     <div className="relative h-full contents overflow-y-auto">
       <div ref={scrollableRef} className="overflow-y-auto flex-1">
@@ -466,11 +620,13 @@ export function ChatBody({ messages: initialMessages = [], members }: ChatBodyPr
                 members={members}
                 // id={`msg-${msg.id}`}
                 // data-message-id={msg.id}
-                // ref={refs[i]}
                 // targetRef={msg.senderId === user?.id ? null : targetRef}
-                targetRef={lastMessage?.senderId !== user?.id ? (msg.senderId === user?.id ? null : targetRef) : null}
-                lastMessage={lastMessage}
+                // targetRef={lastMessage?.senderId !== user?.id ? (msg.senderId === user?.id ? null : targetRef) : null}
                 // ref={lastMessage?.id === msg.id ? (msg.senderId === user?.id ? bottomRef : targetRef) : undefined}
+                targetRef={targetRef}
+                lastMessage={lastMessage}
+                ref={refs[i]}
+                isInView={inViewMap[i] ? true : undefined}
               />
             ))}
           </React.Fragment>
@@ -485,9 +641,9 @@ interface ChatFormProps {
   members?: (MinimalAccount | null)[] | null | undefined;
 }
 export function ChatForm({ messages, members: initialMembers }: ChatFormProps) {
-  const { scrollIntoView, isInView, targetRef, searchSlug: chatId } = useActiveChat();
+  const { scrollIntoView, isInView, onReload, slug: chatId } = useActiveChat();
 
-  const { form } = useForm<ChatValues>({
+  const { form, router } = useForm<ChatValues>({
     schema: ChatSchema,
     defaultValues: {
       message: '',
@@ -496,16 +652,11 @@ export function ChatForm({ messages, members: initialMembers }: ChatFormProps) {
     }
   });
 
-  const messagesIsDefined = messages?.length > 0;
+  const isMessages = messages && messages?.length > 0;
+
   const isMessage = (form.watch('message') === undefined && form.watch('message')?.trim() === '') || (form.watch('mediaUrl') === undefined && form.watch('mediaUrl')?.trim() === '');
 
   function onSubmit(data: ChatValues) {
-    // form.setValue('message', '', { shouldValidate: true });
-    // console.log('[DATA]:', {
-    //   ...data,
-    //   chatId: chatId
-    // });
-
     if ((!data.message && !data.mediaUrl) || (data.message && data.message?.trim() === '') || (data.mediaUrl && data.mediaUrl?.trim() === '')) return;
 
     try {
@@ -514,24 +665,18 @@ export function ChatForm({ messages, members: initialMembers }: ChatFormProps) {
         chatId: chatId
       });
       form.reset();
+      onReload();
     } catch (error: any) {
       console.log('Error:', error.message);
     }
   }
-
-  const handleUpload = (result: any) => {
-    axios.post('/api/chats/messages', {
-      image: result.info.secure_url,
-      chatId: chatId
-    });
-  };
 
   const members = React.useMemo(() => (initialMembers ?? [])?.map(member => ({ id: member?.refId!, name: member?.username!, image: member?.image })), [initialMembers]);
 
   return (
     <Form.Provider {...form}>
       <Form onSubmit={form.handleSubmit(onSubmit)} className="bg-background-theme flex flex-col max-h-[35%] w-full border-t [--inset-x:0.75rem] [--inset-b:0.75rem]">
-        {messagesIsDefined && !!targetRef.current && <ScrollToBottom visible={!isInView} onClick={() => scrollIntoView()} />}
+        {isMessages && <ScrollToBottom visible={!isInView} onClick={() => scrollIntoView()} />}
 
         {/* <CldUploadButton
           options={{ maxFiles: 1 }}
@@ -573,7 +718,6 @@ export function ChatForm({ messages, members: initialMembers }: ChatFormProps) {
           render={({ field }) => {
             return (
               <InlineEditor
-                // autoFocus
                 dir="ltr"
                 placeholder="Type a message"
                 users={members}
@@ -583,7 +727,6 @@ export function ChatForm({ messages, members: initialMembers }: ChatFormProps) {
                   // console.log('[VALUE]:', JSON.stringify(i));
                   field.onChange(i);
                 }}
-                // onSubmit={onSubmit}
                 classNames={{
                   root: 'px-3 mt-2 overflow-y-auto min-h-20 max-h-[calc(100%-(0.5rem+3.5rem))]',
                   editor: 'my-0 w-full max-w-full text-sm md:text-[15px] bg-transparent h-auto resize-none leading-normal rounded-none border-0'
@@ -625,7 +768,7 @@ export function ChatForm({ messages, members: initialMembers }: ChatFormProps) {
             role="button"
             tabIndex={0}
             disabled={isMessage}
-            className="bg-background-theme/70 backdrop-blur rounded-full p-2 text-color hover:text-color transition-colors z-[9] cursor-pointer disabled:text-color/50 lg:focus-visible:ring-2 lg:focus-visible:ring-cyan-500/50 max-lg:focus-visible:text-cyan-500"
+            className="bg-background-theme/70 backdrop-blur rounded-full p-2 text-color hover:text-color transition-colors z-[9] cursor-pointer disabled:text-color/50 focus-visible:text-cyan-600"
           >
             <PaperPlaneFillIcon size={24} />
             <span className="hidden sr-only">Send Message</span>

@@ -214,3 +214,22 @@ export function formatDayLabel(dayKey: string, opts: FDLOptions = {}): string {
 
   return targetDate.toLocaleDateString(locale, options);
 }
+
+/**
+ * @example
+ * const dataDefined = (chats ?? [])?.find(c =>
+ *   isSameUserSet(c.userIds, [user?.id, currentUser?.id])
+ * );
+ * @param ids string[]
+ * @param compareIds string[]
+ * @returns boolean
+ */
+export function isSameUserSet(ids: string[], compareIds: string[]): boolean {
+  const setA = new Set(ids);
+  const setB = new Set(compareIds);
+  if (setA.size !== setB.size) return false;
+  for (const id of setA) {
+    if (!setB.has(id)) return false;
+  }
+  return true;
+}

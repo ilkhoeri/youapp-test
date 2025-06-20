@@ -35,7 +35,7 @@ export async function signup(values: z.infer<typeof SignUpSchema>) {
     if (existingEmail) return { error: 'Email already exists' };
     if (existingRefId) return { error: 'Name already used' };
 
-    await db.user?.create({
+    const newUser = await db.user?.create({
       data: {
         refId,
         username,
@@ -55,6 +55,35 @@ export async function signup(values: z.infer<typeof SignUpSchema>) {
     // const verificationToken = await generateVerificationToken(email);
     // await sendVerificationEmail(verificationToken.email, verificationToken.token);
     // return { success: "Confirmation email sent!" };
+
+    return { newUser, success: 'Registration successful, please login.' };
+  } catch (error) {
+    console.error('Signup Error:', error);
+    return { error: 'Error' };
+  }
+}
+
+export async function signupWithCreateChat(values: z.infer<typeof SignUpSchema>) {
+  try {
+    const { newUser } = await signup(values);
+
+    if (!newUser) return { error: 'No Users Created Previously' };
+
+    // 2. Ambil semua user lama (kecuali user baru)
+    const existingUsers = await db.user.findMany({
+      where: { id: { not: newUser.id } }
+    });
+
+    // 3. Untuk setiap user lama, buat Chat baru dengan user lama dan user baru
+    for (const user of existingUsers) {
+      await db.chat.create({
+        data: {
+          type: 'PRIVATE',
+          userIds: [user.id, newUser.id]
+          // field lain sesuai kebutuhan
+        }
+      });
+    }
 
     return { success: 'Registration successful, please login.' };
   } catch (error) {

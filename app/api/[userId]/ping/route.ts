@@ -8,7 +8,7 @@ export async function POST(req: Request) {
 
   await db.user.update({
     where: { id: session.id },
-    data: { lastSeen: new Date() }
+    data: { lastOnline: new Date() }
   });
 
   return new NextResponse('OK');

@@ -1,30 +1,73 @@
 'use client';
 import React from 'react';
 import axios from 'axios';
-import Pusher from 'pusher-js';
 import { debounce } from 'lodash';
-import { useRouter } from 'next/navigation';
 import { useApp } from '../../contexts/app-provider';
 import { AllChatProps, MinimalAccount } from '@/resource/types/user';
+import { pusherClient } from '@/resource/configs/pusher/pusher';
 import { useActiveChat, useOtherUser } from './chat-context';
-import { pusherClient } from '@/resource/server/messages/pusher';
+import { dbPing } from '@/auth/handler-server';
+import { chattype, ID, SwitchData } from './types';
 
-export function useSwitchChat(data: AllChatProps | undefined) {
-  const { searchSlug: chatId, setLoading, searchQuery: query } = useActiveChat();
-  const otherUser = useOtherUser(data);
-  const router = useRouter();
-  const app = useApp();
-  const selected = chatId === data?.id;
+interface SwitcherProps {
+  selectedId?: string | null;
+}
 
-  const setValueChange = React.useCallback(
-    (id: string | undefined = data?.id) => {
-      if (selected) return;
-      const route = query ? `/chat?${query}=${id}` : `/chat/${id}`;
-      setLoading(true);
+export function useSwitcher<TData extends ID>(items: SwitchData<TData>, opts: SwitcherProps = {}) {
+  const { selectedId: _id } = opts;
+
+  const { router, setLoading, slug: chatId, onReload, ...rest } = useActiveChat();
+
+  const selectedId = _id || chatId;
+
+  const itemsIsDefined = items && items?.length > 0;
+
+  const defaultSelectedId = React.useMemo(() => {
+    // return itemsIsDefined ? items[0]?.id : undefined;
+    if (!itemsIsDefined) return;
+    return selectedId ?? undefined;
+  }, [selectedId, items]);
+
+  const [selectedItemId, setSelectedItemId] = React.useState<string | undefined>(selectedId ?? defaultSelectedId);
+
+  React.useEffect(() => {
+    if (!itemsIsDefined) {
+      setSelectedItemId(undefined);
+      return;
+    }
+    const stillValid = items?.some(item => item?.id === selectedItemId);
+    if (selectedId) setSelectedItemId(selectedId);
+    if (!stillValid) setSelectedItemId(defaultSelectedId);
+  }, [selectedId, items, selectedItemId, defaultSelectedId]);
+
+  const selectedItem = items?.find(item => item?.id === selectedItemId);
+
+  const isSelect = selectedId === selectedItem?.id;
+
+  const onSwitch = React.useCallback(
+    (query: chattype | null, slug: string | null | undefined) => {
+      if (!slug) return;
+      const route = query ? `/chat?${query}=${slug}` : `/chat/${slug}`;
       router.push(route, { scroll: false });
+      setSelectedItemId(slug);
+      setLoading(true);
+      onReload();
     },
-    [data, query, selected]
+    [selectedItem, isSelect]
   );
+
+  return { selectedItemId, selectedItem, isSelect, onSwitch, setLoading, router, slug: chatId, onReload, ...rest };
+}
+
+type ChatProps = AllChatProps | null | undefined;
+// type SwitchChatParams = ChatProps | (ChatProps[] | null | undefined);
+
+export function useSwitchChat(data: ChatProps) {
+  const { setLoading, slug: chatId, onReload, router, ...rest } = useActiveChat();
+  // const data = params && Array.isArray(params) ? params.find(c => c?.id === chatId) : params;
+  const otherUser = useOtherUser(data);
+  const app = useApp();
+  const isSelect = chatId === data?.id;
 
   const lastMessage = React.useMemo(() => {
     const messages = data?.messages || [];
@@ -52,24 +95,41 @@ export function useSwitchChat(data: AllChatProps | undefined) {
     return 'Started a conversation';
   }, [lastMessage]);
 
-  return { setValueChange, selected, otherUser, lastMessage, hasSeen, lastMessageText };
+  const onSwitch = React.useCallback(
+    (query: chattype | null, slug: string | null | undefined) => {
+      if (isSelect || !slug) return;
+      const route = query ? `/chat?${query}=${slug}` : `/chat/${slug}`;
+      router.push(route, { scroll: false });
+      setLoading(true);
+      onReload();
+    },
+    [data, isSelect]
+  );
+
+  return { onSwitch, isSelect, otherUser, lastMessage, hasSeen, lastMessageText, setLoading, slug: chatId, onReload, router, ...rest };
 }
 
 // untuk UI lokal, misal tampilkan badge "You're offline"
-export function useOnlineStatus(userId?: string | null) {
+export function useOnlineStatus(userId?: string | null, threshold = 40) {
   const [isOnline, setIsOnline] = React.useState<boolean>(typeof navigator !== 'undefined' ? navigator.onLine : false);
+
+  const THRESHOLD = threshold * 1000;
 
   React.useEffect(() => {
     if (!userId) return;
-    const interval = setInterval(() => {
-      fetch(`/api/${userId}/ping`, { method: 'POST' });
-    }, 20_000); // tiap 20 detik
+    async function lastSeen() {
+      try {
+        await dbPing(userId, { lastOnline: new Date() });
+        // axios.post(`/api/${userId}/ping`);
+      } catch (error) {}
+    }
+    const interval = setInterval(() => lastSeen(), THRESHOLD); // tiap 20 detik
 
     return () => clearInterval(interval);
-  }, []);
+  }, [userId]);
 
   React.useEffect(() => {
-    if (userId) return;
+    if (!userId) return;
     const handleOnline = () => setIsOnline(true);
     const handleOffline = () => setIsOnline(false);
 
@@ -80,63 +140,115 @@ export function useOnlineStatus(userId?: string | null) {
       window.removeEventListener('online', handleOnline);
       window.removeEventListener('offline', handleOffline);
     };
-  }, []);
+  }, [userId]);
 
   return isOnline;
 }
 
-export function isUserOnline(lastSeen: Date): boolean {
-  const THRESHOLD = 30 * 1000; // 30 detik
+export function isUserOnline(lastSeen: Date | null | undefined, threshold = 50): boolean {
+  const THRESHOLD = threshold * 1000;
+  if (!lastSeen) return false;
   return new Date().getTime() - new Date(lastSeen).getTime() < THRESHOLD;
 }
 
 //
-export function useOnlinePresence() {
-  const [onlineUsers, setOnlineUsers] = React.useState<string[]>([]);
+type MergedUser = {
+  accounts: MinimalAccount;
+  members: MemberInfo;
+};
 
-  React.useEffect(() => {
-    const channel = pusherClient.subscribe('presence-users');
+export function getMatchingMembers(accounts: MinimalAccount[], members: MemberInfo[]): MergedUser[] {
+  const memberMap = new Map(members.map(m => [m.email, m]));
 
-    channel.bind('pusher:subscription_succeeded', (members: any) => {
-      const ids = members.map((member: any) => member.id);
-      setOnlineUsers(ids);
-    });
-
-    channel.bind('pusher:member_added', (member: any) => {
-      setOnlineUsers(prev => [...new Set([...prev, member.id])]);
-    });
-
-    channel.bind('pusher:member_removed', (member: any) => {
-      setOnlineUsers(prev => prev.filter(id => id !== member.id));
-    });
-
-    return () => {
-      pusherClient.unsubscribe('presence-users');
-    };
-  }, []);
-
-  const isOnline = (userId: string) => onlineUsers.includes(userId);
-  return { onlineUsers, isOnline };
+  return accounts
+    .filter(user => memberMap.has(user.email))
+    .map(user => ({
+      accounts: user,
+      members: memberMap.get(user.email)!
+    }));
 }
 
-export function usePresenceUsers() {
-  const [onlineUsers, setOnlineUsers] = React.useState<MinimalAccount[]>([]);
+export function getMatchingAccounts(accounts: MinimalAccount[], members: MemberInfo[]): MinimalAccount[] {
+  const memberMap = new Map(members.map(m => [m.email, m]));
+  return accounts.filter(user => memberMap.has(user.email));
+}
 
+/**
+ * @example
+ * type Emails = 'janedoe123@gmail.com' | 'johndoe123@gmail.com';
+ * const members: MembersPresence<Emails> = {
+ *   members: {
+ *     'janedoe123@gmail.com': {
+ *       id: '684568324a6f3739c22fb2b6',
+ *       email: 'janedoe123@gmail.com',
+ *       name: 'janedoe',
+ *       avatar: ''
+ *     },
+ *     'johndoe123@gmail.com': {
+ *       id: '684567d94a6f3739c22fb2b4',
+ *       email: 'johndoe123@gmail.com',
+ *       name: 'johndoe',
+ *       avatar: ''
+ *     }
+ *   },
+ *   count: 2,
+ *   myID: 'johndoe123@gmail.com',
+ *   me: {
+ *     id: 'johndoe123@gmail.com',
+ *     info: {
+ *       id: '684567d94a6f3739c22fb2b4',
+ *       email: 'johndoe123@gmail.com',
+ *       name: 'johndoe',
+ *       avatar: ''
+ *     }
+ *   }
+ * };
+ */
+export type MembersPresence<TEmails extends string = string> = {
+  members: MembersMap<TEmails>;
+  count: number;
+  myID: TEmails;
+  me: {
+    id: TEmails;
+    info: MemberInfo<TEmails>;
+  };
+};
+export type MembersMap<T extends string> = {
+  [K in T]: {
+    id: string;
+    email: K;
+    name: string;
+    avatar: string;
+  };
+};
+export type MemberInfo<TEmail extends string = string> = {
+  id: string;
+  email: TEmail;
+  name: string;
+  avatar: string;
+};
+
+export function useOnlinePresence() {
+  const [onlineUsers, setOnlineUsers] = React.useState<MemberInfo[]>([]);
+
+  // 🔔 Realtime pusher events
   React.useEffect(() => {
     const channel = pusherClient.subscribe('presence-user-status');
 
     channel.bind('pusher:subscription_succeeded', (members: any) => {
-      const users: MinimalAccount[] = [];
+      // const users = Object.values(members.members);
+      const users: MemberInfo[] = [];
       members.each((member: any) => users.push(member.info));
       setOnlineUsers(users);
     });
 
     channel.bind('pusher:member_added', (member: any) => {
-      setOnlineUsers(prev => [...prev, member.info]);
+      // setOnlineUsers(current => [...current, member.info]);
+      setOnlineUsers(current => [...new Set([...current, member.info])]);
     });
 
     channel.bind('pusher:member_removed', (member: any) => {
-      setOnlineUsers(prev => prev.filter(user => user.email !== member.info.email));
+      setOnlineUsers(current => current.filter(u => u.id !== member.id));
     });
 
     return () => {
@@ -144,10 +256,9 @@ export function usePresenceUsers() {
     };
   }, []);
 
-  // const isOnline = (userId: string) => onlineUsers.flatMap(user => user.id).includes(userId);
-  const isOnline = (userId: string) => onlineUsers.some(u => u.id === userId);
+  const isOnline = (userId: string) => onlineUsers?.some(u => u?.id === userId);
 
-  return { onlineUsers, isOnline };
+  return { onlineCount: onlineUsers?.length, onlineUsers, isOnline };
 }
 
 //
@@ -190,7 +301,7 @@ export function useBatchSeenTracker({ chatId, currentUserId }: Options) {
             markSeen();
           }
         },
-        { threshold: 0.8 }
+        { threshold: 0.85 }
       );
 
       observer.observe(element);

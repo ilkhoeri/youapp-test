@@ -1,7 +1,7 @@
 import db from '@/resource/db/user';
 import { NextResponse } from 'next/server';
 import { getCurrentUser } from '@/resource/db/user/get-accounts';
-import { pusherServer } from '@/resource/server/messages/pusher';
+import { pusherServer } from '@/resource/configs/pusher/pusher';
 
 interface Params {
   chatId?: string;

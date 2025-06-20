@@ -1,6 +1,6 @@
 'use server';
 
-import { pusherServer } from './pusher';
+import { pusherServer } from '../../configs/pusher/pusher';
 
 interface SendMessageProps {
   channel: string | Array<string>;

@@ -11,31 +11,31 @@ import { ChatList } from './chat-list';
 import { Input } from '../fields/input';
 import { Skeleton } from './chat-skeleton';
 import { useMount } from '../client-mount';
-import { ChatClient } from './chat-client';
 import { Resizable } from '../ui/resizable';
 import { Separator } from '../ui/separator';
 import { buttonVariants } from '../ui/button';
-import { ChatSwitcher } from './chat-switcher';
+import { ChatSwitcher, UserSwitcher } from './chat-switcher';
 import { CreateChatGroup } from './chat-group';
-import { UseChatOptions } from './chat-context';
 import { Tag2DuotoneIcon } from '../icons-duotone';
 import { useApp } from '../../contexts/app-provider';
 import { useDeviceQuery } from '@/resource/hooks/use-device-query';
-import { AllChatProps, MinimalAccount } from '@/resource/types/user';
+import { AllChatProps, Message, MinimalAccount } from '@/resource/types/user';
 import { ArchiveFillIcon, ArchiveJunkFillIcon, CartShoppingFillIcon, FileDraftFillIcon, InboxFillIcon, MailFillIcon, SendFillIcon, TrashFillIcon, RefreshFillIcon } from '../icons-fill';
+import { ChatClient } from './chat-client';
 
-const classTabs = {
+export const classTabs = {
   list: 'inline-flex h-9 items-center justify-center rounded-lg bg-background-theme border p-1 aria-disabled:opacity-50',
   tab: 'inline-flex items-center justify-center whitespace-nowrap rounded-md px-3 py-1 text-sm font-semibold ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 aria-selected:bg-color data-[active]:text-background aria-selected:shadow text-muted-foreground',
   panel: 'px-4 m-0 space-y-0.5 overflow-y-auto max-h-[calc(100%-7.5rem)]'
 };
 
-interface ChatContainerProps extends UseChatOptions {
+interface ChatContainerProps {
   accounts: MinimalAccount[];
   chats: AllChatProps[];
   defaultLayout?: number[] | undefined;
   defaultCollapsed?: boolean;
   navCollapsedSize?: number;
+  messages: Message[];
 }
 
 type ContainerActionsProps = Pick<ChatContainerProps, 'accounts' | 'chats'>;
@@ -134,13 +134,12 @@ function useContainerActions(props: ContainerActionsProps) {
 
 export function ChatContainer(_props: ChatContainerProps) {
   const desktopQuery = useDeviceQuery('xl');
-  const { accounts, chats: allChat, searchQuery, defaultLayout = desktopQuery ? [20, 32, 48] : [19, 31, 50], defaultCollapsed = false, navCollapsedSize } = _props;
+  const { accounts, messages, chats: allChat, defaultLayout = desktopQuery ? [20, 32, 48] : [19, 31, 50], defaultCollapsed = false, navCollapsedSize } = _props;
   const [isCollapsed, setIsCollapsed] = React.useState(defaultCollapsed);
 
   const chatsIsDefined = allChat && allChat.length > 0;
 
   const links = useContainerActions({ accounts, chats: allChat });
-  // const members = chat?.users;
   const mount = useMount();
 
   if (!mount) return <Skeleton.Container layouts={defaultLayout} />;
@@ -170,7 +169,7 @@ export function ChatContainer(_props: ChatContainerProps) {
         className={cn('max-xl:grid max-xl:grid-cols-2 relative', isCollapsed && 'min-w-[50px] transition-all duration-300 ease-in-out')}
       >
         <div className={cn('max-xl:col-span-full flex h-[52px] items-center justify-center', isCollapsed ? 'h-[52px]' : 'px-2')}>
-          <ChatSwitcher isCollapsed={isCollapsed} accounts={accounts} chats={allChat} />
+          <UserSwitcher isCollapsed={isCollapsed} accounts={accounts} chats={allChat} />
         </div>
         <Separator className="max-xl:absolute max-xl:top-[52px] max-xl:w-full max-xl:inset-x-0" />
         <ChatNav isCollapsed={isCollapsed} links={links[1]} className="max-xl:border-r overflow-y-auto" />
@@ -185,6 +184,7 @@ export function ChatContainer(_props: ChatContainerProps) {
           <div className="flex items-center px-4 py-2 gap-2">
             <h1 className="text-xl font-bold">Inbox</h1>
             <CreateChatGroup accounts={accounts} />
+            <ChatSwitcher isCollapsed={isCollapsed} accounts={accounts} chats={allChat} />
             <Tabs.List aria-disabled={!chatsIsDefined} className={classTabs.list}>
               <Tabs.Tab value="all" className={classTabs.tab}>
                 All
@@ -195,7 +195,7 @@ export function ChatContainer(_props: ChatContainerProps) {
             </Tabs.List>
           </div>
           <Separator />
-          <div className="bg-background/95 p-4 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+          {/* <div className="bg-background/95 p-4 backdrop-blur supports-[backdrop-filter]:bg-background/60">
             <form>
               <div className="relative">
                 <SearchIcon className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
@@ -204,18 +204,19 @@ export function ChatContainer(_props: ChatContainerProps) {
             </form>
           </div>
           <Tabs.Panel value="all" className={classTabs.panel}>
-            <ChatList accounts={accounts} items={allChat} searchQuery={searchQuery} />
+            <ChatList accounts={accounts} items={allChat} />
           </Tabs.Panel>
           <Tabs.Panel value="unread" className={classTabs.panel}>
-            <ChatList accounts={accounts} items={allChat?.filter(item => !item.messages?.map(ms => ms.seenIds.length > 0))} searchQuery={searchQuery} />
-          </Tabs.Panel>
+            <ChatList accounts={accounts} items={allChat?.filter(item => !item.messages?.map(ms => ms.seenIds.length > 0))} />
+          </Tabs.Panel> */}
+          <ChatList accounts={accounts} items={allChat} />
         </Tabs>
       </Resizable.Panel>
 
       <Resizable.Handle withHandle />
 
       <Resizable.Panel defaultSize={defaultLayout[2]} minSize={desktopQuery ? 55 : 30} className="relative">
-        <ChatClient chats={allChat} />
+        <ChatClient chats={allChat} messages={messages} />
       </Resizable.Panel>
     </Resizable>
   );

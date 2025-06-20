@@ -124,6 +124,7 @@ export const DialogContent = React.forwardRef<React.ElementRef<typeof DialogPrim
           <DialogPrimitive.Close
             tabIndex={0}
             disabled={disabled}
+            data-role="button-close"
             className={cn(
               'absolute right-4 top-4 rounded-sm opacity-70 transition-opacity hover:opacity-100 disabled:pointer-events-none data-[state=open]:bg-accent data-[state=open]:text-muted-foreground ring-offset-background focus:ring-0 focus:ring-ring focus:ring-offset-0 focus:outline-0 focus-visible:outline-0 focus-visible:ring-0',
               classNames?.close

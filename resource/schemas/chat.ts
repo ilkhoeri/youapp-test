@@ -1,8 +1,8 @@
 import * as z from 'zod';
 import { ChatType } from '@prisma/client';
 
-export const ChatGroupSchema = z.object({
-  userId: z.string(),
+export const CreateChatSchema = z.object({
+  userId: z.optional(z.string()),
   name: z.optional(z.string()),
   type: z.nativeEnum(ChatType),
   members: z
@@ -16,7 +16,7 @@ export const ChatGroupSchema = z.object({
     .default([])
 });
 
-export type ChatGroupValues = z.infer<typeof ChatGroupSchema>;
+export type CreateChatTypes = z.infer<typeof CreateChatSchema>;
 
 export const ChatSchema = z.object({
   message: z.optional(z.string()),

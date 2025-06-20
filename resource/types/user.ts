@@ -1,7 +1,7 @@
-import * as user from '@prisma/client';
+import * as db from '@prisma/client';
 import { UserGender } from '../schemas/user';
 
-export type ElaboratedUser = {
+export type ElaboratedUserX = {
   id: string;
   createdAt: Date;
   updatedAt: Date;
@@ -17,8 +17,8 @@ export type ElaboratedUser = {
   image: string | null;
   phone: string | null;
   isTwoFactorEnabled: boolean;
-  role: user.$Enums.UserRole;
-  status: user.$Enums.AccountStatus;
+  role: db.$Enums.UserRole;
+  status: db.$Enums.AccountStatus;
   /** Nomor KTP / SIM */
   nationalId?: string | null;
   /** NPWP */
@@ -29,52 +29,54 @@ export type ElaboratedUser = {
   favoriteIds?: string[] | null;
   /**  */
   saveIds?: string[] | null;
-  lastOnline?: Date;
-  lastSeen?: Date;
+  lastOnline?: Date | null;
+  lastSeen?: Date | null;
 };
 
-type UserAbout = Omit<user.About, 'gender'> & { gender?: UserGender };
+export type ElaboratedUser = db.User;
+
+type UserAbout = Omit<db.About, 'gender'> & { gender?: UserGender };
 
 export type ExtendededCurrentlyActiveUser = {
   about?: UserAbout | null;
-  chats?: user.Chat[] | null;
-  seenMessages?: user.Message[] | null;
-  messages?: user.Message[] | null;
-  educations?: user.Education[] | null;
+  chats?: db.Chat[] | null;
+  seenMessages?: db.Message[] | null;
+  messages?: db.Message[] | null;
+  educations?: db.Education[] | null;
   /** Referensi profesional */
-  references?: user.Reference[] | null;
+  references?: db.Reference[] | null;
   /** Karir yang pernah dilalui user */
-  careers?: user.Career[] | null;
+  careers?: db.Career[] | null;
   /** Perusahaan tempat user bekerja saat ini */
   currentCompanyId?: string | null;
-  currentCompany?: user.Company | null;
+  currentCompany?: db.Company | null;
   /**  */
-  address?: user.Address | null;
+  address?: db.Address | null;
   /**  */
-  links?: user.Link[] | null;
+  links?: db.Link[] | null;
   /**  */
-  testimony?: user.Testimony[] | null;
+  testimony?: db.Testimony[] | null;
   /**  */
-  ownedTeams?: user.Team[] | null;
+  ownedTeams?: db.Team[] | null;
   teamIDs?: string[];
   /**  */
-  teams?: user.Team[] | null;
+  teams?: db.Team[] | null;
   followedByIDs?: string[];
   /**  */
-  followedBy?: user.User[] | null;
+  followedBy?: db.User[] | null;
   followingIDs?: string[] | null;
   /**  */
-  following?: user.User[] | null;
+  following?: db.User[] | null;
   /**  */
-  notifications?: user.Notification[] | null;
+  notifications?: db.Notification[] | null;
   /**  */
-  notificationSettings?: user.UserNotificationSetting | null;
+  notificationSettings?: db.UserNotificationSetting | null;
   /**  */
-  transactionAccount?: user.TransactionAccount[] | null;
+  transactionAccount?: db.TransactionAccount[] | null;
   /** Relasi untuk token yang dibuat oleh user */
-  createdTokens?: user.InvitationToken[] | null;
+  createdTokens?: db.InvitationToken[] | null;
   /** Relasi untuk token yang digunakan oleh user */
-  usedToken?: user.InvitationToken[] | null;
+  usedToken?: db.InvitationToken[] | null;
   // isOAuth: boolean;
 };
 
@@ -87,15 +89,15 @@ declare global {
   }
 }
 
-// export type Account = Nullable<user.User> | null;
+// export type Account = Nullable<db.User> | null;
 export type Account = (ElaboratedUser & ExtendededCurrentlyActiveUser) | null;
 
 export type IsRole = ElaboratedUser['role'];
-// export const IsRole = Object.values(user.$Enums.UserRole);
+// export const IsRole = Object.values(db.$Enums.UserRole);
 export const IsRole = ['SUPERADMIN', 'ADMIN', 'USER'];
 
 export type IsAccountStatus = ElaboratedUser['status'];
-export const IsAccountStatus = Object.values(user.$Enums.AccountStatus);
+export const IsAccountStatus = Object.values(db.$Enums.AccountStatus);
 
 export interface Session {
   session: Account;
@@ -106,10 +108,10 @@ export interface ElaboratedSession {
 }
 
 export namespace USER {
-  export type TEAM = user.Team & {};
-  export type ADDRESS = user.Address & {};
-  export type LINK = user.Link & {};
-  export type LINKS = user.Link[] | null;
+  export type TEAM = db.Team & {};
+  export type ADDRESS = db.Address & {};
+  export type LINK = db.Link & {};
+  export type LINKS = db.Link[] | null;
 }
 
 export namespace FORM_USER {
@@ -117,7 +119,7 @@ export namespace FORM_USER {
     data: AddressProps | null | undefined;
   }
   export interface FORM_LINK {
-    data: user.Link | null;
+    data: db.Link | null;
   }
 }
 
@@ -136,7 +138,7 @@ export type AddressProps = {
   createdAt?: Date | null;
   updatedAt?: Date | null;
   notes?: string[];
-  visibility?: user.$Enums.Visibility | null;
+  visibility?: db.$Enums.Visibility | null;
   userId?: string | null;
 };
 
@@ -144,20 +146,20 @@ type SecureFromOtherUser = keyof typeof pickFromOtherUser;
 
 export type MinimalAccount = Pick<NonNullable<Account>, SecureFromOtherUser>;
 
-export interface MessageReaction extends user.Reaction {
+export type MessageReaction = db.Reaction & {
   user: MinimalAccount | null | undefined;
-}
+};
 
-export interface Message extends user.Message {
+export type Message = db.Message & {
   sender: MinimalAccount;
   seen: MinimalAccount[];
   reactions?: MessageReaction[] | null | undefined;
-}
+};
 
-export interface AllChatProps extends user.Chat {
+export type AllChatProps = db.Chat & {
   users: MinimalAccount[];
   messages: Message[];
-}
+};
 
 export const pickFromOtherUser = {
   id: true,
@@ -168,5 +170,8 @@ export const pickFromOtherUser = {
   username: true,
   firstName: true,
   lastName: true,
-  createdAt: true
-};
+  lastOnline: true,
+  lastSeen: true,
+  createdAt: true,
+  chatIds: true
+}; // as db.Prisma.UserSelect;
