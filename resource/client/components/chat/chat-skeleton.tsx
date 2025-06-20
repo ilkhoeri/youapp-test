@@ -33,12 +33,12 @@ export function ContainerSkeleton(props: ContainerSkeletonProps) {
 const bubbleClasses = cvx({
   variants: {
     selector: {
-      root: 'transition-[height,width] flex flex-row items-start gap-x-1 max-w-[80%]',
+      root: 'transition-[height,width] min-w-22 flex flex-row items-start gap-x-1 max-w-[80%]',
       avatar: 'size-8 bg-muted rounded-full animate-pulse [animation-delay:250ms]',
       container: 'relative flex-1 flex flex-col gap-1 animate-pulse',
       arrow: 'size-3 bg-muted rounded-none absolute top-0 z-[10]',
       body: 'transition-[height,width] h-16 w-full bg-muted rounded-lg',
-      date: 'h-2.5 w-20 min-w-20 bg-muted invert rounded-[3.5px] absolute bottom-1'
+      date: 'h-2.5 w-16 min-w-16 bg-muted invert rounded-[3.5px] absolute bottom-1'
     }
   }
 });
