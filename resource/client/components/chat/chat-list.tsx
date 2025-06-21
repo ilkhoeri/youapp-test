@@ -96,9 +96,13 @@ export function ChatList(_props: ChatListProps) {
 
   return (
     <>
-      <div className="bg-background/95 relative p-4 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-        <SearchIcon className="absolute left-2 top-2.5 text-muted-foreground" />
-        <Input placeholder="Search" variant="outline" className="pl-8" value={query} onChange={e => setQuery(e.target.value)} />
+      <div className="bg-background/95 p-4 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+        <form>
+          <div className="relative">
+            <SearchIcon className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+            <Input placeholder="Search" variant="outline" className="pl-8" value={query} onChange={e => setQuery(e.target.value)} />
+          </div>
+        </form>
       </div>
       <Tabs.Panel value="all" className={classTabs.panel}>
         {listItems(newItems)}
