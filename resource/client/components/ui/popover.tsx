@@ -3,8 +3,8 @@
 import * as React from 'react';
 import * as PopoverPrimitive from '@radix-ui/react-popover';
 
-import { twMerge } from 'tailwind-merge';
 import { ChevronIcon } from '../icons';
+import { cn } from 'cn';
 
 export const Popover = PopoverPrimitive.Root as PopoverComponent;
 
@@ -29,7 +29,7 @@ export const PopoverContent = React.forwardRef<React.ElementRef<typeof PopoverPr
           e.preventDefault();
           onContextMenu?.(e);
         }}
-        className={twMerge(
+        className={cn(
           !unstyled &&
             'relative z-[106] max-h-96 min-w-[162px] w-72 rounded-xl border bg-popover p-4 text-popover-foreground shadow-md outline-none data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2',
           className
@@ -48,18 +48,27 @@ export const PopoverItem = React.forwardRef<
     el?: React.ElementType;
     ref?: React.Ref<HTMLElement>;
     unstyled?: boolean;
+    inset?: boolean;
+    disabled?: boolean;
+    variant?: 'default' | 'destructive';
   }
->(({ className, unstyled, el = 'div', orientation = 'horizontal', ...props }, ref) => {
+>(({ className, unstyled, el = 'div', orientation = 'horizontal', inset, variant, disabled, ...props }, ref) => {
   let Item = el as React.ElementType;
+  const cc = <T,>(x: T) => (x ? x : undefined);
   return (
     <Item
       ref={ref}
       role="menuitem"
       tabIndex={0}
-      data-orientation={orientation}
-      className={twMerge(
+      data-disabled={cc(disabled)}
+      data-inset={cc(inset)}
+      data-variant={cc(variant)}
+      data-orientation={cc(orientation)}
+      className={cn(
         !unstyled &&
           'relative flex cursor-pointer select-none items-center rounded-md px-2 py-1.5 text-sm font-medium outline-none transition-colors data-[disabled]:pointer-events-none data-[disabled]:opacity-50 focus-visible:ring-0 hover:bg-card',
+        { 'text-destructive hover:bg-destructive/10 dark:hover:bg-destructive/20 hover:text-destructive *:[svg]:!text-destructive': variant === 'destructive' },
+        inset && 'pl-8',
         className
       )}
       {...props}
@@ -75,7 +84,7 @@ export const PopoverSeparator = React.forwardRef<
     unstyled?: boolean;
   }
 >(({ className, unstyled, orientation = 'horizontal', ...props }, ref) => {
-  return <div ref={ref} role="separator" tabIndex={-1} data-orientation={orientation} className={twMerge(!unstyled && 'bg-border -mx-1 my-1 h-px', className)} {...props} />;
+  return <div ref={ref} role="separator" tabIndex={-1} data-orientation={orientation} className={cn(!unstyled && 'bg-border -mx-1 my-1 h-px', className)} {...props} />;
 });
 PopoverSeparator.displayName = 'PopoverSeparator';
 
@@ -85,7 +94,7 @@ export const PopoverShortcut = React.forwardRef<
     unstyled?: boolean;
   }
 >(({ className, unstyled, ...props }, ref) => {
-  return <span ref={ref} role="note" tabIndex={-1} className={twMerge(!unstyled && 'text-muted-foreground ml-auto text-xs tracking-widest', className)} {...props} />;
+  return <span ref={ref} role="note" tabIndex={-1} className={cn(!unstyled && 'text-muted-foreground ml-auto text-xs tracking-widest', className)} {...props} />;
 });
 PopoverShortcut.displayName = 'PopoverShortcut';
 
@@ -105,7 +114,7 @@ export const PopoverSubTrigger = React.forwardRef<
       role="button"
       tabIndex={0}
       data-inset={inset}
-      className={twMerge(
+      className={cn(
         !unstyled &&
           "flex w-full cursor-pointer select-none items-center rounded-lg px-2 py-1.5 text-sm outline-none focus:text-accent-foreground data-[state=open]:text-accent-foreground [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
         'data-[state=open]:bg-background-theme/20',
@@ -136,7 +145,7 @@ export const PopoverSubContent = React.forwardRef<React.ElementRef<typeof Popove
             e.preventDefault();
             onContextMenu?.(e);
           }}
-          className={twMerge(
+          className={cn(
             !unstyled &&
               'z-[108] min-w-[8rem] overflow-hidden rounded-xl border bg-popover p-1 text-popover-foreground shadow-lg data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 origin-[var(--radix-context-menu-content-transform-origin)]',
             className

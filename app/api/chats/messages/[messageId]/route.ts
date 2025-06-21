@@ -41,28 +41,27 @@ export async function DELETE(req: Request, { params }: { params: Promise<Params>
     if (!currentUser) return new NextResponse('Unauthorized', { status: 400 });
 
     const existingMessage = await db.message.findUnique({
-      where: {
-        id: messageId
-      },
-      include: {
-        sender: true
-      }
+      where: { id: messageId },
+      include: { sender: true }
     });
 
-    if (!existingMessage) {
-      return new NextResponse('Invalid ID', { status: 400 });
-    }
+    if (!existingMessage) return new NextResponse('Invalid ID', { status: 400 });
 
-    const deletedMessage = await db.message.deleteMany({
+    const deletedMessage = await db.message.delete({
       where: {
         id: messageId,
         senderId: currentUser.id
+      },
+      include: {
+        seen: true,
+        chat: {
+          include: { users: true }
+        }
       }
     });
 
-    if (existingMessage.sender.email) {
-      pusherServer.trigger(existingMessage.sender.email, 'message:remove', existingMessage);
-    }
+    // await pusherServer.trigger(`chat:${deletedMessage.chatId}`, 'message:remove', { id: deletedMessage.id });
+    await pusherServer.trigger(deletedMessage.chatId, 'message:remove', { id: deletedMessage.id });
 
     return NextResponse.json(deletedMessage);
   } catch (error) {
@@ -70,25 +69,25 @@ export async function DELETE(req: Request, { params }: { params: Promise<Params>
   }
 }
 export type UpdatedSeenIds = {
-  messageIds: string[];
+  messageIds?: string[] | undefined;
   seenIds: string[];
 };
 
 export async function PATCH(req: Request, { params }: { params: Promise<Params> }) {
   try {
-    const [currentUser, { messageId }, data] = await Promise.all([getCurrentUser(), params, req.json()]);
-    const { messageIds, seenIds } = data as UpdatedSeenIds;
+    const [currentUser, { messageId }, body] = await Promise.all([getCurrentUser(), params, req.json()]);
+    const { seenIds, messageIds } = body as UpdatedSeenIds;
 
     if (!currentUser) return new NextResponse('Unauthorized', { status: 401 });
 
     if (!messageId) return new NextResponse('Unauthorized', { status: 402 });
 
-    if (!messageIds || !seenIds) return new NextResponse('Invalid field', { status: 400 });
+    if (!seenIds) return new NextResponse('Invalid field', { status: 400 });
 
-    const updatedMessage = await db.message.updateMany({
+    const updatedMessages = await db.message.updateMany({
       where: {
         // id: { in: ['id1', 'id2', 'id3'] } // filter pesan yang akan diupdate (berdasarkan id)
-        id: { in: messageIds }
+        id: { in: messageIds ?? undefined }
       },
       data: {
         seenIds: {
@@ -98,7 +97,33 @@ export async function PATCH(req: Request, { params }: { params: Promise<Params> 
       }
     });
 
-    return NextResponse.json(updatedMessage);
+    // const updatedMessage = await db.message.update({
+    //   where: {
+    //     id: messageId
+    //   },
+    //   data: {
+    //     seenIds: {
+    //       set: seenIds
+    //     }
+    //   },
+    //   include: {
+    //     seen: true,
+    //     chat: {
+    //       include: {
+    //         users: true
+    //       }
+    //     }
+    //   }
+    // });
+
+    // await pusherServer.trigger(currentUser.email, 'chat:update', {
+    //   id: updatedMessage.chatId,
+    //   messages: [updatedMessage]
+    // });
+    // await pusherServer.trigger(updatedMessage.chatId!, 'message:update', updatedMessage);
+    // return NextResponse.json(updatedMessage);
+
+    if (messageIds) return NextResponse.json(updatedMessages);
   } catch (error) {
     console.log('[MSG_PATCH]', error);
     return new NextResponse('Internal error', { status: 500 });

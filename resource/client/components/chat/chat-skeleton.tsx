@@ -22,7 +22,7 @@ export function ContainerSkeleton(props: ContainerSkeletonProps) {
     <div className={cn('flex w-full flex-col xl:flex-row overflow-hidden cursor-not-allowed', classes, className)}>
       {layouts?.map((grow, idx) => (
         <React.Fragment key={idx}>
-          <div className="animate-pulse bg-muted/30" style={{ flex: `${grow} 1 0`, overflow: 'hidden', animationDelay: `${grow * 10}ms` }}></div>
+          <div className="animate-pulse bg-muted/30" style={{ flex: `${grow} 1 0`, overflow: 'hidden', animationDelay: `${(idx + 1) * 1000}ms` }}></div>
           {idx < layouts.length - 1 && handle}
         </React.Fragment>
       ))}
@@ -33,7 +33,7 @@ export function ContainerSkeleton(props: ContainerSkeletonProps) {
 const bubbleClasses = cvx({
   variants: {
     selector: {
-      root: 'transition-[height,width] flex flex-row items-start gap-x-1 max-w-[80%]',
+      root: 'transition-[height,width] flex flex-row items-start gap-x-1 max-w-[80%] ',
       avatar: 'size-8 bg-muted rounded-full animate-pulse [animation-delay:250ms]',
       container: 'relative flex-1 flex flex-col gap-1 animate-pulse',
       arrow: 'size-3 bg-muted rounded-none absolute top-0 z-[10]',
@@ -44,14 +44,14 @@ const bubbleClasses = cvx({
 });
 
 function bubbleStyles(isLeft = false): Record<ChatBubbleTrees, CSSProperties> {
-  const randomHeight = `${Math.floor(Math.random() * (186 - 64 + 1)) + 64}px`; // 64px - 186px
-  const randomWidth = `${Math.floor(Math.random() * 50) + 30}%`; // antara 30% - 80%
+  const randomHeight = `${Math.floor(Math.random() * (146 - 64 + 1)) + 64}px`; // 64px - 146px
+  const randomWidth = `${Math.floor(Math.random() * 55) + 30}%`; // antara 35% - 85%
   return {
     root: {
       '--padd': '0.625rem',
       '--safe-date': '0.25rem',
       width: randomWidth,
-      minWidth: '276px',
+      minWidth: '200px',
       [isLeft ? 'marginRight' : 'marginLeft']: 'auto'
     },
     avatar: {
@@ -89,18 +89,19 @@ interface GetStyles {
 
 function getStyles(selector: ChatBubbleTrees, i: number): GetStyles {
   const isLeft = i % 2 === 0;
+  const label = selector + '-skeleton-' + (isLeft ? 'left' : 'right');
   return {
-    className: bubbleClasses({ selector }),
+    className: cn(label, bubbleClasses({ selector })),
     style: bubbleStyles(isLeft)[selector]
   };
 }
 
 export function ChatSkeleton() {
   return (
-    <div className="size-full flex flex-col gap-6 rounded-lg shadow-md p-2">
-      <div className="h-10 bg-muted rounded w-full animate-pulse delay-500" />
+    <div data-skeleton="chat-bubble" className="size-full flex flex-col gap-6 rounded-lg shadow-md p-2">
+      <div className="h-10 min-h-10 bg-muted rounded w-full animate-pulse delay-500" />
 
-      <div className="space-y-6 size-full p-2 pt-0">
+      <div data-skeleton="bubble-inner" className="flex flex-col gap-6 size-full p-2 pt-0">
         {[...Array(5)].map((_, i) => {
           return (
             <div key={i} {...getStyles('root', i)}>

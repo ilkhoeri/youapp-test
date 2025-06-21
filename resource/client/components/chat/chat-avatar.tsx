@@ -1,5 +1,5 @@
 import { Avatar } from '../ui/avatar-oeri';
-import { UserFillIcon, User3FillIcon, User2FillIcon } from '../icons-fill';
+import { UserFillIcon, User3FillIcon, User2FillIcon, BotFillIcon, PersonSyncFillIcon, PersonFillIcon } from '../icons-fill';
 import type { Chat } from '@prisma/client';
 import type { MinimalAccount } from '@/resource/types/user';
 
@@ -8,17 +8,22 @@ interface ChatAvatarsProps {
   otherUser: MinimalAccount | null | undefined;
   grouping?: boolean;
 }
+
+const SIZEICON = 28;
+
+function fallbackMap(data: ChatAvatarsProps['data']) {
+  const iconMap = {
+    BOT: <BotFillIcon />,
+    CHANNEL: <PersonSyncFillIcon />,
+    PRIVATE: <PersonFillIcon />,
+    GROUP: data && (data?.userIds.length === 2 ? <User2FillIcon size={SIZEICON} /> : data?.userIds.length > 2 ? <User3FillIcon size={SIZEICON} /> : <UserFillIcon size={SIZEICON} />)
+  };
+  if (!data?.type) return '';
+  return iconMap[data?.type]!;
+}
+
 export function ChatAvatars({ data, otherUser, grouping }: ChatAvatarsProps) {
   const imageUrl = data?.type === 'PRIVATE' ? otherUser?.image : data?.avatarUrl;
-  const fallbackIcon = data ? (
-    data?.userIds.length === 2 && data.type === 'GROUP' ? (
-      <User2FillIcon size={28} />
-    ) : data?.userIds.length > 2 ? (
-      <User3FillIcon size={28} />
-    ) : (
-      <UserFillIcon size={28} />
-    )
-  ) : undefined;
 
   if (data?.type === 'GROUP' && grouping) {
     const MAX_VISIBLE = 3,
@@ -40,7 +45,7 @@ export function ChatAvatars({ data, otherUser, grouping }: ChatAvatarsProps) {
   return (
     <Avatar
       src={imageUrl}
-      fallback={fallbackIcon}
+      fallback={fallbackMap(data)}
       alt={otherUser?.username}
       size={32}
       rootProps={{

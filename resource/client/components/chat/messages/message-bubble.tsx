@@ -28,7 +28,8 @@ import { useOnlinePresence } from '../chat-hooks';
 import { useRouter } from 'next/navigation';
 
 import css from './msg.module.css';
-import { debounce } from 'lodash';
+import { debounce, find } from 'lodash';
+import { pusherClient } from '@/resource/configs/pusher/pusher';
 
 const reactions: MessageReaction[] = [
   { emoji: '❤️', createdAt: new Date(Date.now()), id: '1', messageId: '1', userId: '1', user: null },
@@ -41,7 +42,7 @@ function onPrevent<TEvent extends React.MouseEvent<HTMLElement, MouseEvent>>(e: 
   e.stopPropagation();
 }
 
-interface DefFloat<T> {
+interface InOut<T> {
   in: T;
   out: T;
 }
@@ -83,50 +84,51 @@ export function MessageBubble(_props: MessageBubbleProps) {
   const plaintext = x.cnx(`[${dateTime}, ${dateMessage}]`, `${data.sender.name}:`);
   const isSend = seenList.length > 0;
 
-  const defFloat = <T,>(define: DefFloat<T>): T => (isOwn ? define.out : define.in);
+  const inOut = <T,>(x: InOut<T>): T => (isOwn ? x.out : x.in);
 
   const container = cn('relative', data.isFirst ? 'my-3' : data.isLast ? 'mb-6' : 'mb-3', data.isRepeatInDay && '-mt-2.5', className),
-    root = defFloat({ in: css._rpin, out: css._rpout }),
-    arrow = defFloat({ in: css._arin, out: css._arout }),
-    reaction = defFloat({ in: css._rctin, out: css._rctout }),
-    avatar = defFloat({ in: css._avtin, out: css._avtout }),
-    box = defFloat({ in: css._bxin, out: css._bxout }),
-    header = defFloat({ in: css._hdrin, out: css._hdrout }),
-    cntpict = defFloat({ in: css._pictin, out: css._pictout }),
-    emoji = defFloat({ in: css._emjin, out: css._emjout });
+    root = inOut({ in: css._rpin, out: css._rpout }),
+    arrow = inOut({ in: css._arin, out: css._arout }),
+    reaction = inOut({ in: css._rctin, out: css._rctout }),
+    avatar = inOut({ in: css._avtin, out: css._avtout }),
+    box = inOut({ in: css._bxin, out: css._bxout }),
+    header = inOut({ in: css._hdrin, out: css._hdrout }),
+    cntpict = inOut({ in: css._pictin, out: css._pictout }),
+    emoji = inOut({ in: css._emjin, out: css._emjout });
 
   const { isOnline } = useOnlinePresence();
 
-  const cc = data.senderId !== user?.id && (data.seenIds ?? []).includes(user?.id!);
-
-  React.useEffect(() => {
-    if (cc && !isInView) return;
-    async function markSeen() {
-      try {
-        try {
-          await axios.patch(`/api/chats/messages/${data.id}`, {
-            messageIds: [data.id],
-            seenIds: [user?.id]
-          });
-        } catch (err) {
-          console.error('Failed to mark messages as seen:', err);
-        }
-      } catch (_e) {}
-    }
-    markSeen();
-  }, [user?.id, data.seenIds, cc, isInView]);
+  // const cc = data.senderId !== user?.id && (data.seenIds ?? []).includes(user?.id!);
+  // React.useEffect(() => {
+  //   if (cc && !isInView) return;
+  //   async function markSeen() {
+  //     try {
+  //       await axios.patch(`/api/chats/messages/${data.id}`, {
+  //         seenIds: [user?.id]
+  //       });
+  //       console.log('Success to mark message for id:', data?.id);
+  //     } catch (err) {
+  //       console.error('Failed to mark messages as seen:', err);
+  //     }
+  //   }
+  //   markSeen();
+  // }, [user?.id, data.senderId, cc, data.seenIds, isInView]);
 
   return (
     <CtxMenu>
-      {/* {stt && <span className="text-sm">{JSON.stringify(stt, null, 2)}</span>} */}
       <article key={data?.id} {...{ ...props, role: 'row', suppressHydrationWarning: true, tabIndex: -1 }} ref={mergeRefs(ref, targetRef)}>
-        <div tabIndex={-1} className={container}>
+        <div {...{ role: 'cell', tabIndex: -1 }} className={container}>
           <div ref={refRootHovered} className={root}>
+            <span className="text-sm">
+              {/* {JSON.stringify(user?.id, null, 2)} */}
+              <br />
+              {JSON.stringify(data.seenIds, null, 2)}
+            </span>
+
             <div
-              className={defFloat({ in: css._wrpI, out: css._wrpO })}
-              // onContextMenu={onContextMenu}
+              className={inOut({ in: css._wrpI, out: css._wrpO })}
+              suppressHydrationWarning
               {...{
-                suppressHydrationWarning: true,
                 style: {
                   '--color-themes': 'var(--color-themes)'
                 } as React.CSSProperties
@@ -151,7 +153,7 @@ export function MessageBubble(_props: MessageBubbleProps) {
               )}
               <CtxMenu.Trigger asChild>
                 <div ref={refContent} className={box} {...{ style: { backgroundColor: 'var(--bg-themes)', boxShadow: '0 1px .5px var(--shadow)' } }}>
-                  <span aria-label={defFloat({ in: data.sender.name, out: 'You:' })} />
+                  <span aria-label={inOut({ in: data.sender.name, out: 'You:' })} />
 
                   <div>
                     <div className={css._ctn}>
@@ -221,7 +223,7 @@ export function MessageBubble(_props: MessageBubbleProps) {
                             </span>
                           </ActionOnHovered>
                         }
-                        content={<MessageMenu opened data={data} />}
+                        content={<MessageMenu event="click" data={data} onOpenChange={setOpenMenu} />}
                         classNames={{ content: 'p-1 h-fit w-48' }}
                       />
                     )}
@@ -253,7 +255,7 @@ export function MessageBubble(_props: MessageBubbleProps) {
         </div>
       </article>
 
-      <MessageMenu data={data} />
+      <MessageMenu event="contextmenu" data={data} />
     </CtxMenu>
   );
 }
@@ -403,9 +405,11 @@ function ActionOnHovered(_props: ActionOnHoveredProps) {
   );
 }
 
-interface UseMenuMapOptions {}
+interface UseMenuMapProps {
+  onOpenChange?: (prev: React.SetStateAction<boolean>) => void;
+}
 
-function useMenuMap(data: EnrichedMessage) {
+function useMenuMap(data: EnrichedMessage, { onOpenChange }: UseMenuMapProps) {
   const app = useApp();
   const isMediaQuery = useIsMobile();
   const router = useRouter();
@@ -459,16 +463,19 @@ function useMenuMap(data: EnrichedMessage) {
   }, []);
 
   const handleDelete = React.useCallback(async () => {
-    const confirmDelete = window.confirm('Apakah kamu yakin ingin menghapus pesan ini?');
+    const confirmDelete = window.confirm('Are you sure you want to delete this message?');
     if (!confirmDelete) return;
+
+    onOpenChange?.(false);
 
     try {
       await axios.delete(`/api/chats/messages/${data.id}`);
       router.refresh();
     } catch (_e) {
-      console.error('Gagal menghapus Pesan', _e);
+      console.error('Failed to delete Message', _e);
     } finally {
       router.refresh();
+      toast('Message has been deleted', { classNames: { toast: 'max-w-max animate-width-scale' } });
     }
   }, [data.id]);
 
@@ -520,7 +527,7 @@ function renderMenuItemsX(items: MenuMap[]) {
       elements.push(
         <CtxMenu.Sub key={item.label}>
           <CtxMenu.SubTrigger>{item.label}</CtxMenu.SubTrigger>
-          <CtxMenu.SubContent className="w-40">{renderMenuItems(item.sub)}</CtxMenu.SubContent>
+          <CtxMenu.SubContent className="w-40">{renderMenuItems(item.sub, { event: 'contextmenu' })}</CtxMenu.SubContent>
         </CtxMenu.Sub>
       );
     } else {
@@ -536,7 +543,11 @@ function renderMenuItemsX(items: MenuMap[]) {
   });
 }
 
-function renderMenuItems(items: MenuMap[], event: 'contextmenu' | 'click' = 'contextmenu') {
+interface MenuItemsProps {
+  event: 'contextmenu' | 'click';
+}
+
+function renderMenuItems(items: MenuMap[], props: MenuItemsProps) {
   const componentMap = {
     contextmenu: {
       Item: CtxMenu.Item,
@@ -556,7 +567,7 @@ function renderMenuItems(items: MenuMap[], event: 'contextmenu' | 'click' = 'con
     }
   };
 
-  const { Item, Separator, Sub, SubTrigger, SubContent, Shortcut } = componentMap[event];
+  const { Item, Separator, Sub, SubTrigger, SubContent, Shortcut } = componentMap[props.event];
 
   return items.flatMap(item => {
     const elements: React.ReactNode[] = [];
@@ -569,7 +580,7 @@ function renderMenuItems(items: MenuMap[], event: 'contextmenu' | 'click' = 'con
       elements.push(
         <Sub key={item.label}>
           <SubTrigger>{item.label}</SubTrigger>
-          <SubContent className="w-40">{renderMenuItems(item.sub, event)}</SubContent>
+          <SubContent className="w-40">{renderMenuItems(item.sub, props)}</SubContent>
         </Sub>
       );
     } else {
@@ -585,21 +596,22 @@ function renderMenuItems(items: MenuMap[], event: 'contextmenu' | 'click' = 'con
   });
 }
 
-interface MessageMenuProps {
-  // event?: 'contextmenu' | 'click';
-  opened?: boolean;
+interface MessageMenuProps extends UseMenuMapProps, MenuItemsProps {
   data: EnrichedMessage;
 }
-function MessageMenu({ opened, ...props }: MessageMenuProps) {
-  const menuMap = useMenuMap(props.data);
+function MessageMenu({ data, event, onOpenChange }: MessageMenuProps) {
+  const menuMap = useMenuMap(data, { onOpenChange });
 
-  const [confirm, onConfirm] = React.useState(false);
+  switch (event) {
+    case 'click':
+      return renderMenuItems(menuMap, { event: 'click' });
 
-  const dialogDelete = menuMap.find(item => item.label)?.label;
+    case 'contextmenu':
+      return <CtxMenu.Content className="w-48">{renderMenuItems(menuMap, { event: 'contextmenu' })}</CtxMenu.Content>;
 
-  if (opened) return renderMenuItems(menuMap, 'click');
-
-  return <CtxMenu.Content className="w-48">{renderMenuItems(menuMap, 'contextmenu')}</CtxMenu.Content>;
+    default:
+      return null;
+  }
 }
 
 interface ReactionsProps {

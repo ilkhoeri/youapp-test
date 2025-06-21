@@ -189,26 +189,12 @@ export function ChatContainer(_props: ChatContainerProps) {
               <Tabs.Tab value="all" className={classTabs.tab}>
                 All
               </Tabs.Tab>
-              <Tabs.Tab value="unread" className={classTabs.tab}>
-                Unread
+              <Tabs.Tab value="group" className={classTabs.tab}>
+                Group
               </Tabs.Tab>
             </Tabs.List>
           </div>
           <Separator />
-          {/* <div className="bg-background/95 p-4 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-            <form>
-              <div className="relative">
-                <SearchIcon className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-                <Input placeholder="Search" variant="outline" className="pl-8" />
-              </div>
-            </form>
-          </div>
-          <Tabs.Panel value="all" className={classTabs.panel}>
-            <ChatList accounts={accounts} items={allChat} />
-          </Tabs.Panel>
-          <Tabs.Panel value="unread" className={classTabs.panel}>
-            <ChatList accounts={accounts} items={allChat?.filter(item => !item.messages?.map(ms => ms.seenIds.length > 0))} />
-          </Tabs.Panel> */}
           <ChatList accounts={accounts} items={allChat} />
         </Tabs>
       </Resizable.Panel>

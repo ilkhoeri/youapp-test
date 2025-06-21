@@ -3,13 +3,14 @@ import * as React from 'react';
 import { ChatSkeleton } from './chat-skeleton';
 import { useActiveChat } from './chat-context';
 import { AllChatProps, Message as MessageProp } from '@/resource/types/user';
-import { ChatBody, ChatBackground, ChatForm, ChatHeader, ChatHeaderProps } from './chat-contents';
+import { ChatHeader } from '@/resource/client/components/chat/chat-header';
+import { ChatBody } from '@/resource/client/components/chat/chat-body';
+import { ChatForm } from './chat-form';
+import { ChatBackground } from './chat-background';
 import { useApp } from '../../contexts/app-provider';
 import { EmptyChat } from './chat-room';
 
 interface ChatClientProps {
-  // id: string;
-  // name: string;
   messages: Array<MessageProp>;
   chats: Array<AllChatProps> | null;
 }
@@ -92,15 +93,15 @@ export function ChatClient({ chats, messages }: ChatClientProps) {
   }
 
   const chat = chats?.find(chat => chat.id === chatId);
-  const members = chat?.users?.filter(find => find.email !== user?.email);
+  const membersForm = chat?.users?.filter(find => find.email !== user?.email);
 
   return (
     <React.Suspense fallback={<ChatSkeleton />}>
       <div className="flex h-full flex-col">
         <div className="h-full flex flex-col relative z-[9]">
           <ChatHeader chat={chat} />
-          <ChatBody members={members} messages={messages!} />
-          <ChatForm members={members} messages={messages!} />
+          <ChatBody members={chat?.users} messages={messages!} />
+          <ChatForm members={membersForm} messages={messages!} />
         </div>
         <ChatBackground />
       </div>

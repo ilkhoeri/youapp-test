@@ -1,7 +1,7 @@
 'use client';
 import * as React from 'react';
 import axios from 'axios';
-import { User3FillIcon } from '../icons-fill';
+import { PersonChatFillIcon, User3FillIcon } from '../icons-fill';
 import { Select, SelectItemProps } from '../ui/select';
 import { AllChatProps, MinimalAccount } from '@/resource/types/user';
 import { getMatchingAccounts, useOnlinePresence, useSwitcher } from './chat-hooks';
@@ -13,6 +13,9 @@ import { toast } from 'sonner';
 import { x } from 'xuxi';
 import { cn } from 'cn';
 
+type Align = 'center' | 'end' | 'start';
+type Side = 'bottom' | 'top' | 'right' | 'left';
+
 interface GenericSwitcherProps<TData extends ID> {
   items: SwitchData<TData>;
   selectedId?: string | null;
@@ -23,6 +26,8 @@ interface GenericSwitcherProps<TData extends ID> {
   renderExtra?: (item: TData) => SwitchType;
   placeholder?: string;
   loading?: boolean;
+  align?: React.ComponentProps<typeof Select.Content>['align'];
+  side?: React.ComponentProps<typeof Select.Content>['side'];
 }
 
 export function GenericSwitcher<TData extends ID>({
@@ -34,7 +39,9 @@ export function GenericSwitcher<TData extends ID>({
   getLabel,
   renderExtra,
   placeholder = 'Select item',
-  loading
+  loading,
+  align,
+  side
 }: GenericSwitcherProps<TData>) {
   const itemsIsDefined = items && items?.length > 0;
 
@@ -56,7 +63,7 @@ export function GenericSwitcher<TData extends ID>({
       </Select.Trigger>
 
       {itemsIsDefined && (
-        <Select.Content>
+        <Select.Content align={align} side={side}>
           {items.map(item => (
             <SwitchItem key={item?.id} id={item?.id} name={getLabel(item!)} {...(renderExtra ? renderExtra(item!) : {})} />
           ))}
@@ -98,6 +105,7 @@ export function ChatSwitcher(_props: SwitcherProps) {
       items={chats}
       selectedId={slug}
       isCollapsed={true}
+      icon={<PersonChatFillIcon size={24} rules="regular" />}
       onSelect={id => onSwitch('group', id)}
       getLabel={chat => {
         const newName = chat.name || chat.users.find(c => chat.userIds?.length === 2 && chat.userIds[1] === c.id)?.username;
@@ -157,16 +165,9 @@ export function UserSwitcher(_props: SwitcherProps) {
     [chats, currentUser?.id, onSwitch, router]
   );
 
-  const label = React.useCallback(
-    (user: MinimalAccount) => {
-      // const chat = (chats ?? []).find(c => isSameUserSet(c.userIds, [user?.id, currentUser?.id]));
-      // const isRoom = chat && isSameUserSet(chat?.userIds, [user?.id, currentUser?.id]);
-      return x.cnx(user.name);
-    },
-    [chats, currentUser?.id]
+  return (
+    <GenericSwitcher loading={loading} items={accounts} selectedId={slug} isCollapsed={isCollapsed} onSelect={setValueChange} getLabel={user => x.cnx(user.name)} placeholder="Contact" />
   );
-
-  return <GenericSwitcher loading={loading} items={accounts} selectedId={slug} isCollapsed={isCollapsed} onSelect={setValueChange} getLabel={label} placeholder="Contact" />;
 }
 
 type SwitchType = {

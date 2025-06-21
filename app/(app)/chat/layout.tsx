@@ -5,7 +5,7 @@ interface LayoutProps {
 }
 export default function ChatsLayout({ children }: Readonly<LayoutProps>) {
   return (
-    <section className="relative w-full min-h-screen max-w-screen-2xl mx-auto flex flex-col [&_[data-panel-group]]:mb-[55svh]">
+    <section className="relative w-full min-h-screen max-w-screen-2xl mx-auto flex flex-col [&_[data-panel-group]]:mb-[38.5svh]">
       <div className="mb-6 mt-8 grid grid-cols-3 justify-items-center items-center">
         <Navigation instance="back" className="mr-auto" />
         <p className="text-sm font-semibold"></p>

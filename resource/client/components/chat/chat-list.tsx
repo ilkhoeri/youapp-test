@@ -15,10 +15,10 @@ import { classTabs } from './chat-container';
 import { ChatAvatars } from './chat-avatar';
 import { Input } from '../fields/input';
 import { SearchIcon } from '../icons';
+import { chattype } from './types';
 import { Tabs } from '../ui/tabs';
 import { find } from 'lodash';
 import { cn } from 'cn';
-import { chattype } from './types';
 
 interface ChatListProps {
   items: AllChatProps[];
@@ -48,7 +48,6 @@ export function ChatList(_props: ChatListProps) {
 
   const [items, setItems] = React.useState(initialItems);
 
-  // const router = useRouter();
   const { user } = useApp();
 
   const pusherKey = React.useMemo(() => {
@@ -64,12 +63,8 @@ export function ChatList(_props: ChatListProps) {
       setItems(current =>
         current?.map(currentChat => {
           if (currentChat.id === chat.id) {
-            return {
-              ...currentChat,
-              messages: chat.messages
-            };
+            return { ...currentChat, messages: chat.messages };
           }
-
           return currentChat;
         })
       );
@@ -78,7 +73,6 @@ export function ChatList(_props: ChatListProps) {
     const newHandler = (chat: AllChatProps) => {
       setItems(current => {
         if (find(current, { id: chat.id })) return current;
-
         return [chat, ...current];
       });
     };
@@ -89,31 +83,29 @@ export function ChatList(_props: ChatListProps) {
       });
     };
 
-    pusherClient.bind('chat:update', updateHandler);
     pusherClient.bind('chat:new', newHandler);
+    pusherClient.bind('chat:update', updateHandler);
     pusherClient.bind('chat:remove', removeHandler);
   }, [pusherKey, query]);
 
   const newItems = !!query && results ? results : items;
-  const unreadItems = newItems.filter(item => !item.messages?.map(ms => ms.seenIds.length > 0));
+  const groupItems = newItems.filter(item => item.type === 'GROUP');
 
   const listItems = (chats: AllChatProps[]) => (isSearching ? <ChatListItemSkeleton /> : chats?.map(item => <ChatListItem key={item.id} data={item} />));
 
   return (
     <>
-      <div className="bg-background/95 p-4 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-        <form>
-          <div className="relative">
-            <SearchIcon className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-            <Input placeholder="Search" variant="outline" className="pl-8" value={query} onChange={e => setQuery(e.target.value)} />
-          </div>
-        </form>
+      <div className="bg-background/95 relative p-4 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+        <div>
+          <SearchIcon className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+          <Input placeholder="Search" variant="outline" className="pl-8" value={query} onChange={e => setQuery(e.target.value)} />
+        </div>
       </div>
       <Tabs.Panel value="all" className={classTabs.panel}>
         {listItems(newItems)}
       </Tabs.Panel>
-      <Tabs.Panel value="unread" className={classTabs.panel}>
-        {listItems(unreadItems)}
+      <Tabs.Panel value="group" className={classTabs.panel}>
+        {listItems(groupItems)}
       </Tabs.Panel>
     </>
   );

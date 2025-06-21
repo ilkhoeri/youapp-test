@@ -2,6 +2,21 @@
 @tailwind components;
 @tailwind utilities;
 
+html,
+:host {
+  text-size-adjust: 100%;
+  -ms-text-size-adjust: 100%;
+  -moz-text-size-adjust: 100%;
+  -webkit-text-size-adjust: 100%; /* fallback for older WebKit browsers */
+}
+
+ul li,
+ol li,
+menu li {
+  text-align: match-parent;
+  text-align: -webkit-match-parent; /* fallback for older WebKit browsers */
+}
+
 ::selection {
   background-color: hsl(var(--teal-100)) !important;
   color: hsl(var(--teal-700)) !important;
@@ -147,6 +162,17 @@
     width: 0;
   }
 }
+
+/* .root-skeleton-right + .root-skeleton-left,
+.root-skeleton-left + .root-skeleton-right {
+  padding-top: 1.25rem;
+}
+.root-skeleton-right + .root-skeleton-left ~ .root-skeleton-left:not(:first-of-type) .avatar-skeleton-left,
+.root-skeleton-left + .root-skeleton-right ~ .root-skeleton-right:not(:first-of-type) .avatar-skeleton-right,
+.root-skeleton-right + .root-skeleton-left ~ .root-skeleton-left:not(:first-of-type) .arrow-skeleton-left,
+.root-skeleton-left + .root-skeleton-right ~ .root-skeleton-right:not(:first-of-type) .arrow-skeleton-right {
+  opacity: 0 !important;
+} */
 
 @layer utilities {
   .markdown-body {
@@ -1708,5 +1734,28 @@ code[data-line-numbers-max-digits='3'] > [data-line]::before {
   }
   100% {
     transform: scale(1);
+  }
+}
+
+.animate-width-scale {
+  text-wrap: nowrap;
+  white-space: nowrap;
+  overflow: hidden;
+  transform-origin: left center;
+  animation: widthScale 2s linear 0s forwards;
+}
+
+.animate-width-scale * {
+  text-wrap: nowrap !important;
+  white-space: nowrap !important;
+  overflow: hidden;
+}
+
+@keyframes widthScale {
+  0% {
+    width: 0;
+  }
+  100% {
+    width: 100%;
   }
 }

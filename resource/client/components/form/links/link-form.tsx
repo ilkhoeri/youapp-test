@@ -130,7 +130,7 @@ export function LinkForm({ data, account, setOpenId }: LinkFormProps) {
     <Form.Provider {...form}>
       <motion.form
         initial={false}
-        animate={!data && addLink ? 'open' : 'closed'}
+        animate={(!data && addLink) || (data && editField) ? 'open' : 'closed'}
         variants={containerVariants({ open: { marginBottom: -28 } })}
         onSubmit={form.handleSubmit(onSubmit)}
         className={cn('w-full max-w-full px-1 flex flex-col gap-1 mt-2 overflow-hidden')}
@@ -177,7 +177,13 @@ export function LinkForm({ data, account, setOpenId }: LinkFormProps) {
           }}
         />
 
-        <motion.div className="w-full grid grid-flow-row grid-cols-2 items-center justify-center gap-3 md:gap-4 px-1">
+        <motion.div
+          className={cn(
+            'w-full grid items-center justify-center gap-3 md:gap-4 px-1',
+            !data && addLink && 'grid-flow-row grid-cols-2',
+            data && editField && 'mb-4 grid-flow-col justify-normal'
+          )}
+        >
           <Button
             disabled={loading}
             onClick={() => {
@@ -200,7 +206,7 @@ export function LinkForm({ data, account, setOpenId }: LinkFormProps) {
           </Button>
 
           {data && (
-            <Button variant="danger" size="default" aria-label="Delete Link" disabled={loading} onClick={onDelete} className={cn('size-9 text-white bg-[#da3633]')}>
+            <Button variant="danger" size="default" aria-label="Delete Link" disabled={loading} onClick={onDelete} className="size-9 text-white bg-[#da3633] absolute top-7 right-1">
               <TrashFillIcon size={20} />
             </Button>
           )}
@@ -211,7 +217,7 @@ export function LinkForm({ data, account, setOpenId }: LinkFormProps) {
 
   const renderField = data && (
     <div className="flex flex-row items-center gap-4 flex-shrink-0 h-[--sz] [--sz:32px] w-full max-w-full group">
-      <Icon className="size-[--sz] min-w-[--sz] min-h-[--sz]" />
+      <Icon size="var(--sz)" />
       <div className="flex flex-col max-w-[calc(100%-(var(--sz)+2rem+2rem))]">
         <Link href={data?.url} target="_blank" rel="noopener noreferrer nofollow" className="font-normal text-sm truncate">
           {data?.name}

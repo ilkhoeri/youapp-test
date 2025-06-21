@@ -12,7 +12,7 @@ export const Toaster = (props: ToasterProps) => {
       {...props}
       theme={theme as ToasterProps['theme']}
       position={props.position || 'top-center'}
-      className="toaster group"
+      className="toaster group flex items-center justify-center"
       toastOptions={{
         classNames: {
           toast:

@@ -1,7 +1,10 @@
 import { EmptyChat } from '@/resource/client/components/chat/chat-room';
-import { currentUser, getUserByRefId } from '@/resource/db/user/get-accounts';
+import { currentUser } from '@/resource/db/user/get-accounts';
 import { getChatById, getMessages } from '@/resource/server/messages/get-chats';
-import { ChatBody, ChatForm, ChatHeader } from '@/resource/client/components/chat/chat-contents';
+import { ChatForm } from '@/resource/client/components/chat/chat-form';
+import { ChatHeader } from '@/resource/client/components/chat/chat-header';
+import { ChatBody } from '@/resource/client/components/chat/chat-body';
+import { ChatBackground } from '@/resource/client/components/chat/chat-background';
 import { ActiveChatProvider } from '../../../../resource/client/components/chat/chat-context';
 import { queryEntries } from '@/resource/client/components/chat/types';
 
@@ -12,14 +15,14 @@ interface Params {
   searchParams: Promise<{ getAccount: string }>;
 }
 
-export async function generateMetadata({ params, searchParams }: Params, parent: ResolvingMetadata): Promise<Metadata> {
-  const [session, { chatId }, { openGraph }] = await Promise.all([currentUser(), params, parent]);
+export async function generateMetadata({ params }: Params, parent: ResolvingMetadata): Promise<Metadata> {
+  const [chat, { chatId }, { openGraph }] = await Promise.all([getChatById((await params).chatId), params, parent]);
 
   const previousImages = openGraph?.images || [];
 
   const url = process.env.NEXT_PUBLIC_SITE_URL;
-  const slug = `/chat/${chatId}` || '';
-  const namePage = session?.name || 'NotFound!';
+  const slug = `/chat/${chatId}`;
+  const namePage = chat?.name ?? '';
 
   return {
     title: 'Chat Group',
@@ -30,7 +33,7 @@ export async function generateMetadata({ params, searchParams }: Params, parent:
       description: namePage,
       images: [
         {
-          url: session?.image || '',
+          url: chat?.avatarUrl ?? '',
           width: 800,
           height: 800
         },
@@ -66,6 +69,7 @@ export default async function ChatIdPage({ params }: Params) {
             <ChatBody messages={messages} />
             <ChatForm messages={messages} />
           </div>
+          <ChatBackground />
         </div>
       </section>
     </ActiveChatProvider>

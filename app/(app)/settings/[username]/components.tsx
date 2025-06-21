@@ -88,7 +88,7 @@ function BadgeInfo(info: BadgeInfoProps) {
 
   React.useEffect(() => {
     async function fetchHoroscope() {
-      if (info.prop !== 'horoscope' || !open) {
+      if (info.prop !== 'horoscope') {
         setData(null);
         return;
       }
@@ -116,7 +116,7 @@ function BadgeInfo(info: BadgeInfoProps) {
     }
 
     async function fetchZodiac() {
-      if (info.prop !== 'shio' || (!info.element && !info.animal) || !open) {
+      if (info.prop !== 'shio' || (!info.element && !info.animal)) {
         setData(null);
         return;
       }
@@ -217,7 +217,7 @@ function BadgeInfo(info: BadgeInfoProps) {
       <div className="size-full relative flex flex-col gap-4 overflow-y-auto">
         <info.icon {...({ [`${info.prop}`]: info.label } as any)} size={44} stroke={4} className="mx-auto" />
         <RenderScrapes title={data?.title} description={data?.description} classNames={{ title: 'text-h3 mx-auto' }} />
-        <div className="size-full max-h-max flex flex-col gap-4 overflow-y-auto pb-10 relative z-[20]">
+        <div className="size-full max-h-max grid grid-flow-row gap-4 overflow-y-auto pb-10 relative z-[20]">
           {data?.sub && data?.sub?.map((sub, idx) => <RenderScrapes key={idx} {...sub} />)}
         </div>
         <info.icon {...({ [`${info.prop}`]: info.label } as any)} size={{ w: 'auto', h: '100%' }} stroke={8} className="absolute z-0 opacity-10 top-[-8%] left-[20%]" />
@@ -288,7 +288,7 @@ const UserInfo: React.FC<{ user: Account }> = ({ user }) => {
 
   return (
     <div suppressHydrationWarning className="relative z-[3] mt-auto grid grid-flow-row gap-y-1">
-      <h3 className={cn('text-base font-bold')}>{userInfoParts.join(', ')}</h3>
+      <h3 className="text-base font-bold">{userInfoParts.join(', ')}</h3>
       {user.about?.gender && <p className="text-[13px] font-medium tracking-tight">{user.about?.gender}</p>}
       {someInfo && <div className="inline-flex flex-row gap-4 mt-1.5">{badgeInfo?.map(info => <BadgeInfo key={info.prop} {...info} />)}</div>}
     </div>

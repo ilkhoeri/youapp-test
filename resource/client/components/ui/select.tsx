@@ -104,9 +104,10 @@ SelectScrollDownButton.displayName = SelectPrimitive.ScrollDownButton.displayNam
 
 interface SelectContentProps extends React.ComponentPropsWithoutRef<typeof SelectPrimitive.Content> {
   unstyled?: boolean;
+  withScrollButton?: boolean;
 }
 export const SelectContent = React.forwardRef<React.ElementRef<typeof SelectPrimitive.Content>, SelectContentProps>(
-  ({ className, unstyled, children, position = 'popper', ...props }, ref) => (
+  ({ className, unstyled, children, position = 'popper', withScrollButton, ...props }, ref) => (
     <SelectPrimitive.Portal>
       <SelectPrimitive.Content
         ref={ref}
@@ -119,13 +120,13 @@ export const SelectContent = React.forwardRef<React.ElementRef<typeof SelectPrim
         position={position}
         {...props}
       >
-        <SelectScrollUpButton />
+        {withScrollButton && <SelectScrollUpButton />}
         <SelectPrimitive.Viewport
           className={twMerge('p-1.5 space-y-0.5', position === 'popper' && 'h-[var(--radix-select-trigger-height)] w-full min-w-[var(--radix-select-trigger-width)]')}
         >
           {children}
         </SelectPrimitive.Viewport>
-        <SelectScrollDownButton />
+        {withScrollButton && <SelectScrollDownButton />}
       </SelectPrimitive.Content>
     </SelectPrimitive.Portal>
   )

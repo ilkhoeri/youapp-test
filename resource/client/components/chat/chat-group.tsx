@@ -8,7 +8,7 @@ import { MinimalAccount } from '@/resource/types/user';
 import { CreateChatSchema, CreateChatTypes } from '@/resource/schemas/chat';
 import { styleForm } from '../form/accounts/components';
 import { MotionCardModal } from '../motion/motion-card';
-import { PeopleChatFillIcon } from '../icons-fill';
+import { ChatMultipleIcon } from '../icons-fill';
 import { Navigation } from '../actions';
 import { cn } from 'cn';
 import { SheetsBreakpoint } from '../sheets-breakpoint';
@@ -130,7 +130,7 @@ export function CreateChatGroup({ accounts }: CreateChatGroupProps) {
       }}
       trigger={
         <button type="button" role="button" name="chat-group" className={cn('flex items-center justify-center border rounded-lg ml-auto p-0.5 size-9')}>
-          <PeopleChatFillIcon size={24} className="transition-colors" />
+          <ChatMultipleIcon mark="plus" size={24} className="transition-colors" />
           <span className="sr-only hidden">Create Chat Group</span>
         </button>
       }

@@ -2,14 +2,15 @@ import db from '@/resource/db/user';
 import { getCurrentUser } from '@/resource/db/user/get-accounts';
 import { pusherServer } from '@/resource/configs/pusher/pusher';
 import { NextResponse } from 'next/server';
+import { ChatValues } from '@/resource/schemas/chat';
 
 export async function POST(req: Request) {
   try {
-    const [currentUser, { message, mediaUrl, chatId }] = await Promise.all([getCurrentUser(), req.json()]);
+    const [currentUser, body] = await Promise.all([getCurrentUser(), req.json()]);
 
-    if (!currentUser?.id || !currentUser?.email) {
-      return new NextResponse('Unauthorized', { status: 401 });
-    }
+    const { message, mediaUrl, chatId } = body as ChatValues;
+
+    if (!currentUser?.id || !currentUser?.email) return new NextResponse('Unauthorized', { status: 401 });
 
     const newMessage = await db.message.create({
       include: {
@@ -17,32 +18,24 @@ export async function POST(req: Request) {
         sender: true
       },
       data: {
-        body: message,
+        body: message && message?.replace(/\u200B/g, '')?.trim(),
         mediaUrl: mediaUrl,
-        chat: {
-          connect: { id: chatId }
-        },
+        chat: { connect: { id: chatId } },
         sender: {
           connect: { id: currentUser.id }
         },
         seen: {
-          connect: {
-            id: currentUser.id
-          }
+          // connect: { id: currentUser.id }
         }
       }
     });
 
     const updatedChat = await db.chat.update({
-      where: {
-        id: chatId
-      },
+      where: { id: chatId },
       data: {
         lastMessageAt: new Date(),
         messages: {
-          connect: {
-            id: newMessage.id
-          }
+          connect: { id: newMessage.id }
         }
       },
       include: {

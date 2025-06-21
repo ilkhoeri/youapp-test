@@ -256,7 +256,7 @@ export function useOnlinePresence() {
     };
   }, []);
 
-  const isOnline = (userId: string) => onlineUsers?.some(u => u?.id === userId);
+  const isOnline = (userId: string | null | undefined) => onlineUsers?.some(u => u?.id === userId);
 
   return { onlineCount: onlineUsers?.length, onlineUsers, isOnline };
 }

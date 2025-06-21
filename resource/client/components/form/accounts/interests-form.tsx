@@ -113,6 +113,10 @@ export function SettingInterestsForm({ account }: { account: Account }) {
 
   useMobileHistoryState(true, { open: isEdit, onOpenChange: setIsEdit });
 
+  React.useEffect(() => {
+    if (!isEdit) form.reset();
+  }, [isEdit, form]);
+
   if (!account) return null;
 
   function onSubmit({ name, about }: SettingGeneralFormValues) {
@@ -211,6 +215,7 @@ export function SettingInterestsForm({ account }: { account: Account }) {
                   noOptionsMessage={() => 'Add new\n(select or press Enter)'}
                   {...field}
                   isMulti
+                  autoFocus
                   // menuIsOpen
                   options={groupedOptions}
                   value={field.value?.map(int => ({ label: int, value: int }))}

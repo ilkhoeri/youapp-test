@@ -11,9 +11,7 @@ export async function POST(req: Request, { params }: { params: Promise<Params> }
   try {
     const [currentUser, { chatId }] = await Promise.all([getCurrentUser(), params]);
 
-    if (!currentUser?.id || !currentUser?.email) {
-      return new NextResponse('Unauthorized', { status: 401 });
-    }
+    if (!currentUser?.id || !currentUser?.email) return new NextResponse('Unauthorized', { status: 401 });
 
     // Find existing chat
     const chat = await db.chat.findUnique({
@@ -30,16 +28,12 @@ export async function POST(req: Request, { params }: { params: Promise<Params> }
       }
     });
 
-    if (!chat) {
-      return new NextResponse('Invalid ID', { status: 400 });
-    }
+    if (!chat) return new NextResponse('Invalid ID', { status: 400 });
 
     // Find last message
     const lastMessage = chat.messages[chat.messages.length - 1];
 
-    if (!lastMessage) {
-      return NextResponse.json(chat);
-    }
+    if (!lastMessage) return NextResponse.json(chat);
 
     // Update seen of last message
     const updatedMessage = await db.message.update({
@@ -51,11 +45,12 @@ export async function POST(req: Request, { params }: { params: Promise<Params> }
         seen: true
       },
       data: {
-        seen: {
-          connect: {
-            id: currentUser.id
-          }
-        }
+        seen:
+          lastMessage.senderId !== currentUser.id
+            ? {
+                connect: { id: currentUser.id }
+              }
+            : undefined
       }
     });
 
@@ -66,9 +61,7 @@ export async function POST(req: Request, { params }: { params: Promise<Params> }
     });
 
     // If user has already seen the message, no need to go further
-    if (lastMessage.seenIds.indexOf(currentUser.id) !== -1) {
-      return NextResponse.json(chat);
-    }
+    if (lastMessage.seenIds.indexOf(currentUser.id) !== -1) return NextResponse.json(chat);
 
     // Update last message seen
     await pusherServer.trigger(chatId!, 'message:update', updatedMessage);
