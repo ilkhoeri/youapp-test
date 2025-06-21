@@ -13,7 +13,7 @@
 
 ._rpin,
 ._rpout {
-  @apply flex flex-col select-text pr-[57px] pl-[71px] max-[968px]:pr-[19px] max-[968px]:pl-[53px];
+  @apply flex flex-col select-none xl:select-text pr-[57px] pl-[71px] max-[968px]:pr-[19px] max-[968px]:pl-[53px];
 }
 
 ._rpin {
@@ -141,7 +141,7 @@
 
 /* Body chat */
 ._ctn {
-  @apply select-text pb-2 pt-1.5 pr-[7px] pl-[9px];
+  @apply select-none xl:select-text pb-2 pt-1.5 pr-[7px] pl-[9px];
 }
 
 /* Name Sender / header message | max-w-[calc(var(--width-msg-bubble-media,100%)-6px)] [--pre-maxw:calc(49.125%-(7px+9px))]*/
@@ -189,19 +189,14 @@
   }
 }
 ._msgbd {
-  @apply min-h-0 visible select-text [display:unset];
+  @apply min-h-0 visible select-none xl:select-text [display:unset];
 
   & ._mention,
   & a {
     color: #53bdeb;
   }
   & ._mention {
-    cursor: pointer;
-    visibility: visible;
-    user-select: all;
-    -ms-user-select: all;
-    -moz-user-select: all;
-    -webkit-user-select: all;
+    @apply cursor-pointer visible;
   }
   & a {
     cursor: pointer;

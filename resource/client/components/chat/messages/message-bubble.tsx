@@ -30,6 +30,7 @@ import { useRouter } from 'next/navigation';
 import css from './msg.module.css';
 import { debounce, find } from 'lodash';
 import { pusherClient } from '@/resource/configs/pusher/pusher';
+import { getSafeInlineText } from '../../inline-editor/helper';
 
 const reactions: MessageReaction[] = [
   { emoji: '❤️', createdAt: new Date(Date.now()), id: '1', messageId: '1', userId: '1', user: null },
@@ -119,11 +120,11 @@ export function MessageBubble(_props: MessageBubbleProps) {
       <article key={data?.id} {...{ ...props, role: 'row', suppressHydrationWarning: true, tabIndex: -1 }} ref={mergeRefs(ref, targetRef)}>
         <div {...{ role: 'cell', tabIndex: -1 }} className={container}>
           <div ref={refRootHovered} className={root}>
-            <span className="text-sm">
-              {/* {JSON.stringify(user?.id, null, 2)} */}
+            {/* <span className="text-sm">
+              {JSON.stringify(user?.id, null, 2)}
               <br />
               {JSON.stringify(data.seenIds, null, 2)}
-            </span>
+            </span> */}
 
             <div
               className={inOut({ in: css._wrpI, out: css._wrpO })}
@@ -417,7 +418,7 @@ function useMenuMap(data: EnrichedMessage, { onOpenChange }: UseMenuMapProps) {
   const handleCopy = React.useCallback(() => {
     if (data.body) {
       navigator.clipboard
-        .writeText(data.body)
+        .writeText(getSafeInlineText(data.body))
         .then(() => {
           toast('Text copied to clipboard');
         })

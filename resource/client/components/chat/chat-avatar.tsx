@@ -13,9 +13,9 @@ const SIZEICON = 28;
 
 function fallbackMap(data: ChatAvatarsProps['data']) {
   const iconMap = {
-    BOT: <BotFillIcon />,
-    CHANNEL: <PersonSyncFillIcon />,
-    PRIVATE: <PersonFillIcon />,
+    BOT: <BotFillIcon size={SIZEICON} />,
+    CHANNEL: <PersonSyncFillIcon size={SIZEICON} />,
+    PRIVATE: <PersonFillIcon size={SIZEICON} />,
     GROUP: data && (data?.userIds.length === 2 ? <User2FillIcon size={SIZEICON} /> : data?.userIds.length > 2 ? <User3FillIcon size={SIZEICON} /> : <UserFillIcon size={SIZEICON} />)
   };
   if (!data?.type) return '';

@@ -19,6 +19,7 @@ import { chattype } from './types';
 import { Tabs } from '../ui/tabs';
 import { find } from 'lodash';
 import { cn } from 'cn';
+import { getSafeInlineText } from '../inline-editor/helper';
 
 interface ChatListProps {
   items: AllChatProps[];
@@ -96,10 +97,8 @@ export function ChatList(_props: ChatListProps) {
   return (
     <>
       <div className="bg-background/95 relative p-4 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-        <div>
-          <SearchIcon className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-          <Input placeholder="Search" variant="outline" className="pl-8" value={query} onChange={e => setQuery(e.target.value)} />
-        </div>
+        <SearchIcon className="absolute left-2 top-2.5 text-muted-foreground" />
+        <Input placeholder="Search" variant="outline" className="pl-8" value={query} onChange={e => setQuery(e.target.value)} />
       </div>
       <Tabs.Panel value="all" className={classTabs.panel}>
         {listItems(newItems)}
@@ -231,11 +230,13 @@ function renderMenuItems(items: MenuMap[]) {
   });
 }
 
-function escapeText(text: string | null | undefined): string {
+export function escapeText(text: string | null | undefined): string {
   if (!text) return '';
 
+  const parseText = getSafeInlineText(text);
+
   return (
-    text
+    parseText
       // Inline formatting: _, *, ~
       .replace(/___/g, '')
       .replace(/---/g, '')

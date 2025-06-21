@@ -120,7 +120,7 @@ export function ChatForm({ messages, members: initialMembers }: ChatFormProps) {
             role="button"
             tabIndex={0}
             disabled={isMessage}
-            className="bg-background-theme/70 backdrop-blur rounded-full p-2 text-color hover:text-color transition-colors z-[9] cursor-pointer disabled:text-color/50 focus-visible:text-cyan-600"
+            className="ml-auto bg-background-theme/70 backdrop-blur rounded-full p-2 text-color hover:text-color transition-colors z-[9] cursor-pointer disabled:text-color/50 focus-visible:text-cyan-600"
           >
             <PaperPlaneFillIcon size={24} />
             <span className="hidden sr-only">Send Message</span>

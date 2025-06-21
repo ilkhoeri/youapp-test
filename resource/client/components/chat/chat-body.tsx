@@ -326,12 +326,6 @@ function useMarkMessagesAsSeenSequentially(initialMessages: Message[], user: Acc
   // React.useEffect(() => {
   //   targetRef?.current?.scrollIntoView({ behavior: 'smooth' });
   // }, [messages.length]);
-  const isPrevent = messages.some(m => m.senderId === user?.id || m.seenIds.includes(user?.id!));
-  React.useEffect(() => {
-    if (isPrevent) {
-      targetRef?.current?.scrollIntoView({ behavior: 'smooth' });
-    }
-  }, [isPrevent, targetRef?.current, messages.length]);
 
   return { messages, scrollableRef, targetRef, lastMessage, ...groupMessages };
 }
@@ -430,18 +424,17 @@ export function ChatBody({ messages: initialMessages = [], members }: ChatBodyPr
                 key={msg.id}
                 data={msg}
                 members={members}
-                targetRef={targetRef}
+                targetRef={lastMessage?.id === msg.id ? targetRef : undefined}
                 lastMessage={lastMessage}
                 //
                 // data-in-view={inViewMap[i]}
                 // isInView={inViewMap[i] ? true : undefined}
-                // ref={refs[i]}
+                // ref={refs[i]} {JSON.stringify(user?.id, null, 2)}
               />
             ))}
           </React.Fragment>
         ))}
       </div>
-      {JSON.stringify(user?.id, null, 2)}
     </div>
   );
 }

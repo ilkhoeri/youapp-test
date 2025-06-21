@@ -1,6 +1,6 @@
 'use client';
 import * as React from 'react';
-import { InferTag, User } from './types';
+import { InferTag } from './types';
 import { cn } from 'cn';
 import { allowedEmoji, allowedPatterns, escapeHtml, InlineEditorConfig, TagPattern, TTagPatterns } from './inline-editor';
 
