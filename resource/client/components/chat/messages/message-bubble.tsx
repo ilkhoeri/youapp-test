@@ -24,13 +24,11 @@ import { cn } from 'cn';
 import { toast } from 'sonner';
 import { mergeRefs } from '@/resource/hooks/use-merged-ref';
 import { useApp } from '@/resource/client/contexts/app-provider';
+import { getSafeInlineText } from '../../inline-editor/helper';
 import { useOnlinePresence } from '../chat-hooks';
 import { useRouter } from 'next/navigation';
 
 import css from './msg.module.css';
-import { debounce, find } from 'lodash';
-import { pusherClient } from '@/resource/configs/pusher/pusher';
-import { getSafeInlineText } from '../../inline-editor/helper';
 
 const reactions: MessageReaction[] = [
   { emoji: '❤️', createdAt: new Date(Date.now()), id: '1', messageId: '1', userId: '1', user: null },
@@ -65,6 +63,7 @@ export function MessageBubble(_props: MessageBubbleProps) {
   // if (!user) return null;
 
   const [openMenu, setOpenMenu] = React.useState<boolean>(false);
+  const [openCtx, setOpenCtx] = React.useState<boolean>(false);
 
   const isMediaQuery = useIsMobile();
 
@@ -87,7 +86,7 @@ export function MessageBubble(_props: MessageBubbleProps) {
 
   const inOut = <T,>(x: InOut<T>): T => (isOwn ? x.out : x.in);
 
-  const container = cn('relative', data.isFirst ? 'my-3' : data.isLast ? 'mb-6' : 'mb-3', data.isRepeatInDay && '-mt-2.5', className),
+  const container = cn(css._ctr, data.isFirst ? 'my-3' : data.isLast ? 'mb-6' : 'mb-3', data.isRepeatInDay && '-mt-2.5', className),
     root = inOut({ in: css._rpin, out: css._rpout }),
     arrow = inOut({ in: css._arin, out: css._arout }),
     reaction = inOut({ in: css._rctin, out: css._rctout }),
@@ -116,9 +115,9 @@ export function MessageBubble(_props: MessageBubbleProps) {
   // }, [user?.id, data.senderId, cc, data.seenIds, isInView]);
 
   return (
-    <CtxMenu>
+    <CtxMenu onOpenChange={setOpenCtx}>
       <article key={data?.id} {...{ ...props, role: 'row', suppressHydrationWarning: true, tabIndex: -1 }} ref={mergeRefs(ref, targetRef)}>
-        <div {...{ role: 'cell', tabIndex: -1 }} className={container}>
+        <div {...{ role: 'cell', tabIndex: -1 }} className={container} data-focused={openCtx || openMenu ? 'true' : undefined}>
           <div ref={refRootHovered} className={root}>
             {/* <span className="text-sm">
               {JSON.stringify(user?.id, null, 2)}
@@ -127,12 +126,10 @@ export function MessageBubble(_props: MessageBubbleProps) {
             </span> */}
 
             <div
-              className={inOut({ in: css._wrpI, out: css._wrpO })}
               suppressHydrationWarning
               {...{
-                style: {
-                  '--color-themes': 'var(--color-themes)'
-                } as React.CSSProperties
+                className: inOut({ in: css._wrpI, out: css._wrpO }),
+                style: { '--color-themes': 'var(--color-themes)' } as React.CSSProperties
               }}
             >
               {!data.isRepeatInDay && (
@@ -140,6 +137,7 @@ export function MessageBubble(_props: MessageBubbleProps) {
                   <ArrowMessageBubble bubble={isOwn ? 'out' : 'in'} style={{ color: 'var(--bg-themes)' }} />
                 </span>
               )}
+
               {!data.isRepeatInDay && !isOwn && (
                 <Avatar
                   unstyled={{ root: true, fallback: true }}
@@ -253,6 +251,7 @@ export function MessageBubble(_props: MessageBubbleProps) {
 
             <Reactions reactions={data?.reactions} classNames={{ root: reaction }} />
           </div>
+          {(openCtx || openMenu) && <span data-focused />}
         </div>
       </article>
 
@@ -486,7 +485,7 @@ function useMenuMap(data: EnrichedMessage, { onOpenChange }: UseMenuMapProps) {
     { label: 'Message info', shortcut: '⌘+I', disabled: true, onAction: () => {} },
     ...opts(data.mediaUrl, { label: 'Save Media', onAction: handleSaveMedia }),
     { label: 'Reply', shortcut: '⌘+R', disabled: true, onAction: () => {} },
-    { label: 'Copy', shortcut: '⌘+P', onAction: handleCopy },
+    ...opts(!!data.body, { label: 'Copy', shortcut: '⌘+P', onAction: handleCopy }),
     { label: 'React', shortcut: '⌘+E', disabled: true, onAction: () => {} },
     { label: 'Forward', shortcut: '⌘+F', disabled: true, onAction: () => {} },
     { label: 'Pin', shortcut: '', disabled: true, onAction: () => {} },

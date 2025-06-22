@@ -111,7 +111,7 @@ export function ChatSwitcher(_props: SwitcherProps) {
         const newName = chat.name || chat.users.find(c => chat.userIds?.length === 2 && chat.userIds[1] === c.id)?.username;
         return String(newName);
       }}
-      renderExtra={chat => ({ online: totalOnline(), total: chat.type === 'GROUP' && chat.userIds?.length })}
+      renderExtra={chat => ({ online: chat.userIds?.length > 2 && totalOnline(), total: chat.type === 'GROUP' && chat.userIds?.length })}
       placeholder="Select a group"
     />
   );
@@ -142,7 +142,6 @@ export function UserSwitcher(_props: SwitcherProps) {
         } finally {
           return;
         }
-        // return;
       }
 
       if (!isRoom) {
@@ -188,7 +187,7 @@ function SwitchItem(_props: SwitchItemProps) {
       <div className="flex items-center gap-3">
         <span className="mr-auto">{name}</span>
         {total && <span className="text-muted-foreground text-xs">&#40;{total}&#41;</span>}
-        {online && <span className="">{online} Online</span>}
+        {online && <span className="absolute -left-0.5 size-1.5 z-[50] rounded-full bg-green-600" />}
       </div>
     </Select.Item>
   );

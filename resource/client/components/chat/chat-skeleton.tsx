@@ -7,7 +7,7 @@ interface ContainerSkeletonProps {
   layouts?: Array<number>;
   className?: string;
 }
-const classes = 'h-full max-xl:min-h-[176dvh] max-xl:max-h-[176dvh] xl:min-h-[80dvh] xl:max-h-[82dvh] items-stretch border rounded-2xl';
+const classes = '[--h:176dvh] h-[--h] max-xl:min-h-[--h] max-xl:max-h-[--h] xl:min-h-[80dvh] xl:max-h-[82dvh] items-stretch border rounded-2xl';
 
 export function ContainerSkeleton(props: ContainerSkeletonProps) {
   const { layouts = [15, 30, 55], className } = props;

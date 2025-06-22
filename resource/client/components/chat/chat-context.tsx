@@ -6,6 +6,7 @@ import { useSession } from 'next-auth/react';
 import { ScrollIntoViewAnimation, useScrollIntoView } from '@/resource/hooks/use-scroll-into-view';
 import { useReload } from '@/resource/hooks/use-reload';
 import { ChatQuerys, slugQuerys } from './types';
+import { useApp } from '../../contexts/app-provider';
 
 interface getChatId {
   searchQuery: string;
@@ -42,19 +43,37 @@ export function useChat(opts: UseChatOptions = {}): UseChat {
   );
 }
 
+type UseOtherUserProps = (AllChatProps | { users: MinimalAccount[] }) | null | undefined;
+
 export function useOtherUser(chats: (AllChatProps | { users: MinimalAccount[] }) | null | undefined): MinimalAccount | null {
-  const session = useSession();
+  // const session = useSession();
+  const { user: session } = useApp();
 
   try {
     if (!session || !chats) return null;
 
+    // const currentUserEmail = session.data?.user?.email;
+    const currentUserEmail = session?.email;
+
     const otherUser = React.useMemo(() => {
-      const currentUserEmail = session.data?.user?.email;
+      let parseUser: MinimalAccount | null = null;
+      // const parseUser = chats?.users.filter(user => user?.email !== currentUserEmail);
+      // return parseUser?.[0];
 
-      const otherUser = chats?.users.filter(user => user?.email !== currentUserEmail);
+      // const newName = chats.users.find(c => chat.userIds?.length === 2 && chat.userIds[1] === c.id)?.username;
 
-      return otherUser?.[0];
-    }, [session.data?.user?.email, chats?.users]);
+      if ('userIds' in chats) {
+        const userIds = chats.userIds ?? [];
+        if (userIds.length === 2) {
+          parseUser = chats.users.find(u => u.email !== currentUserEmail) ?? null;
+        }
+        if (userIds.length > 2) {
+          parseUser = chats?.users.filter(user => user?.email !== currentUserEmail)?.[0];
+        }
+      }
+
+      return parseUser;
+    }, [currentUserEmail, chats?.users]);
 
     return otherUser;
   } catch (error: any) {

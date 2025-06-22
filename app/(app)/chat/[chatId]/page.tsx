@@ -62,15 +62,14 @@ export default async function ChatIdPage({ params }: Params) {
 
   return (
     <ActiveChatProvider querys={queryEntries(chatId)}>
-      <section className="w-full max-w-5xl mx-auto">
-        <div className="lg:pl-80 h-full">
-          <div className="h-full flex flex-col">
-            <ChatHeader chat={chat} />
-            <ChatBody messages={messages} />
-            <ChatForm messages={messages} />
-          </div>
-          <ChatBackground />
+      <section className="absolute mt-[84px] top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 h-full w-[calc(100%+(var(--x)*2))] max-w-5xl mx-auto">
+        <div className="size-full flex flex-col relative z-[2]">
+          <ChatHeader chat={chat} />
+          <ChatBody messages={messages} />
+          <ChatForm messages={messages} />
         </div>
+        <ChatBackground />
+        <div className="hidden lg:block lg:min-h-80 lg:h-80" />
       </section>
     </ActiveChatProvider>
   );

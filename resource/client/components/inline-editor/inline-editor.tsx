@@ -446,7 +446,9 @@ export function InlineEditor<TData, TTag extends TTagPatterns = TTagPatterns>(_p
         />
       </div>
 
-      {createPortal(
+      <InlineMention users={users} open={mentionActive} onOpenChange={setMentionActive} selectedUser={selectedIndex} onSelectedUser={user => insertMention(user)} />
+
+      {/* {createPortal(
         <ul
           ref={contentRef}
           data-portal-ie=""
@@ -475,14 +477,98 @@ export function InlineEditor<TData, TTag extends TTagPatterns = TTagPatterns>(_p
                 <span dir="ltr">{user.name}</span>
               </li>
             ))}
-          {/* {filteredUsers?.length === 0 && <li style={{ color: '#999' }}>No users</li>} */}
+          {filteredUsers?.length === 0 && <li style={{ color: '#999' }}>No users</li>}
         </ul>,
         document.body
-      )}
+      )} */}
     </>
   );
 }
 InlineEditor.displayName = 'InlineEditor';
+
+type ItemsProps<T> = T | ((user: User, index: number) => T);
+
+export interface InlineMentionProps extends React.ComponentProps<'ul'> {
+  users?: User[] | null | undefined;
+  open: boolean;
+  onOpenChange: (prev: boolean | ((prev: boolean) => boolean)) => void;
+  classNames?: {
+    list?: string;
+    items?: ItemsProps<string>;
+  };
+  styles?: {
+    list?: CSSProperties;
+    items?: ItemsProps<CSSProperties>;
+  };
+  itemsProps?: ItemsProps<React.ComponentProps<'li'>>;
+  selectedUser?: number;
+  onSelectedUser?: (user: User) => void;
+}
+export function InlineMention(_props: InlineMentionProps) {
+  const { users, role = 'listbox', open, onOpenChange, className, classNames, style, styles, itemsProps, selectedUser, onSelectedUser, ...props } = _props;
+
+  const [mount, setMount] = React.useState(false);
+
+  React.useEffect(() => setMount(true), []);
+
+  if (!mount) return null;
+
+  const isOpened = users && users.length > 0 && open;
+
+  return createPortal(
+    <ul
+      {...props}
+      {...{
+        role,
+        'data-portal-ie': '',
+        className: cn(classNames?.list, className),
+        style: { ...styles?.list, ...styles }
+      }}
+    >
+      {isOpened &&
+        users?.map((user, i) => {
+          const itemProps = typeof itemsProps === 'function' ? itemsProps(user, i + 1) : itemsProps;
+          const className = typeof classNames?.items === 'function' ? classNames?.items(user, i + 1) : classNames?.items;
+          const style = typeof styles?.items === 'function' ? styles?.items(user, i + 1) : styles?.items;
+          const itemRef = itemProps?.ref;
+
+          return (
+            <li
+              {...itemProps}
+              key={user.id}
+              data-index={i + 1}
+              data-focused={i === selectedUser}
+              {...{
+                dir: itemProps?.dir ?? 'auto',
+                role: itemProps?.role ?? 'listitem',
+                className: cn(className, itemProps?.className),
+                style: { ...style, ...itemProps }
+              }}
+              onMouseDown={e => {
+                e.preventDefault();
+                onOpenChange(false);
+                onSelectedUser?.(user);
+                itemProps?.onMouseDown?.(e);
+              }}
+              ref={el => {
+                if (i === selectedUser && el) {
+                  el.scrollIntoView({ block: 'nearest' });
+                }
+                if (typeof itemRef === 'function') itemRef(el);
+                else if (itemRef) (itemRef as React.MutableRefObject<HTMLLIElement | null>).current = el;
+              }}
+            >
+              <i className="i-avatar" style={{ '--user-avatar': user?.image && `url("${user?.image}")` } as React.CSSProperties} />
+              <span dir="ltr">{user.name}</span>
+            </li>
+          );
+        })}
+      {/* {filteredUsers?.length === 0 && <li style={{ color: '#999' }}>No users</li>} */}
+    </ul>,
+    document.body,
+    users?.length
+  );
+}
 
 type InteractionEvent<T = Element> = KeyboardEvent | React.KeyboardEvent<T>;
 

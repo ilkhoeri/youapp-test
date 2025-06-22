@@ -121,7 +121,6 @@ interface ChatListItemProps {
 }
 export function ChatListItem(_props: ChatListItemProps) {
   const { data } = _props;
-
   const { onSwitch, isSelect, otherUser, lastMessage, hasSeen, lastMessageText } = useSwitchChat(data);
 
   const query = data.type.toLowerCase() as chattype;

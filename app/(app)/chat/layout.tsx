@@ -1,4 +1,5 @@
 import { Navigation } from '@/resource/client/components/actions';
+import { HomeFillIcon } from '@/resource/client/components/icons-fill';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -9,7 +10,9 @@ export default function ChatsLayout({ children }: Readonly<LayoutProps>) {
       <div className="mb-6 mt-8 grid grid-cols-3 justify-items-center items-center">
         <Navigation instance="back" className="mr-auto" />
         <p className="text-sm font-semibold"></p>
-        <p className="w-max mr-4 rtl:mr-0 rtl:ml-4 text-sm font-semibold ml-auto py-0"></p>
+        <Navigation instance="replace" href="/" className="w-max mr-4 rtl:mr-0 rtl:ml-4 text-sm font-semibold ml-auto py-0">
+          <HomeFillIcon size={28} />
+        </Navigation>
       </div>
 
       {/* <ChatList title="Messages" accounts={users} items={chats} /> */}
