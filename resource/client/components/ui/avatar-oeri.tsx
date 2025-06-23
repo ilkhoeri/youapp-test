@@ -10,7 +10,7 @@ const classes = cvx({
   variants: {
     selector: {
       root: 'relative flex items-center justify-center select-none overflow-hidden p-0 border',
-      image: 'object-cover size-full block',
+      image: 'object-cover size-full block absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2',
       fallback: 'absolute flex size-full items-center justify-center font-bold select-none text-[calc(var(--avatar-fz))]',
       group: 'flex pl-[var(--ag-spacing)]'
     }

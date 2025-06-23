@@ -45,7 +45,7 @@ export async function POST(req: Request) {
 
     if (!currentUser) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-    if (!currentUser || !currentUser.email) return new NextResponse('Unauthorized', { status: 401 });
+    if (!currentUser.email) return new NextResponse('Unauthorized', { status: 401 });
 
     const data = {
       user_id: currentUser?.email!,
@@ -54,7 +54,7 @@ export async function POST(req: Request) {
         id: currentUser?.id!,
         email: currentUser?.email!,
         name: currentUser?.username!,
-        avatar: currentUser?.image!
+        avatar: currentUser?.image ?? undefined
       }
     };
 

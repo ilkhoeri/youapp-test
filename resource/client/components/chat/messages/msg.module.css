@@ -180,7 +180,7 @@
 ._msg:where(:has(._pictout + ._msgbd:where(:empty))) {
   & ._pictin,
   & ._pictout {
-    @apply -mb-6;
+    @apply mb-[-0.29rem];
   }
 }
 ._msg:where(:has(._pictin:only-child)),
@@ -254,7 +254,8 @@
   & u {
     text-decoration: underline;
   }
-  & pre {
+  & pre,
+  & pre code {
     max-width: 100%;
     overflow-x: auto;
   }

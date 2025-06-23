@@ -13,9 +13,6 @@ import { toast } from 'sonner';
 import { x } from 'xuxi';
 import { cn } from 'cn';
 
-type Align = 'center' | 'end' | 'start';
-type Side = 'bottom' | 'top' | 'right' | 'left';
-
 interface GenericSwitcherProps<TData extends ID> {
   items: SwitchData<TData>;
   selectedId?: string | null;
@@ -89,15 +86,6 @@ export function ChatSwitcher(_props: SwitcherProps) {
   const memberOnline = getMatchingAccounts(accounts, onlineUsers);
 
   const totalOnline = (name?: string | null) => x.cnx(name, memberOnline?.length);
-
-  // const [name, setName] = React.useState<string>('');
-
-  // const normalizedData = chats?.map(c => {
-  //   return {
-  //     ...c,
-  //     name: c.name ?? c?.users.find(u => u?.username?.toLowerCase().includes())?.username
-  //   };
-  // });
 
   return (
     <GenericSwitcher

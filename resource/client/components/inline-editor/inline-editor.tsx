@@ -4,36 +4,38 @@ import * as React from 'react';
 import { createPortal } from 'react-dom';
 import { cn } from 'cn';
 import DOMPurify from 'dompurify';
-import { EmojiEntry, User } from './types';
 import emojiJson from './emoji.json' with { type: 'json' };
 
-import './inline-editor.css';
 import { useElementRect } from '@/resource/hooks/use-element-info';
 import { getVarsPositions, useUpdatedPositions } from '@/resource/hooks/use-open-state';
 import { mergeRefs } from '@/resource/hooks/use-merged-ref';
 
-export type TValues<T extends unknown = string> = Record<string, T>;
+import type { EmojiEntry, User, TValues, ReadValues } from './types';
 
-export type ReadValues<T extends unknown = string> = TValues<T> | Readonly<TValues<T>>;
+import './inline-editor.css';
 
-export interface TagPattern<TTag extends keyof React.JSX.IntrinsicElements = keyof React.JSX.IntrinsicElements, TShortcut = string> {
-  tag: TTag;
+export type GetTagPatternProps = <TTag extends keyof React.JSX.IntrinsicElements = 'div'>(match: RegExpExecArray, props: React.ComponentProps<TTag>) => React.ComponentProps<TTag>;
+
+export interface TagPattern {
+  tag: string;
   regex: RegExp;
   open?: string;
   close?: string;
-  shortcut?: TShortcut | undefined;
+  shortcut?: string | undefined;
   /** **EXPERIMENTAL** */
-  getProps?: (match: RegExpExecArray, props?: React.ComponentProps<TTag>) => React.ComponentProps<TTag>;
+  getProps?: <TTag extends keyof React.JSX.IntrinsicElements = 'div'>(match: RegExpExecArray, props: React.ComponentProps<TTag>) => React.ComponentProps<TTag>;
 }
 
-export type TTagPatterns<TTag extends keyof React.JSX.IntrinsicElements = keyof React.JSX.IntrinsicElements, TShortcut = string> = ReadonlyArray<TagPattern<TTag, TShortcut>>;
+export type TTagPatterns = ReadonlyArray<TagPattern>;
 
-export interface InlineEditorConfig<TTag extends TTagPatterns = TTagPatterns> {
-  tagPattern?: TTag;
+export type UsersType<TUser = User> = TUser[] | null | undefined;
+
+export interface InlineEditorConfig<TUser = User> {
+  tagPattern?: TTagPatterns;
   charPair?: ReadValues;
   /** `:emoji_name:` */
   emoji?: ReadValues;
-  users?: User[] | null | undefined;
+  users?: UsersType<TUser>;
 }
 
 type GetProp<T = any> = {
@@ -41,7 +43,7 @@ type GetProp<T = any> = {
   editor?: T;
 };
 
-type __Excludes = 'dir' | 'style' | 'onChange' | 'onSubmit';
+type __Excludes = 'dir' | 'style' | 'onChange';
 type Selector = NonNullable<keyof GetProp>;
 type CSSProperties = React.CSSProperties & Record<string, any>;
 
@@ -56,10 +58,7 @@ interface InlineEditorStyles extends RootStyles {
   styles?: GetProp<CSSProperties>;
 }
 
-export interface InlineEditorProps<TData, TTag extends TTagPatterns = TTagPatterns>
-  extends InlineEditorConfig<TTag>,
-    Omit<React.ComponentPropsWithRef<'div'>, __Excludes>,
-    InlineEditorStyles {
+export interface InlineEditorProps<TUser = User> extends InlineEditorConfig<TUser>, Omit<React.ComponentPropsWithRef<'div'>, __Excludes>, InlineEditorStyles {
   disabled?: boolean;
   dir?: 'ltr' | 'rtl' | 'auto';
   value?: string | null | undefined; // controlled
@@ -67,7 +66,6 @@ export interface InlineEditorProps<TData, TTag extends TTagPatterns = TTagPatter
   onChange?: (value: string) => void;
   autoFocus?: boolean;
   placeholder?: string;
-  onSubmit?(data?: TData): void;
 }
 
 interface UndoRedoStack {
@@ -89,7 +87,7 @@ function getStyles(selector: Selector, opts: InlineEditorStyles = {}) {
   };
 }
 
-export function InlineEditor<TData, TTag extends TTagPatterns = TTagPatterns>(_props: InlineEditorProps<TData, TTag>) {
+export function InlineEditor<TUser extends User = User>(_props: InlineEditorProps<TUser>) {
   const {
     placeholder,
     role = 'textbox',
@@ -127,10 +125,6 @@ export function InlineEditor<TData, TTag extends TTagPatterns = TTagPatterns>(_p
   const [internalValue, setInternalValue] = React.useState(defaultValue ?? '');
 
   const rawText = isControlled ? (value ?? '') : internalValue;
-  const formattedHTML = likeMdx(rawText).trim();
-
-  const usersList = React.useMemo(() => (users ?? [])?.map(user => `@${user.name}`), [users]);
-  const findUser = React.useCallback((query: string) => (users ?? [])?.find(user => user.name === query), [users]);
 
   const [mentionActive, setMentionActive] = React.useState(false);
   const [selectedIndex, setSelectedIndex] = React.useState(0);
@@ -163,7 +157,6 @@ export function InlineEditor<TData, TTag extends TTagPatterns = TTagPatterns>(_p
   function emptyUsers() {
     setMentionActive(false);
     setFilteredUsers([]);
-    // setPosition(null);
   }
 
   // Cek input untuk aktifkan mention mode
@@ -199,9 +192,9 @@ export function InlineEditor<TData, TTag extends TTagPatterns = TTagPatterns>(_p
       if (/^[\w]*$/.test(query)) {
         // hanya alphanumeric untuk mention query
         setMentionActive(true);
-        setFilteredUsers(users.filter(u => u.name.startsWith(query)));
+        setFilteredUsers(users.filter(u => u?.name.startsWith(query)));
 
-        const user = users.find(u => u.name === query);
+        const user = users.find(u => u?.name === query);
         if (user) {
           // insertMention(user);
           emptyUsers();
@@ -225,9 +218,9 @@ export function InlineEditor<TData, TTag extends TTagPatterns = TTagPatterns>(_p
       setSelectedIndex(prev => (prev === 0 ? filteredUsers.length - 1 : prev - 1));
     } else if (e.key === 'Enter') {
       e.preventDefault();
-      const selectedUser = filteredUsers[selectedIndex];
-      if (selectedUser) {
-        insertMention(selectedUser);
+      const selectUser = filteredUsers[selectedIndex];
+      if (selectUser) {
+        insertMention(selectUser);
         setMentionActive(false);
         setSelectedIndex(0); // reset index
       }
@@ -238,7 +231,6 @@ export function InlineEditor<TData, TTag extends TTagPatterns = TTagPatterns>(_p
     }
   }
 
-  // console.log('[EMOJI]:', JSON.stringify(convertToEmoji(emojiJson), null, 2));
 
   const undoStack: UndoRedoStack[] = [];
   const redoStack: UndoRedoStack[] = [];
@@ -446,7 +438,7 @@ export function InlineEditor<TData, TTag extends TTagPatterns = TTagPatterns>(_p
         />
       </div>
 
-      <InlineMention users={users} open={mentionActive} onOpenChange={setMentionActive} selectedUser={selectedIndex} onSelectedUser={user => insertMention(user)} />
+      <InlineMention<TUser> users={users} open={mentionActive} onOpenChange={setMentionActive} selectUser={selectedIndex} onSelectUser={user => insertMention(user)} />
 
       {/* {createPortal(
         <ul
@@ -486,26 +478,26 @@ export function InlineEditor<TData, TTag extends TTagPatterns = TTagPatterns>(_p
 }
 InlineEditor.displayName = 'InlineEditor';
 
-type ItemsProps<T> = T | ((user: User, index: number) => T);
+type ItemsProps<TUser, T> = T | ((user: TUser, index: number) => T);
 
-export interface InlineMentionProps extends React.ComponentProps<'ul'> {
-  users?: User[] | null | undefined;
+export interface InlineMentionProps<TUser extends User = User> extends React.ComponentProps<'ul'> {
+  users?: UsersType<TUser>;
   open: boolean;
   onOpenChange: (prev: boolean | ((prev: boolean) => boolean)) => void;
   classNames?: {
     list?: string;
-    items?: ItemsProps<string>;
+    items?: ItemsProps<TUser, string>;
   };
   styles?: {
     list?: CSSProperties;
-    items?: ItemsProps<CSSProperties>;
+    items?: ItemsProps<TUser, CSSProperties>;
   };
-  itemsProps?: ItemsProps<React.ComponentProps<'li'>>;
-  selectedUser?: number;
-  onSelectedUser?: (user: User) => void;
+  itemsProps?: ItemsProps<TUser, React.ComponentProps<'li'>>;
+  selectUser?: number;
+  onSelectUser?: (user: TUser) => void;
 }
-export function InlineMention(_props: InlineMentionProps) {
-  const { users, role = 'listbox', open, onOpenChange, className, classNames, style, styles, itemsProps, selectedUser, onSelectedUser, ...props } = _props;
+export function InlineMention<TUser extends User = User>(_props: InlineMentionProps<TUser>) {
+  const { users, role = 'listbox', open, onOpenChange, className, classNames, style, styles, itemsProps, selectUser, onSelectUser, ...props } = _props;
 
   const [mount, setMount] = React.useState(false);
 
@@ -537,7 +529,7 @@ export function InlineMention(_props: InlineMentionProps) {
               {...itemProps}
               key={user.id}
               data-index={i + 1}
-              data-focused={i === selectedUser}
+              data-focused={i === selectUser}
               {...{
                 dir: itemProps?.dir ?? 'auto',
                 role: itemProps?.role ?? 'listitem',
@@ -547,11 +539,11 @@ export function InlineMention(_props: InlineMentionProps) {
               onMouseDown={e => {
                 e.preventDefault();
                 onOpenChange(false);
-                onSelectedUser?.(user);
+                onSelectUser?.(user);
                 itemProps?.onMouseDown?.(e);
               }}
               ref={el => {
-                if (i === selectedUser && el) {
+                if (i === selectUser && el) {
                   el.scrollIntoView({ block: 'nearest' });
                 }
                 if (typeof itemRef === 'function') itemRef(el);
@@ -559,7 +551,7 @@ export function InlineMention(_props: InlineMentionProps) {
               }}
             >
               <i className="i-avatar" style={{ '--user-avatar': user?.image && `url("${user?.image}")` } as React.CSSProperties} />
-              <span dir="ltr">{user.name}</span>
+              <span dir="ltr">{user?.name}</span>
             </li>
           );
         })}
@@ -602,8 +594,14 @@ export const allowedPairs: ReadValues = {
 export const allowedPatterns = [
   { tag: 'blockquote', shortcut: 'shift + q', open: '> ', close: '', regex: /^> ([^\s].+)$/ },
   { tag: 'pre', shortcut: 'shift + `', open: '```\n', close: '\n```', regex: /```[\r\n]+([\s\S]+?)[\r\n]+```/g },
-  { tag: 'code', shortcut: '`', open: '`', close: '`', regex: /`([^`]+)`/ },
-  { tag: 'u', shortcut: 'u', open: '!', close: '!', regex: /!([^!]+)!/ },
+  {
+    tag: 'code',
+    shortcut: '`',
+    open: '`',
+    close: '`',
+    //  regex: /`([^`]+)`/
+    regex: /(^|\s)`([^`\s][^`]*?)`(?=\s|$)/
+  },
   { tag: 'u', shortcut: 'u', open: '__', close: '__', regex: /__([^_]+)__/ },
   { tag: 'i', shortcut: 'i', open: '_', close: '_', regex: /_([^_]+)_/ },
   { tag: 'i', shortcut: '/', open: '_', close: '_', regex: /_([^_]+)_/ },
@@ -1684,11 +1682,11 @@ function handleMention(e: React.KeyboardEvent<HTMLDivElement>) {
   }
 }
 
-function mentionElement(user: User): HTMLSpanElement {
+function mentionElement<TUser extends User>(user: TUser): HTMLSpanElement {
   const span = document.createElement('span');
   span.className = 'mention';
-  span.dataset.mentionId = user.id;
-  span.textContent = `@${user.name}`;
+  span.dataset.mentionId = user?.id;
+  span.textContent = `@${user?.name}`;
   span.contentEditable = 'false'; // bukan false
   span.setAttribute('data-is-mention', 'true');
   span.setAttribute('tabIndex', '-1');
@@ -1707,7 +1705,7 @@ function mentionElement(user: User): HTMLSpanElement {
 }
 
 // Insert mention ke content editable
-function insertMention(user: User) {
+function insertMention<TUser extends User>(user: TUser) {
   const sel = window.getSelection();
   if (!sel || sel.rangeCount === 0) return;
 
@@ -1833,64 +1831,28 @@ export function escapeHtml(text: string): string {
 
 export function limitedMarkdown(text: string | null | undefined): string {
   if (!text) return '';
-  // Replace ___ with <hr>
   text = text.replace(/___/g, '<hr>');
-  // Replace --- with <hr>
   text = text.replace(/---/g, '<hr>');
-  // Replace _..._ with <i>...</i>
   text = text.replace(/_(.*?)_/g, '<i>$1</i>');
-  // Replace ~...~ with <s>...</s>
   text = text.replace(/~(.*?)~/g, '<s>$1</s>');
-  // Replace *...* with <strong>...</strong>
   text = text.replace(/\*(.*?)\*/g, '<strong>$1</strong>');
-  // Replace headings
   text = text.replace(/^###### (.*$)/gim, '<h6>$1</h6>');
   text = text.replace(/^##### (.*$)/gim, '<h5>$1</h5>');
   text = text.replace(/^#### (.*$)/gim, '<h4>$1</h4>');
   text = text.replace(/^### (.*$)/gim, '<h3>$1</h3>');
   text = text.replace(/^## (.*$)/gim, '<h2>$1</h2>');
   text = text.replace(/^# (.*$)/gim, '<h1>$1</h1>');
-  // Replace links with images (e.g., [![alt](image)](link))
-  // text = text.replace(/\[!\[([^\]]*)\]\(([^)]+)\)\]\(([^)]+)\)/g, (_, alt = '', imgSrc, href) => {
-  //   const escapedHref = href.replace(/@/g, '&#64;');
-  //   return `<a href="${escapedHref}" rel="nofollow"><img src="${imgSrc}" alt="${alt || ''}" data-canonical-src="${imgSrc}" style="max-width: 100%;"></a>`;
-  // });
-  // // Replace standalone images (e.g., ![alt](src))
-  // text = text.replace(/!\[([^\]]*)\]\(([^)]+)\)/g, (_, alt = '', src) => {
-  //   const canonicalSrc = src.replace(/&/g, '&amp;');
-  //   return `<a target="_blank" rel="noopener noreferrer nofollow" href=""><img src="${src}" alt="${alt || ''}" data-canonical-src="${canonicalSrc}" style="max-width: 100%;"></a>`;
-  // });
-  // // Replace standard links (e.g., [text](link))
-  // text = text.replace(/\[([^\]]+)\]\(([^)]+)\)/g, (_, text, href) => {
-  //   const escapedHref = href.replace(/@/g, '&#64;');
-  //   return `<a href="${escapedHref}">${text}</a>`;
-  // });
-  // // Replace email addresses with mailto links
-  // text = text.replace(/<([^>]+@[^>]+)>/g, '<a href="mailto:$1">$1</a>');
-  // text = text.replace(/^(.*?<a href="mailto:[^>]+>[^<]+<\/a>.*)$/gm, '<p>$1</p>');
-  // Replace blockquotes
   text = text.replace(/^> (.*$)/gim, '<blockquote>$1</blockquote>');
   text = text.replace(/^< (.*$)/gim, '$1');
-  // Replace ordered list items (start with a digit followed by space)
   text = text.replace(/^\d+ (.*)$/gm, '<li>$1</li>');
   text = text.replace(/(<li>.*<\/li>)(?!(<\/ol>|<\/ul>))/gim, '<ol dir="auto">$1</ol>');
-  // Replace unordered list items (start with a dash followed by space)
   text = text.replace(/^- (.*)$/gm, '<li>$1</li>');
   text = text.replace(/(<li>.*<\/li>)(?!(<\/ul>|<\/ol>))/gim, '<ul dir="auto">$1</ul>');
-  // Combine all consecutive <ol> and <ul> tags into one
   text = text.replace(/<\/ol>\s*<ol dir="auto">/gim, '');
   text = text.replace(/<\/ul>\s*<ul dir="auto">/gim, '');
-
-  // Replace code blocks (text wrapped with triple backticks)
   // @ts-ignore
-  text = text.replace(/```([^```]+)```/gs, (_, p1) => `<pre class="notranslate"><code>${p1.trim()}</code></pre>`);
-  // Replace `...` with <code>...</code>
-  text = text.replace(/`([^`]+)`/g, '<code>$1</code>');
-  // Split text into blocks separated by newlines and wrap them with <div dir="auto"></div>
-  // const blocks = text.split(/\n\n+/);
-  // const wrappedBlocks = blocks.map(block => `<div dir="auto">${block}</div>`);
-  // // Join the blocks back into a single string
-  // text = wrappedBlocks.join('\n');
+  text = text.replace(/```[\r\n]+([\s\S]+?)[\r\n]+```/g, (_, p1) => `<pre class="notranslate"><code>${p1.trim()}</code></pre>`);
+  text = text.replace(/`(.*?)`/g, '<code>$1</code>');
 
   return text;
 }

@@ -16,3 +16,7 @@ export type InferTag<T extends TTagPatterns = TTagPatterns> = NonNullable<T[numb
 
 /** @example type Shortcuts = InferShortcut<typeof allowedPatterns>; // "ctrl + `" | "s" | "shift + s" | ... */
 export type InferShortcut<T extends TTagPatterns = TTagPatterns> = NonNullable<T[number]['shortcut']>;
+
+export type TValues<T extends unknown = string> = Record<string, T>;
+
+export type ReadValues<T extends unknown = string> = TValues<T> | Readonly<TValues<T>>;

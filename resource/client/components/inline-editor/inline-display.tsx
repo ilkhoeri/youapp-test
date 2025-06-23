@@ -1,387 +1,456 @@
 'use client';
 import * as React from 'react';
-import { InferTag } from './types';
+import { InferTag, ReadValues, User } from './types';
 import { cn } from 'cn';
-import { allowedEmoji, allowedPatterns, escapeHtml, InlineEditorConfig, TagPattern, TTagPatterns } from './inline-editor';
+import { allowedEmoji, allowedPatterns, InlineEditorConfig, UsersType } from './inline-editor';
 
-type InlineTag = 'a' | InferTag<typeof allowedPatterns>;
-type InlineSelector = 'mention' | InlineTag;
+type TokensRendererSelector = 'a' | 'mention' | 'text' | InferTag<typeof allowedPatterns>;
+type InlineSelector = 'root' | 'expand' | 'ellipsis' | TokensRendererSelector;
 type CSSProperties = React.CSSProperties & Record<string, any>;
 
-interface ElementProps {
-  unstyled?: boolean | Partial<Record<InlineSelector, boolean>>;
-  styles?: Partial<Record<InlineSelector, CSSProperties>>;
-  classNames?: Partial<Record<InlineSelector, string>>;
+interface StylesProps<TSelector extends string> {
+  unstyled?: boolean | Partial<Record<TSelector, boolean>>;
+  styles?: Partial<Record<TSelector, CSSProperties>>;
+  classNames?: Partial<Record<TSelector, string>>;
+}
+
+type BaseProps<T = object> = T & {
+  style?: CSSProperties;
+  className?: string;
   dir?: 'auto' | 'ltr' | 'rtl';
+};
+
+type TagPatterns = typeof parsedPatterns;
+
+interface GetProps<TSelector extends string> extends StylesProps<TSelector>, BaseProps {}
+
+type ComponentProps = Omit<React.ComponentProps<'div'>, keyof GetProps<string>>;
+
+export interface SafeInlineRendererProps<TUser = User> extends ComponentProps, InlineEditorConfig<TUser>, GetProps<InlineSelector> {
+  value: string | null | undefined;
+  expandSteps?: number[];
+  defaultExpand?: number;
+  expand?: number;
+  onExpandChange?: (prev: number | ((prev: number) => number)) => void;
+  onExpandClick?: React.MouseEventHandler<HTMLButtonElement>;
+  ellipsis?: React.ReactNode;
 }
 
-export interface SafeInlineDisplayProps<TTag extends TTagPatterns = TTagPatterns> extends InlineEditorConfig<TTag>, ElementProps {
-  text: string | null | undefined;
-  // users: User[];
-}
-
-function getProps(selector: InlineSelector, opts: ElementProps = {}) {
-  const { classNames, dir, styles, unstyled: unstyledProp } = opts;
+function getProps<TSelector extends string = TokensRendererSelector>(selector: TSelector, opts: GetProps<TSelector> = {}) {
+  const { classNames, dir, styles, unstyled: unstyledProp, className, style } = opts;
   const unstyled = typeof unstyledProp === 'object' ? unstyledProp?.[selector] : unstyledProp;
 
   return {
     dir,
-    className: cn(!unstyled && selector, classNames?.[selector]),
-    style: styles?.[selector]
+    className: classNames?.[selector] || className ? cn(!unstyled && `${selector}`, classNames?.[selector], className) : undefined,
+    style: { ...styles?.[selector], ...style }
   };
 }
 
-const mentionRegex = /@(\w+)/g;
-const emojiRegex = /:([a-z0-9_+-]+):/g;
-const combinedRegex = /@(\w+)|:([a-zA-Z0-9_+-]+):/g;
+type TokenType = 'emoji' | TokensRendererSelector;
+type Token = {
+  type: TokenType;
+  content: string;
+  match?: RegExpExecArray;
+};
 
-function parseUnicode(text: string): string {
-  // text = text.replace(/<[^>]*>/g, '');
-  return text
-    .replace(/&amp;/g, '&') // harus duluan
-    .replace(/&lt;/g, '<')
-    .replace(/&gt;/g, '>')
-    .replace(/&quot;/g, '"')
-    .replace(/&#039;/g, "'")
-    .replace(/\u200B/g, '');
-}
+export function tokenize(text: string, patterns: TagPatterns = parsedPatterns): Token[] {
+  const tokens: Token[] = [];
+  let input = text;
 
-export function SafeInlineDisplay0<TTag extends TTagPatterns = TTagPatterns>(_props: SafeInlineDisplayProps<TTag>) {
-  const { text, users, charPair, emoji = allowedEmoji, tagPattern = allowedPatterns, dir = 'auto', ...rest } = _props;
-
-  const propApi = { dir, ...rest };
-
-  if (!text) return null;
-
-  const parts: (string | React.ReactElement)[] = [];
-
-  // Step 1: Replace emoji first (since it’s purely textual, no user lookup needed)
-  const emojiParsed = text.replace(emojiRegex, (_, name) => emoji[name] ?? `:${name}:`);
-
-  // Step 2: Parse mention
-  let lastIndex = 0;
-  let match: RegExpExecArray | null;
-
-  while ((match = mentionRegex.exec(emojiParsed)) !== null) {
-    const start = match.index;
-    const end = mentionRegex.lastIndex;
-    const username = match[1];
-
-    // Push text before @mention
-    if (start > lastIndex) {
-      parts.push(emojiParsed.slice(lastIndex, start));
-    }
-
-    const user = users?.find(u => u.name === username);
-    if (user) {
-      parts.push(
-        <span key={`mention-${user.id}-${start}`} data-mention-id={user.id} {...getProps('mention', propApi)}>
-          @<span dir="ltr">{user.name}</span>
-        </span>
-      );
-    } else {
-      const textParsed = emojiParsed.slice(start, end);
-      parts.push(textParsed); // keep as text
-    }
-
-    lastIndex = end;
-  }
-
-  // Sisa teks setelah mention terakhir
-  if (lastIndex < emojiParsed.length) {
-    parts.push(emojiParsed.slice(lastIndex));
-  }
-
-  return <>{parts}</>;
-}
-
-export function SafeInlineDisplay<TTag extends TTagPatterns = TTagPatterns>(_props: SafeInlineDisplayProps<TTag>) {
-  const { text, users, charPair, emoji = allowedEmoji, tagPattern = allowedPatterns, dir = 'auto', ...rest } = _props;
-
-  const propApi = { dir, ...rest };
-
-  if (!text) return null;
-
-  // Step 1: Replace emoji codes with actual emoji
-  // let parsed = text.replace(emojiRegex, (_, name) => emoji[name] ?? `:${name}:`);
-  let parsed = text.replace(/\u200B/g, '').replace(emojiRegex, (_, name) => emoji[name] ?? `:${name}:`);
-
-  // Step 2: Parse inline tags (bold, italic, etc.) using allowedPatterns
-  function parseInlineTags0(input: string): (string | React.ReactElement)[] {
-    if (!input) return [];
-
+  while (input.length > 0) {
     let earliestMatch: {
-      pattern: (typeof allowedPatterns)[number];
+      pattern: (typeof patterns)[number];
       match: RegExpExecArray;
       index: number;
     } | null = null;
 
-    for (const pattern of allowedPatterns) {
-      const re = new RegExp(pattern.regex.source, 'g'); // fresh regex
-      const match = re.exec(input);
+    for (const pattern of patterns) {
+      // const regex = new RegExp(pattern.regex.source, pattern.regex.flags.replace('g', '')); // disable global
+      const regex = new RegExp(pattern.regex.source, 'gm'); // multiline
+      const match = regex.exec(input);
       if (match && (earliestMatch === null || match.index < earliestMatch.index)) {
-        earliestMatch = { pattern, match, index: match.index };
-      }
-    }
-
-    if (!earliestMatch) return [input];
-
-    const { pattern, match, index } = earliestMatch;
-    const fullMatch = match[0];
-
-    // Calculate content inside open/close (without assuming match[1])
-    const openLength = pattern?.open?.length ?? 0;
-    const closeLength = pattern?.close?.length ?? 0;
-
-    const innerStart = index + openLength;
-    const innerEnd = index + fullMatch.length - closeLength;
-
-    const before = input.slice(0, index);
-    const innerRaw = input.slice(innerStart, innerEnd);
-    const after = input.slice(index + fullMatch.length);
-
-    // Special tag handling: hr is self-closing, no inner
-    if (pattern.tag === 'hr') {
-      return [
-        ...parseInlineTags(before),
-        React.createElement(pattern.tag, {
-          key: `${pattern.tag}-${index}`,
-          ...getProps?.(pattern.tag, propApi)
-        }),
-        ...parseInlineTags(after)
-      ];
-    }
-
-    return [
-      ...parseInlineTags(before),
-      React.createElement(
-        pattern.tag,
-        {
-          key: `${pattern.tag}-${index}`,
-          ...getProps?.(pattern.tag, propApi)
-        },
-        parseInlineTags(innerRaw) // recursive!
-      ),
-      ...parseInlineTags(after)
-    ];
-  }
-
-  function wrapWithParagraphs(input: (string | React.ReactElement)[]): React.ReactNode[] {
-    const result: React.ReactNode[] = [];
-
-    for (const item of input) {
-      if (typeof item === 'string') {
-        const lines = item.split(/\r?\n/);
-
-        for (let i = 0; i < lines.length; i++) {
-          const line = lines[i];
-
-          if (line.trim() === '') {
-            result.push(<br key={`br-${i}-${line}`} />);
-          } else {
-            result.push(<p key={`p-${i}-${line}`}>{line}</p>);
-          }
+        const index = match.index;
+        if (pattern.tag.startsWith('h') && pattern.regex.source.startsWith('^')) {
+          if (index !== 0 && input[index - 1] !== '\n') continue; // hanya match awal baris
         }
-      } else {
-        // Biarkan komponen seperti <pre>, <a>, <strong> tetap tampil apa adanya
-        result.push(item);
+
+        earliestMatch = { pattern, match, index };
       }
     }
 
-    return result;
+    if (!earliestMatch) {
+      tokens.push({ type: 'text', content: input });
+      break;
+    }
+
+    const { pattern, match, index: i } = earliestMatch;
+
+    // Add any plain text before this match
+    if (i > 0) {
+      tokens.push({ type: 'text', content: input.slice(0, i) });
+    }
+
+    // Push token based on match
+    tokens.push({ type: pattern.tag, content: match[1] ?? match[0], match: match.length > 1 ? match : undefined });
+
+    // Slice the input and continue
+    input = input.slice(i + match[0].length);
   }
 
-  const parsedPatterns: TTagPatterns<InlineTag> = [
-    {
-      tag: 'a',
-      regex: /\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/,
-      open: '[',
-      close: ')',
-      getProps(match) {
-        return {
-          href: match[2],
-          target: '_blank',
-          rel: 'noopener noreferrer nofollow',
-          children: match[1]
-        };
-      }
+  return tokens;
+}
+
+export function safeTruncate(text: string, max: number): string {
+  if (!text || text.length <= max) return text;
+
+  const sliced = text.slice(0, max);
+
+  const lastSpace = sliced.lastIndexOf(' ');
+  if (lastSpace === -1) return ''; // tidak ada spasi sama sekali
+
+  return sliced.slice(0, lastSpace).trim();
+}
+
+export function safeTokensByTruncate(data: Token[], plaintext: string): Token[] {
+  const result: Token[] = [];
+  let remaining = plaintext;
+
+  for (const { type, content, match } of data) {
+    if (!remaining) break;
+
+    if (remaining.length >= content.length) {
+      result.push({ type, content, match });
+      remaining = remaining.slice(content.length);
+    } else {
+      // safe truncate: clean cut based on words
+      const cleanCut = safeTruncate(content, remaining.length);
+      result.push({ type, content: cleanCut, match });
+      remaining = '';
+    }
+  }
+
+  return result;
+}
+
+export function SafeInlineRenderer<TUser extends User = User>(_props: SafeInlineRendererProps<TUser>) {
+  const {
+    value,
+    users,
+    charPair,
+    emoji = allowedEmoji,
+    tagPattern = allowedPatterns,
+    dir = 'auto',
+    className,
+    style,
+    classNames,
+    styles,
+    unstyled,
+    expandSteps,
+    defaultExpand = 0,
+    expand: expandProp,
+    onExpandChange: setExpandedProp,
+    onExpandClick,
+    ellipsis = '...',
+    ...props
+  } = _props;
+
+  let text: string = value ?? '';
+
+  const STEPS = expandSteps ?? safeSliceSteps(768, 3071, text?.length);
+
+  const [_expanded, _setExpanded] = React.useState(defaultExpand);
+  const expanded = expandProp ?? _expanded;
+  const setExpanded = React.useCallback(
+    (prev: number | ((prev: number) => number)) => {
+      const expandState = typeof prev === 'function' ? prev(expanded) : prev;
+      if (setExpandedProp) setExpandedProp(expandState);
+      else _setExpanded(expandState);
     },
-    {
-      tag: 'a',
-      regex: /\b(https?:\/\/[^\s<>"'`()[\]]+)/,
-      open: '',
-      close: '',
-      shortcut: '',
-      getProps: match => ({
-        href: match[1],
+    [expanded, STEPS]
+  );
+
+  const visibleLength = STEPS[expanded] || text?.length;
+  const isTruncated = text?.length > visibleLength;
+
+  const propsApi = { dir, classNames, styles, unstyled };
+
+  const addEllipsis = typeof ellipsis === 'string' ? <span {...getProps('ellipsis', { classNames, styles })}>{ellipsis}</span> : ellipsis;
+
+  return (
+    <div {...props} {...getProps('root', { className, style, ...propsApi })}>
+      <TokensRenderer text={text} users={users} limit={visibleLength} emoji={emoji} {...propsApi} />
+      {isTruncated && addEllipsis}
+      {isTruncated && (
+        <button
+          type="button"
+          role="button"
+          {...getProps('expand', propsApi)}
+          onClick={e => {
+            setExpanded(prev => Math.min(prev + 1, STEPS.length));
+            onExpandClick?.(e);
+          }}
+        >
+          Read more
+        </button>
+      )}
+    </div>
+  );
+}
+SafeInlineRenderer.displayName = 'SafeInlineRenderer';
+
+function safeSliceSteps(start: number, step: number, max: number): number[] {
+  const steps = [];
+  let current = start;
+  while (current < max) {
+    steps.push(current);
+    current += step;
+  }
+  return steps;
+}
+
+export interface TokensRendererProps<TUser extends User = User> extends StylesProps<TokensRendererSelector> {
+  text: string;
+  limit?: number;
+  dir?: 'auto' | 'ltr' | 'rtl';
+  emoji?: ReadValues<string>;
+  tagPattern?: TagPatterns;
+  users?: UsersType<TUser>;
+}
+
+export function TokensRenderer<TUser extends User = User>(props: TokensRendererProps<TUser>) {
+  const { text, limit = 1000000, emoji = allowedEmoji, tagPattern, users, ...rest } = props;
+
+  const tokens = tokenize(text, tagPattern);
+  const parseText = safeTruncate(text, limit);
+  const safeTokens = safeTokensByTruncate(tokens, parseText);
+
+  return safeTokens.map((t, i) => {
+    switch (t.type) {
+      case 'emoji':
+        return <Emoji key={i} name={t.content} emoji={emoji} />;
+      case 'mention':
+        return <Mention key={i} username={t.content} users={users} {...getProps('mention', rest)} />;
+      case 'a':
+        return <Link key={i} exec={t.match} content={t.content} {...getProps('a', rest)} />;
+      case 'pre':
+        return <Pre key={i} content={t.content} {...getProps('pre', rest)} />;
+      case 'i':
+        return (
+          <em key={i} {...getProps('i', rest)}>
+            {t.content}
+          </em>
+        );
+      case 'hr':
+        return <hr key={i} {...getProps('hr')} />;
+      case 'h1':
+      case 'h2':
+      case 'h3':
+      case 'h4':
+      case 'h5':
+      case 'h6':
+      case 'i':
+      case 's':
+      case 'u':
+      case 'code':
+      case 'strong':
+      case 'blockquote':
+        let Component: React.ElementType = t.type;
+        return (
+          <Component key={i} {...getProps(t.type, rest)}>
+            {t.content}
+          </Component>
+        );
+      case 'text':
+        return (
+          <span key={i} {...getProps('text', rest)}>
+            {t.content}
+          </span>
+        );
+
+      default:
+        return (
+          <span key={i} {...getProps('text', rest)}>
+            {t.content}
+          </span>
+        );
+    }
+  });
+}
+
+function Emoji({ name, emoji = allowedEmoji }: { name: string; emoji?: ReadValues<string> }) {
+  return <React.Fragment>{emoji[name]}</React.Fragment>;
+}
+function Mention<TUser extends User = User>({ username, users, ...rest }: BaseProps<{ username: string; users?: UsersType<TUser> }>) {
+  const user = users && users?.find(user => user?.name === username);
+  return (
+    <span data-mention={user ? `@${username}` : undefined} {...rest}>
+      @<span dir="ltr">{username}</span>
+    </span>
+  );
+}
+function Pre({ content, ...rest }: BaseProps<{ content: string }>) {
+  return (
+    <pre {...rest}>
+      <code>{content}</code>
+    </pre>
+  );
+}
+function Link({ exec, content, ...rest }: BaseProps<{ exec?: RegExpExecArray; content: string }>) {
+  const isSame = exec && exec?.[0] === exec?.[1];
+  return (
+    <a href={isSame ? exec?.[1] : exec?.[2]} target="_blank" rel="noopener noreferrer nofollow" {...rest}>
+      {content}
+    </a>
+  );
+}
+
+const parsedPatterns = [
+  ...allowedPatterns,
+  {
+    tag: 'mention',
+    regex: /@([a-zA-Z0-9_.]+)/,
+    open: '@',
+    close: ''
+  },
+  {
+    tag: 'a',
+    regex: /\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/,
+    open: '[',
+    close: ')',
+    getProps(match: RegExpExecArray) {
+      return {
+        href: match[2],
         target: '_blank',
         rel: 'noopener noreferrer nofollow',
         children: match[1]
-      })
-    },
-    ...(tagPattern as TTagPatterns<InlineTag>)
-  ] as const;
+      };
+    }
+  },
+  {
+    tag: 'a',
+    regex: /\b(https?:\/\/[^\s<>"'`()[\]]+)/,
+    open: '',
+    close: '',
+    shortcut: '',
+    getProps: (match: RegExpExecArray) => ({
+      href: match[1],
+      target: '_blank',
+      rel: 'noopener noreferrer nofollow',
+      children: match[1]
+    })
+  },
+  {
+    tag: 'emoji',
+    regex: /:([a-zA-Z0-9_+-]+):/,
+    open: ':',
+    close: ':',
+    getProps(match: RegExpExecArray) {
+      const name = match[1];
+      const emojiChar = allowedEmoji[name];
+      return {
+        children: emojiChar ?? `:${name}:`
+      };
+    }
+  },
+  ...allowedPatterns
+] as const;
 
-  function parseInlineTags(input: string): (string | React.ReactElement)[] {
-    if (!input) return [];
+export function tokenizeOK(input: string): Token[] {
+  const tokens: Token[] = [];
+  let i = 0;
 
-    let earliestMatch: {
-      pattern: (typeof parsedPatterns)[number];
-      match: RegExpExecArray;
-      index: number;
-    } | null = null;
+  while (i < input.length) {
+    const remaining = input.slice(i);
 
-    for (const pattern of parsedPatterns) {
-      const re = new RegExp(pattern.regex.source, 'gm'); // multiline
-      let match: RegExpExecArray | null;
-
-      while ((match = re.exec(input)) !== null) {
-        const index = match.index;
-
-        // Untuk heading, hanya izinkan jika match di awal string (atau awal baris)
-        if (pattern.tag.startsWith('h') && pattern.regex.source.startsWith('^')) {
-          // Cek jika match bukan di awal string, kita skip (jangan nested heading)
-          if (index !== 0 && input[index - 1] !== '\n') continue;
-        }
-
-        if (!earliestMatch || index < earliestMatch.index) {
-          earliestMatch = { pattern, match, index };
-        }
-
-        break; // Ambil hanya match pertama
+    // 1. PRE block: ```code```
+    if (remaining.startsWith('```')) {
+      const endIndex = input.indexOf('```', i + 3);
+      if (endIndex !== -1) {
+        const content = input.slice(i + 3, endIndex).replace(/^\n/, '');
+        tokens.push({ type: 'pre', content: content.replace(/\n$/, '') });
+        i = endIndex + 3;
+        continue;
+      } else {
+        // safe fallback: treat as plain text
+        tokens.push({ type: 'text', content: input.slice(i) });
+        break;
       }
     }
 
-    if (!earliestMatch) return [input];
-
-    const { pattern, match, index } = earliestMatch;
-    const fullMatch = match[0];
-
-    const before = input.slice(0, index);
-    const after = input.slice(index + fullMatch.length);
-    const idx = `${index}-${Math.random()}`;
-
-    // Special: self-closing (like <hr>)
-    // Special: <hr>
-    if (pattern.tag === 'hr') {
-      return [
-        ...parseInlineTags(before),
-        React.createElement(pattern.tag, {
-          key: `${pattern.tag}-${idx}`,
-          ...getProps?.(pattern.tag, propApi)
-        }),
-        ...parseInlineTags(after)
-      ];
+    // Bold: *text*
+    if (input[i] === '*' && input.indexOf('*', i + 1) !== -1) {
+      const end = input.indexOf('*', i + 1);
+      if (end > i + 1) {
+        const content = input.slice(i + 1, end);
+        tokens.push({ type: 'strong', content });
+        i = end + 1;
+        continue;
+      }
     }
 
-    // Special case for links
-
-    // Special: <a> anchor
-    if (pattern.tag === 'a') {
-      const propAnchor = pattern?.getProps?.(match) ?? {};
-      return [...parseInlineTags(before), <a key={`a-${idx}`} {...(propAnchor as React.ComponentProps<'a'>)} {...getProps?.('a', propApi)} />, ...parseInlineTags(after)];
+    // Italic: _text_
+    if (input[i] === '_' && input.indexOf('_', i + 1) !== -1) {
+      const end = input.indexOf('_', i + 1);
+      if (end > i + 1) {
+        const content = input.slice(i + 1, end);
+        tokens.push({ type: 'i', content });
+        i = end + 1;
+        continue;
+      }
     }
 
-    // if (pattern.tag === 'a') {
-    //   // [label](url)
-    //   if (match.length >= 3) {
-    //     const label = match[1];
-    //     const href = match[2];
-
-    //     return [
-    //       ...parseInlineTags(before),
-    //       <a key={`a-${index}`} href={href} target="_blank" rel="noopener noreferrer nofollow" {...getProps?.('a', propApi)}>
-    //         {parseInlineTags(label)}
-    //       </a>,
-    //       ...parseInlineTags(after)
-    //     ];
-    //   }
-
-    //   // Plain URL
-    //   const href = match[1] ?? match[0];
-    //   return [
-    //     ...parseInlineTags(before),
-    //     <a key={`a-${index}`} href={href} target="_blank" rel="noopener noreferrer nofollow" {...getProps?.('a', propApi)}>
-    //       {href}
-    //     </a>,
-    //     ...parseInlineTags(after)
-    //   ];
-    // }
-
-    // For heading, use captured group (match[1]) directly
-    const inner = match[1] ?? '';
-
-    // pre
-    if (pattern.tag === 'pre') {
-      return [
-        ...parseInlineTags(before),
-        <pre key={`pre-${idx}`} {...getProps?.('pre', propApi)}>
-          <code>{String(inner)}</code>
-        </pre>,
-        ...parseInlineTags(after)
-      ];
-    }
-    // code
-    if (pattern.tag === 'code') {
-      return [
-        ...parseInlineTags(before),
-        <code key={`code-${idx}`} {...getProps?.('code', propApi)}>
-          {String(inner)}
-        </code>,
-        ...parseInlineTags(after)
-      ];
+    // Mention: @username
+    if (input[i] === '@') {
+      const mentionMatch = /^[a-zA-Z0-9_.]+/.exec(input.slice(i + 1));
+      if (mentionMatch) {
+        tokens.push({ type: 'mention', content: mentionMatch[0] });
+        i += mentionMatch[0].length + 1;
+        continue;
+      }
     }
 
-    return [
-      ...parseInlineTags(before),
-      React.createElement(
-        pattern.tag,
-        {
-          key: `${pattern.tag}-${idx}`,
-          ...getProps?.(pattern.tag, propApi)
-        },
-        parseInlineTags(inner)
-      ),
-      ...parseInlineTags(after)
-    ];
-  }
-
-  // Step 3: After emoji and formatting, parse @mention
-  const parts: (string | React.ReactElement)[] = [];
-  const tagParsed = parseInlineTags(parsed);
-  for (const segment of tagParsed) {
-    if (typeof segment !== 'string') {
-      parts.push(segment);
+    // Emoji: :smile:
+    if (input[i] === ':' && input.indexOf(':', i + 1) !== -1) {
+      const end = input.indexOf(':', i + 1);
+      const name = input.slice(i + 1, end);
+      const emojiChar = allowedEmoji[name];
+      if (emojiChar) {
+        tokens.push({ type: 'emoji', content: emojiChar });
+      } else {
+        tokens.push({ type: 'text', content: `:${name}:` });
+      }
+      i = end + 1;
       continue;
     }
 
-    let lastIndex = 0;
-    let match: RegExpExecArray | null;
-
-    while ((match = mentionRegex.exec(segment)) !== null) {
-      const start = match.index;
-      const end = mentionRegex.lastIndex;
-      const before = segment.slice(lastIndex, start);
-      const username = match[1];
-      lastIndex = end;
-
-      if (before) parts.push(before);
-
-      const user = users?.find(u => u.name === username);
-      if (user) {
-        parts.push(
-          <span key={`mention-${user.id}-${start}`} data-mention-id={user.id} {...getProps('mention', propApi)}>
-            @<span dir="ltr">{user.name}</span>
-          </span>
-        );
-      } else {
-        parts.push(segment.slice(start, end));
-      }
+    // Link: https://...
+    const linkMatch = /^https?:\/\/[^\s)]+/.exec(input.slice(i));
+    if (linkMatch) {
+      tokens.push({ type: 'a', content: linkMatch[0] });
+      i += linkMatch[0].length;
+      continue;
     }
 
-    const after = segment.slice(lastIndex);
-    if (after) parts.push(after);
+    // Fallback: collect text until next special char
+    let text = '';
+    const start = i;
+
+    while (i < input.length && !input.startsWith('```', i) && !['*', '_', '@', ':'].includes(input[i]) && !/^https?:\/\//.test(input.slice(i))) {
+      text += input[i];
+      i++;
+    }
+
+    if (text) {
+      tokens.push({ type: 'text', content: text });
+    }
+
+    // 🛑 Pastikan tidak stuck: kalau tidak bergerak, skip 1 char
+    if (i === start) {
+      tokens.push({ type: 'text', content: input[i] });
+      i++;
+    }
   }
 
-  return <>{parts}</>;
+  return tokens;
 }

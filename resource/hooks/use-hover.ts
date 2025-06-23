@@ -1,5 +1,5 @@
 'use client';
-import { useState, useLayoutEffect, useRef, useCallback } from 'react';
+import { useState, useLayoutEffect, useRef, useCallback, useEffect } from 'react';
 
 interface UseHoverOptions {
   touch?: boolean;
@@ -22,11 +22,11 @@ export function useHover<T extends HTMLElement | null>(targets?: Array<Target<T>
 
   const onMouseEnter = useCallback(() => {
     if (!isTouchDevice) setHovered(true);
-  }, [isTouchDevice, setHovered]);
+  }, [isTouchDevice]);
 
   const onMouseLeave = useCallback(() => {
     if (!isTouchDevice) setHovered(false);
-  }, [isTouchDevice, setHovered]);
+  }, [isTouchDevice]);
 
   const onMouseMove = useCallback(() => {
     if (isTouchDevice) setIsTouchDevice(false);
@@ -37,14 +37,14 @@ export function useHover<T extends HTMLElement | null>(targets?: Array<Target<T>
       setIsTouchDevice(true);
       setHovered(true);
     }
-  }, [setHovered, touch]);
+  }, [touch]);
 
   const onTouchEnd = useCallback(() => {
     if (touch) setHovered(false);
-  }, [setHovered, touch]);
+  }, [touch]);
 
   // Listen global touchstart/mousemove to detect input type
-  useLayoutEffect(() => {
+  useEffect(() => {
     const handleTouchStart = () => setIsTouchDevice(true);
     const handleMouseMove = () => setIsTouchDevice(false);
 
@@ -57,7 +57,7 @@ export function useHover<T extends HTMLElement | null>(targets?: Array<Target<T>
     };
   }, []);
 
-  useLayoutEffect(() => {
+  useEffect(() => {
     const timer = requestAnimationFrame(() => {
       const resolvedTargets = (targets ?? []).map(target => (target && typeof target === 'object' && 'current' in target ? target.current : target)).filter((el): el is T => !!el);
 
@@ -105,4 +105,83 @@ export function useHover<T extends HTMLElement | null>(targets?: Array<Target<T>
   ]);
 
   return { ref, hovered, setHovered };
+}
+
+export function useMouseEnter<T extends HTMLElement | null>(elements?: Array<T | null>, { open, onOpenChange }: { open?: boolean; onOpenChange?: (v: boolean) => void } = {}) {
+  const [opened, setOpened] = useState(false);
+  const hovered = open !== undefined ? open : opened;
+  const setHovered = onOpenChange !== undefined ? onOpenChange : setOpened;
+  const ref = useRef<T>(null);
+
+  const onMouseEnter = useCallback((e: React.MouseEvent<T, MouseEvent>) => {
+    e.preventDefault();
+    setHovered(true);
+  }, []);
+
+  const onMouseLeave = useCallback((e: React.MouseEvent<T, MouseEvent>) => {
+    e.preventDefault();
+    setHovered(false);
+  }, []);
+
+  const onTouchStart = useCallback((e: React.TouchEvent<T>) => {
+    e.preventDefault();
+    setHovered(true);
+  }, []);
+
+  const onTouchEnd = useCallback((e: React.TouchEvent<T>) => {
+    e.preventDefault();
+    setHovered(false);
+  }, []);
+
+  /**
+  useEffect(() => {
+    const current = ref.current;
+
+    const onMouseEnter = () => {
+      setHovered(true);
+    };
+
+    const onMouseLeave = () => {
+      setHovered(false);
+    };
+
+    const onTouchStart = () => {
+      setHovered(true);
+    };
+
+    const onTouchEnd = () => {
+      setHovered(false);
+    };
+
+    const attachListeners = (el: T | null) => {
+      if (!el) return;
+      el.addEventListener('mouseenter', onMouseEnter);
+      el.addEventListener('mouseleave', onMouseLeave);
+
+      el.addEventListener('touchstart', onTouchStart);
+      el.addEventListener('touchend', onTouchEnd);
+    };
+
+    const detachListeners = (el: T | null) => {
+      if (!el) return;
+      el.removeEventListener('mouseenter', onMouseEnter);
+      el.removeEventListener('mouseleave', onMouseLeave);
+
+      el.removeEventListener('touchstart', onTouchStart);
+      el.removeEventListener('touchend', onTouchEnd);
+    };
+
+    if (elements) elements.forEach(el => attachListeners(el));
+
+    if (current) attachListeners(current);
+
+    return () => {
+      if (elements) elements.forEach(el => detachListeners(el));
+
+      if (current) detachListeners(current);
+    };
+  }, [elements]);
+ */
+
+  return { ref, hovered, setHovered, onMouseEnter, onMouseLeave, onTouchStart, onTouchEnd };
 }

@@ -93,7 +93,7 @@ export function ChatClient({ chats, messages }: ChatClientProps) {
   }
 
   const chat = chats?.find(chat => chat.id === chatId);
-  const membersForm = chat?.users?.filter(find => find.email !== user?.email);
+  const membersForm = chat?.users?.filter(find => find.email !== user?.email!);
 
   return (
     <React.Suspense fallback={<ChatSkeleton />}>

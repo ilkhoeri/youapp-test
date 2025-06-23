@@ -10,11 +10,11 @@ import { formatPrettyDate, formatShortTime } from '@/resource/const/times-helper
 import { MessageReaction, MinimalAccount } from '@/resource/types/user';
 import { ContextMenu as CtxMenu } from '@/resource/client/components/ui/context-menu';
 import { Avatar, getInitialsColor } from '../../ui/avatar-oeri';
-import { useHover } from '@/resource/hooks/use-hover';
+import { useMouseEnter } from '@/resource/hooks/use-hover';
 import { getEmoji } from '../emoji/config';
 
 import { EnrichedMessage } from './helper';
-import { SafeInlineDisplay } from '../../inline-editor/inline-display';
+import { SafeInlineRenderer } from '../../inline-editor/inline-display';
 import { useIsMobile } from '@/resource/hooks/use-device-query';
 import { SheetsBreakpoint } from '../../sheets-breakpoint';
 import { Svg, SvgProps } from '../../ui/svg';
@@ -50,7 +50,7 @@ interface InOut<T> {
 interface MessageBubbleProps extends React.ComponentPropsWithRef<'div'> {
   data: EnrichedMessage;
   lastMessage: EnrichedMessage | undefined;
-  members?: (MinimalAccount | null)[] | null | undefined;
+  members?: MinimalAccount[] | null | undefined;
   targetRef?: React.RefObject<HTMLElement> | null;
   // classNames?: Partial<Record<MCTrees, string>>;
   isInView?: boolean;
@@ -58,28 +58,28 @@ interface MessageBubbleProps extends React.ComponentPropsWithRef<'div'> {
 
 export function MessageBubble(_props: MessageBubbleProps) {
   const { ref, data, className, members, lastMessage, targetRef, isInView, ...props } = _props;
-  const { user } = useApp();
-
-  // if (!user) return null;
 
   const [openMenu, setOpenMenu] = React.useState<boolean>(false);
   const [openCtx, setOpenCtx] = React.useState<boolean>(false);
 
   const isMediaQuery = useIsMobile();
 
-  const refAvatar = React.useRef<HTMLDivElement>(null);
-  const refContent = React.useRef<HTMLDivElement>(null);
-  const { hovered } = useHover([refAvatar, refContent], { touch: true });
-  const { ref: refRootHovered, hovered: rootHovered } = useHover([], { touch: true });
+  const { isOnline } = useOnlinePresence();
+
+  const dateTime = formatShortTime(new Date(data.createdAt));
 
   const colorByInitial = getInitialsColor(data?.sender.name);
+
+  const { hovered: hoveredMenu, ref: _, setHovered: __, ...onHoveredMenu } = useMouseEnter<HTMLDivElement>();
+  const { hovered: hoveredReacts, ref: ___, setHovered: ____, ...onHoveredReacts } = useMouseEnter<HTMLDivElement>();
+
+  const isMQ = <T,>(x: T) => (!isMediaQuery ? x : undefined);
+
   const isOwn = data.isFromCurrentUser;
 
   const seenList = (data.seen || []).filter(user => user.email !== data?.sender?.email).map(user => user.name);
 
   const seenBy = JSON.stringify(`Seen by: [${seenList}]`, null, 2);
-
-  const dateTime = formatShortTime(new Date(data.createdAt));
   const dateMessage = formatPrettyDate(new Date(data.createdAt), { locale: 'en-US', year: 'numeric', month: '2-digit' });
   const plaintext = x.cnx(`[${dateTime}, ${dateMessage}]`, `${data.sender.name}:`);
   const isSend = seenList.length > 0;
@@ -96,35 +96,11 @@ export function MessageBubble(_props: MessageBubbleProps) {
     cntpict = inOut({ in: css._pictin, out: css._pictout }),
     emoji = inOut({ in: css._emjin, out: css._emjout });
 
-  const { isOnline } = useOnlinePresence();
-
-  // const cc = data.senderId !== user?.id && (data.seenIds ?? []).includes(user?.id!);
-  // React.useEffect(() => {
-  //   if (cc && !isInView) return;
-  //   async function markSeen() {
-  //     try {
-  //       await axios.patch(`/api/chats/messages/${data.id}`, {
-  //         seenIds: [user?.id]
-  //       });
-  //       console.log('Success to mark message for id:', data?.id);
-  //     } catch (err) {
-  //       console.error('Failed to mark messages as seen:', err);
-  //     }
-  //   }
-  //   markSeen();
-  // }, [user?.id, data.senderId, cc, data.seenIds, isInView]);
-
   return (
     <CtxMenu onOpenChange={setOpenCtx}>
       <article key={data?.id} {...{ ...props, role: 'row', suppressHydrationWarning: true, tabIndex: -1 }} ref={mergeRefs(ref, targetRef)}>
-        <div {...{ role: 'cell', tabIndex: -1 }} className={container} data-focused={openCtx || openMenu ? 'true' : undefined}>
-          <div ref={refRootHovered} className={root}>
-            {/* <span className="text-sm">
-              {JSON.stringify(user?.id, null, 2)}
-              <br />
-              {JSON.stringify(data.seenIds, null, 2)}
-            </span> */}
-
+        <div {...{ role: 'cell', tabIndex: -1 }} className={container} data-focused={isMQ(openCtx || openMenu)}>
+          <div className={root} {...onHoveredReacts}>
             <div
               suppressHydrationWarning
               {...{
@@ -145,13 +121,13 @@ export function MessageBubble(_props: MessageBubbleProps) {
                   src={data.sender?.image}
                   fallback={data.sender.name}
                   className={avatar}
-                  rootProps={{ ref: refAvatar, tabIndex: 0, onContextMenu: onPrevent }}
+                  rootProps={{ ...onHoveredMenu, tabIndex: 0, onContextMenu: onPrevent }}
                 >
                   {() => isOnline(data.senderId) && <span aria-hidden className={css._dot} />}
                 </Avatar>
               )}
               <CtxMenu.Trigger asChild>
-                <div ref={refContent} className={box} {...{ style: { backgroundColor: 'var(--bg-themes)', boxShadow: '0 1px .5px var(--shadow)' } }}>
+                <div className={box} {...{ ...onHoveredMenu, style: { backgroundColor: 'var(--bg-themes)', boxShadow: '0 1px .5px var(--shadow)' } }}>
                   <span aria-label={inOut({ in: data.sender.name, out: 'You:' })} />
 
                   <div>
@@ -168,7 +144,12 @@ export function MessageBubble(_props: MessageBubbleProps) {
                         <div className={css._msg}>
                           {data?.mediaUrl && <MotionImage src={data.mediaUrl} name={data.id} modal unstyled={{ container: true, image: true }} className={cntpict} />}
 
-                          <ExpandableMessageBody members={members} text={data.body} dir="ltr" className={css._msgbd} />
+                          <SafeInlineRenderer
+                            dir="ltr"
+                            value={data?.body}
+                            users={members}
+                            classNames={{ root: css._msgbd, mention: css._mention, expand: 'text-[#53bdeb] hover:underline text-sm font-system' }}
+                          />
                           {data.body && <SpacerMessageBody dateTime={dateTime} />}
                         </div>
                       </div>
@@ -211,10 +192,9 @@ export function MessageBubble(_props: MessageBubbleProps) {
                           <ActionOnHovered
                             aria-label="Context menu"
                             withShadow={!data?.mediaUrl}
-                            onClick={() => {}}
                             onContextMenu={onPrevent}
                             visibleFrom={isOwn ? 'left' : 'right'}
-                            hovered={hovered || openMenu}
+                            hovered={hoveredMenu || openMenu}
                             classNames={{ root: css._stmnin }}
                           >
                             <span aria-hidden data-icon="down-context">
@@ -239,7 +219,7 @@ export function MessageBubble(_props: MessageBubbleProps) {
                   whileHover={{ scale: 1.1 }}
                   onContextMenu={onPrevent}
                   visibleFrom={isOwn ? 'right' : 'left'}
-                  hovered={rootHovered}
+                  hovered={hoveredReacts}
                   classNames={{ root: emoji }}
                 >
                   <span aria-hidden data-icon="Sticker">
@@ -264,83 +244,6 @@ interface ExpandableMessageProps extends React.ComponentProps<'div'> {
   text: string | null | undefined;
   members?: (MinimalAccount | null)[] | null | undefined;
 }
-
-const SLICE_STEPS = [768, 3839, 6869, 10420, 13750]; // dan seterusnya
-
-// Fungsi utilitas: menghasilkan batas slice bertahap
-function generateSliceSteps(start: number, step: number, max: number): number[] {
-  const steps = [];
-  let current = start;
-  while (current < max) {
-    steps.push(current);
-    current += step;
-  }
-  return steps;
-}
-/**
-function removeZeroWidthSpace(root: HTMLElement) {
-  const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, null);
-
-  let node: Text | null;
-  while ((node = walker.nextNode() as Text | null)) {
-    if (node.nodeValue?.includes('\u200B')) {
-      node.nodeValue = node.nodeValue.replace(/\u200B/g, '');
-    }
-  }
-}
-
-    const containerRef = React.useRef<HTMLDivElement>(null);
-
-    React.useEffect(() => {
-      if (containerRef.current){
-        removeZeroWidthSpace(containerRef.current);
-      }
-    }, [containerRef.current])
- */
-
-const ExpandableMessageBody = React.forwardRef<HTMLDivElement, ExpandableMessageProps>((_props, ref) => {
-  const { text = '', members: initialMembers, ...props } = _props;
-
-  if (!text) return null;
-
-  const fullText: string = text ?? '';
-
-  const SLICE_STEPS = generateSliceSteps(2768, 3071, fullText?.length);
-  const [currentStepIndex, setCurrentStepIndex] = React.useState(0);
-
-  const visibleLength = SLICE_STEPS[currentStepIndex] || fullText?.length;
-  const isTruncated = fullText?.length > visibleLength;
-
-  const members = React.useMemo(() => (initialMembers ?? [])?.map(member => ({ id: member?.refId!, name: member?.username! })), [initialMembers]);
-
-  const handleReadMore = () => {
-    setCurrentStepIndex(prev => Math.min(prev + 1, SLICE_STEPS.length));
-  };
-
-  /**
-const [stepIndex, setStepIndex] = useState(0);
-const visibleLength = SLICE_STEPS[stepIndex] || fullText.length;
-
-const handleReadMore = () => {
-  setStepIndex((prev) => Math.min(prev + 1, SLICE_STEPS.length));
-};
-*/
-
-  return (
-    <div {...props} ref={ref}>
-      {/* {fullText?.slice(0, visibleLength)} */}
-      <SafeInlineDisplay users={members} text={fullText?.slice(0, visibleLength)} classNames={{ mention: css._mention }} />
-      {/* <p dangerouslySetInnerHTML={{ __html: fullText?.slice(0, visibleLength) }} /> */}
-      {isTruncated && '...'}
-      {isTruncated && (
-        <button type="button" role="button" onClick={handleReadMore} className="text-[#53bdeb] hover:underline text-sm font-system">
-          Read more
-        </button>
-      )}
-    </div>
-  );
-});
-ExpandableMessageBody.displayName = 'ExpandableMessageBody';
 
 interface SpacerMessageBodyProps {
   dateTime?: string;
@@ -420,6 +323,8 @@ function useMenuMap(data: EnrichedMessage, { onOpenChange }: UseMenuMapProps) {
         .writeText(getSafeInlineText(data.body))
         .then(() => {
           toast('Text copied to clipboard');
+
+          setTimeout(() => onOpenChange?.(false), 300);
         })
         .catch(err => {
           console.error('Failed to copy: ', err);
@@ -445,6 +350,8 @@ function useMenuMap(data: EnrichedMessage, { onOpenChange }: UseMenuMapProps) {
       link.click();
       document.body.removeChild(link);
 
+      setTimeout(() => onOpenChange?.(false), 300);
+
       URL.revokeObjectURL(blobUrl); // Bersihkan URL blob setelah download
     } catch (error) {
       console.error('Gagal menyimpan media:', error);
@@ -460,6 +367,8 @@ function useMenuMap(data: EnrichedMessage, { onOpenChange }: UseMenuMapProps) {
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+
+    setTimeout(() => onOpenChange?.(false), 300);
   }, []);
 
   const handleDelete = React.useCallback(async () => {
@@ -639,7 +548,6 @@ function Reactions(_props: ReactionsProps) {
     <div className={x.cnx(classNames?.root)}>
       <button type="button" role="button" tabIndex={0} className={popup} aria-haspopup="true" aria-label="reaction 👍">
         <motion.div whileHover={{ scale: 1.05 }} className={emjwr}>
-          {/* seharusnya reaction menggunakan mapping */}
           {reactions?.map(reaction => {
             const config = getEmoji(reaction.emoji);
             if (!config) return null;
@@ -647,7 +555,6 @@ function Reactions(_props: ReactionsProps) {
             return <ReactionItem key={reaction.id} alt={reaction.emoji} src={emojiSrc(config.srcKey)} position={config.position} />;
           })}
 
-          {/* jumlah total reaction */}
           {reactionIsDefined && (
             <div className={emjitttl} onContextMenu={onPrevent}>
               <span>{reactions?.filter(reaction => getEmoji(reaction.emoji))?.length}</span>

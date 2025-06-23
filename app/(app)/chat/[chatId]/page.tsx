@@ -69,7 +69,7 @@ export default async function ChatIdPage({ params }: Params) {
           <ChatForm messages={messages} />
         </div>
         <ChatBackground />
-        <div className="hidden lg:block lg:min-h-80 lg:h-80" />
+        <div className="hidden max-lg:block max-lg:min-h-80 max-lg:h-80" />
       </section>
     </ActiveChatProvider>
   );

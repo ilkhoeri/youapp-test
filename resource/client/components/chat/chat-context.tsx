@@ -56,21 +56,19 @@ export function useOtherUser(chats: (AllChatProps | { users: MinimalAccount[] })
     const currentUserEmail = session?.email;
 
     const otherUser = React.useMemo(() => {
-      let parseUser: MinimalAccount | null = null;
       // const parseUser = chats?.users.filter(user => user?.email !== currentUserEmail);
       // return parseUser?.[0];
 
-      // const newName = chats.users.find(c => chat.userIds?.length === 2 && chat.userIds[1] === c.id)?.username;
+      let parseUser: MinimalAccount | null = null;
 
       if ('userIds' in chats) {
         const userIds = chats.userIds ?? [];
         if (userIds.length === 2) {
           parseUser = chats.users.find(u => u.email !== currentUserEmail) ?? null;
         }
-        if (userIds.length > 2) {
-          parseUser = chats?.users.filter(user => user?.email !== currentUserEmail)?.[0];
-        }
       }
+
+      parseUser = chats?.users.filter(user => user?.email !== currentUserEmail)?.[0];
 
       return parseUser;
     }, [currentUserEmail, chats?.users]);

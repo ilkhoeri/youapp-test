@@ -5,7 +5,6 @@ import { ObjectId } from 'bson';
 import { auth } from '@/auth/auth';
 import user_db from '@/resource/db/user';
 import { LinkSchema } from '@/resource/schemas/shared';
-import { currentUser } from '@/resource/db/user/get-accounts';
 
 type HandlerModel = 'create' | 'update' | 'delete';
 
@@ -23,9 +22,9 @@ export async function handlerLinkUser(model: HandlerModel, id: string | null | u
   const fields = validatedFields.data;
 
   const successByModel = {
-    create: `Tautan ${fields.name ?? 'Tanpa Nama'} berhasil ditambahkan`,
-    update: `Tautan ${fields.name ?? 'Tanpa Nama'} berhasil diperbarui`,
-    delete: `Tautan ${fields.name ?? 'Tanpa Nama'} berhasil dihapus`
+    create: `${fields.name ?? ''} link successfully added`,
+    update: `${fields.name ?? ''} link successfully updated`,
+    delete: `${fields.name ?? ''} link successfully deleted`
   };
 
   try {

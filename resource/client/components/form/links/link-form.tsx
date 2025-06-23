@@ -27,9 +27,9 @@ export function LinkForm({ data, account, setOpenId }: LinkFormProps) {
 
   const [addLink, setAddLink] = React.useState<boolean>(false);
 
-  const [transition, setTransition] = React.useTransition();
-
   const [editField, setEditField] = React.useState<boolean>(false);
+
+  const [transition, setTransition] = React.useTransition();
 
   const isFieldData = data !== null;
 
@@ -91,7 +91,7 @@ export function LinkForm({ data, account, setOpenId }: LinkFormProps) {
           setLoading(false);
           console.error('CATCH_ERROR:', error);
           toast.dismiss(toastId);
-          toast.error('Something went wrong!');
+          toast.error('Enter an unregistered url');
         });
     });
   }
