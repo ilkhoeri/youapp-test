@@ -4,7 +4,7 @@ import axios from 'axios';
 import { MinimalAccount } from '@/resource/types/user';
 import { OptimisticMessage } from '@/resource/types/chats';
 import { pusherClient } from '@/resource/configs/pusher/pusher';
-import { formatDayLabel, groupMessagesByDate } from './messages/message-helper';
+import { EnrichedMessage, formatDayLabel, groupMessagesByDate } from './messages/message-helper';
 import { OptimisticMessageLocal } from './hooks/use-optimistic';
 import { MessageBubble } from './messages/message-bubble';
 import { DateDivider } from './messages/date-divider';
@@ -29,9 +29,9 @@ function mergeMessage(prevMsg: OptimisticMessage, newMsg: OptimisticMessage): Op
 }
 
 function useMarkMessagesAsSeenSequentially() {
-  const { chat, messages, setMessages, currentUser, chatId } = useActiveChat();
+  const { chat, messages, setMessages, currentUser, chatId, lastMessage, dateKeys, byDate, ...groupMessages } = useActiveChat();
 
-  const { lastMessage, dateKeys, byDate, ...groupMessages } = groupMessagesByDate(messages, currentUser!!);
+  // const { lastMessage, dateKeys, byDate, ...groupMessages } = groupMessagesByDate(messages, currentUser!!);
 
   const { refs, inViewMap, scrollableRef } = useInviewMap<OptimisticMessageLocal[], HTMLDivElement, HTMLDivElement>(messages);
 
@@ -119,49 +119,16 @@ function useMarkMessagesAsSeenSequentially() {
     previousLastMessageId.current = last.id;
   }, [messages.length, isLastView, , lastMessage?.id]);
 
-  /**
-  const seenId = messages.find(m => m.chatId === chatId)?.seenIds.includes(currentUser?.id!);
-
-  React.useEffect(() => {
-    if (!chatId || seenId) return;
-    markAsSeen();
-  }, [chatId, seenId, lastMessage?.id]);
-   */
-
   React.useEffect(() => {
     if (!chatId) return;
-    // const channelName = `chat:${chatId}`;
-    // pusherClient.subscribe(channelName);
 
     pusherClient.subscribe(chatId);
-    // targetRef?.current?.scrollIntoView();
 
     const messageHandler = (message: OptimisticMessageLocal) => {
-      // axios.post(`/api/chats/${chatId}/seen`);
-      // if (!isPrevent)
-      // markAsSeen();
-
-      // setMessages(current => {
-      //   if (find(current, { id: message.id })) return current;
-      //   return [...current, message];
-      // });
-
       setMessages(current => {
         const exists = current.find(m => m.id === message.id || (message?.localId && m.localId === message.localId));
 
         if (!exists) return [...current, message];
-
-        // Replace optimistic message with real message
-        // return current.map(m => {
-        //   const isSameByLocal = message.localId && m.localId === message.localId;
-        //   const isSameById = m.id === message.id;
-
-        //   if (isSameByLocal || isSameById) {
-        //     return { ...m, ...message, status: 'SENT' };
-        //   }
-
-        //   return m;
-        // });
 
         return current.map(m => {
           const isSameByLocal = message.localId && m.localId === message.localId;
@@ -207,81 +174,6 @@ function useMarkMessagesAsSeenSequentially() {
   const unseenMessages = dateKeys.flatMap(date => byDate[date].messages.filter(m => m.senderId !== currentUser?.id && !m.seenIds.includes(currentUser?.id!)));
 
   return { chat, lastMessage, dateKeys, byDate, messages, scrollableRef, lastMessageRef, isLastView, scrollIntoView, refs, inViewMap, unseenMessages, ...groupMessages };
-}
-
-/** **updates** [Commit 3e9a9d6] */
-function useMarkMessagesFirst() {
-  const { messages, setMessages, currentUser, chatId } = useActiveChat();
-
-  const { refs, inViewMap, scrollableRef } = useInviewMap<OptimisticMessageLocal[], HTMLDivElement, HTMLDivElement>(messages);
-
-  const groupMessages = groupMessagesByDate(messages, currentUser!!);
-  const seenId = messages.find(m => m.chatId === chatId)?.seenIds.includes(currentUser?.id!);
-
-  React.useEffect(() => {
-    if (!chatId || seenId) return;
-    axios.post(`/api/chats/${chatId}/seen`);
-  }, [chatId, seenId]);
-
-  React.useEffect(() => {
-    if (!chatId) return;
-    pusherClient.subscribe(chatId);
-    // targetRef?.current?.scrollIntoView();
-
-    const messageHandler = (message: OptimisticMessageLocal) => {
-      if (!chatId) return;
-      axios.post(`/api/chats/${chatId}/seen`);
-
-      setMessages(current => {
-        const exists = current.find(m => m.id === message.id || (message?.localId && m.localId === message.localId));
-
-        if (!exists) return [...current, message];
-
-        return current.map(m => {
-          const isSameByLocal = message.localId && m.localId === message.localId;
-          const isSameById = m.id === message.id;
-
-          if (isSameByLocal || isSameById) {
-            return mergeMessage(m, message);
-          }
-
-          return m;
-        });
-      });
-
-      // targetRef?.current?.scrollIntoView();
-    };
-
-    const updateMessageHandler = (newMessage: OptimisticMessageLocal) => {
-      setMessages(current =>
-        current.map(currentMessage => {
-          if (currentMessage.id === newMessage.id) return newMessage;
-          return currentMessage;
-        })
-      );
-    };
-
-    const removeMessageHandler = (data: OptimisticMessageLocal) => {
-      setMessages(current => current.filter(m => m.id !== data.id));
-    };
-
-    pusherClient.bind('messages:new', messageHandler);
-    pusherClient.bind('message:update', updateMessageHandler);
-    pusherClient.bind('message:remove', removeMessageHandler);
-
-    return () => {
-      pusherClient.unsubscribe(chatId);
-      pusherClient.unbind('messages:new', messageHandler);
-      pusherClient.unbind('message:update', updateMessageHandler);
-      pusherClient.unbind('message:remove', removeMessageHandler);
-    };
-  }, [chatId]);
-
-  // React.useEffect(() => {
-  //   targetRef?.current?.scrollIntoView({ behavior: 'smooth' });
-  // }, [messages.length]);
-
-  return { messages, slug: chatId, refs, inViewMap, scrollableRef, ...groupMessages };
 }
 
 export function ChatBody() {

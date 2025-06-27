@@ -1,9 +1,9 @@
 'use client';
 import React from 'react';
-import { useApp } from '../../../contexts/app-provider';
-import { useActiveChat, useOtherUser } from '../chat-context';
+import { useActiveChat } from '../chat-context';
 import { chattype, ID, SwitchData } from '../types';
 import { OptimisticChat } from '@/resource/types/chats';
+import { escapeTruncate } from '../chat-helper';
 
 interface SwitcherProps {
   selectedId?: string | null;
@@ -12,7 +12,7 @@ interface SwitcherProps {
 export function useSwitcher<TData extends ID>(items: SwitchData<TData>, opts: SwitcherProps = {}) {
   const { selectedId: _id } = opts;
 
-  const { router, setLoading, chatId, onReload, ...rest } = useActiveChat();
+  const { router, setLoading, chatId, onReload, loading } = useActiveChat();
 
   const selectedId = _id || chatId;
 
@@ -52,44 +52,52 @@ export function useSwitcher<TData extends ID>(items: SwitchData<TData>, opts: Sw
     [selectedItem, isSelect]
   );
 
-  return { selectedItemId, selectedItem, isSelect, onSwitch, setLoading, router, slug: chatId, onReload, ...rest };
+  return { selectedItemId, selectedItem, isSelect, onSwitch, setLoading, router, chatId, onReload, loading };
 }
 
 type ChatProps = OptimisticChat | null | undefined;
+
 // type SwitchChatParams = ChatProps | (ChatProps[] | null | undefined);
 
-export function useSwitchChat(data: ChatProps) {
-  const { setLoading, chatId, onReload, router, ...rest } = useActiveChat();
-  // const data = params && Array.isArray(params) ? params.find(c => c?.id === chatId) : params;
-  const otherUser = useOtherUser(data);
-  const app = useApp();
-  const isSelect = chatId === data?.id;
+export function useSwitchChat(chat: OptimisticChat | undefined) {
+  const { setLoading, chatId, onReload, router, getOtherUser, currentUser, getGroupMessagesByDate } = useActiveChat();
 
-  const lastMessage = React.useMemo(() => {
-    const messages = data?.messages || [];
+  // const data = params && Array.isArray(params) ? params.find(c => c?.id === chatId) : params;
+  // const otherUser = useOtherUser(data);
+
+  const isSelect = chatId === chat?.id;
+
+  const otherUser = getOtherUser(chat);
+
+  const _lastMessage = React.useMemo(() => {
+    const messages = chat?.messages || [];
 
     return messages[messages.length - 1];
-  }, [data?.messages]);
+  }, [chat?.messages.length]);
 
-  const userEmail = React.useMemo(() => app.session?.user?.email, [app.session?.user?.email]);
+  const lastMessage = React.useMemo(() => {
+    const grouped = getGroupMessagesByDate(chat?.messages);
+    return grouped.lastMessage;
+  }, [chat?.messages, getGroupMessagesByDate]);
+
+  const userEmail = currentUser?.email;
 
   const hasSeen = React.useMemo(() => {
-    if (!lastMessage) return false;
-
-    const seenArray = lastMessage.seen || [];
-
-    if (!userEmail) return false;
-
-    return seenArray.filter(user => user.email === userEmail).length !== 0;
-  }, [userEmail, lastMessage]);
+    if (!lastMessage || !userEmail) return false;
+    return (lastMessage.seen || []).some(user => user.email === userEmail);
+  }, [lastMessage, userEmail]);
 
   const lastMessageText = React.useMemo(() => {
-    if (lastMessage?.mediaUrl) return 'Sent an image';
+    if (!lastMessage) return 'Started a conversation';
 
-    if (lastMessage?.body) return lastMessage?.body;
+    const { body, mediaUrl } = lastMessage;
+
+    if (mediaUrl && body) return `[image] ${escapeTruncate(body)}`;
+    if (mediaUrl) return 'Sent an image';
+    if (body) return escapeTruncate(body);
 
     return 'Started a conversation';
-  }, [lastMessage]);
+  }, [lastMessage, chat?.messages.length]);
 
   const onSwitch = React.useCallback(
     (query: chattype | null, slug: string | null | undefined) => {
@@ -99,8 +107,8 @@ export function useSwitchChat(data: ChatProps) {
       setLoading(true);
       onReload();
     },
-    [data, isSelect]
+    [chat?.id, isSelect]
   );
 
-  return { onSwitch, isSelect, lastMessage, hasSeen, lastMessageText, setLoading, slug: chatId, onReload, router, ...rest };
+  return { onSwitch, isSelect, lastMessage, hasSeen, lastMessageText, otherUser, currentUser, router };
 }

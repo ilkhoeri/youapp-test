@@ -6,7 +6,8 @@ import { OptimisticChat } from '@/resource/types/chats';
 import { useReload } from '@/resource/hooks/use-reload';
 import { ChatQuerys } from './types';
 import { useApp } from '../../contexts/app-provider';
-import { useOptimisticMessages } from './hooks/use-optimistic';
+import { OptimisticMessageLocal, useOptimisticMessages } from './hooks/use-optimistic';
+import { EnrichedMessage, GroupedMessages, groupMessagesByDate } from './messages/message-helper';
 
 interface getChatId {
   searchQuery: string;
@@ -45,12 +46,12 @@ export function useChat(opts: UseChatOptions = {}): UseChat {
 
 type UseOtherUserProps = (OptimisticChat | { users: MinimalAccount[] }) | null | undefined;
 
-export function useOtherUser(chats: (OptimisticChat | { users: MinimalAccount[] }) | null | undefined): MinimalAccount | null {
+export function useOtherUser(chat: (OptimisticChat | { users: MinimalAccount[] }) | null | undefined): MinimalAccount | null {
   // const session = useSession();
   const { user: session } = useApp();
 
   try {
-    if (!session || !chats) return null;
+    if (!session || !chat) return null;
 
     // const currentUserEmail = session.data?.user?.email;
     const currentUserEmail = session?.email;
@@ -61,17 +62,17 @@ export function useOtherUser(chats: (OptimisticChat | { users: MinimalAccount[] 
 
       let parseUser: MinimalAccount | null = null;
 
-      if ('userIds' in chats) {
-        const userIds = chats.userIds ?? [];
+      if ('userIds' in chat) {
+        const userIds = chat.userIds ?? [];
         if (userIds.length === 2) {
-          parseUser = chats.users.find(u => u.email !== currentUserEmail) ?? null;
+          parseUser = chat.users.find(u => u.email !== currentUserEmail) ?? null;
         }
       }
 
-      parseUser = chats?.users.filter(user => user?.email !== currentUserEmail)?.[0];
+      parseUser = chat?.users.filter(user => user?.email !== currentUserEmail)?.[0];
 
       return parseUser;
-    }, [currentUserEmail, chats?.users]);
+    }, [currentUserEmail, chat?.users]);
 
     return otherUser;
   } catch (error: any) {
@@ -82,7 +83,14 @@ export function useOtherUser(chats: (OptimisticChat | { users: MinimalAccount[] 
 
 type ExpandedStore = { querys: ChatQuerys; chats: OptimisticChat[] };
 
-interface ActiveChatStore extends ExpandedStore, InferType<typeof useReload>, InferType<typeof useOptimisticMessages> {
+type UnseenFilter = (msg: EnrichedMessage, index: number) => boolean;
+
+type MessageFilterOptions = {
+  includeOwnMessages?: boolean;
+  includeSeen?: boolean;
+};
+
+interface ActiveChatStore extends ExpandedStore, GroupedMessages, InferType<typeof useReload>, InferType<typeof useOptimisticMessages> {
   members: string[];
   add: (id: string) => void;
   remove: (id: string) => void;
@@ -93,7 +101,9 @@ interface ActiveChatStore extends ExpandedStore, InferType<typeof useReload>, In
   chat: OptimisticChat | undefined;
   users: MinimalAccount[] | undefined;
   otherUsers: MinimalAccount[] | undefined;
-  otherUser: MinimalAccount | undefined;
+  getOtherUser: (chat: OptimisticChat | undefined) => MinimalAccount | undefined;
+  getUnseenMessages: (filter?: UnseenFilter, options?: MessageFilterOptions) => EnrichedMessage[];
+  getGroupMessagesByDate: (messages: OptimisticMessageLocal[] | undefined) => GroupedMessages;
 }
 
 const ActiveChatCtx = React.createContext<ActiveChatStore | undefined>(undefined);
@@ -103,39 +113,15 @@ interface ActiveChatProviderProps extends ExpandedStore {
 }
 
 export function ActiveChatProvider({ children, querys, chats }: ActiveChatProviderProps) {
-  const app = useApp();
+  const { user: currentUser } = useApp();
+
   const reload = useReload();
 
   const chatId = querys?.private || querys?.group || querys?.channel || querys?.bot;
 
-  const currentUser = app.user;
-
   const chat = chats?.find(chat => chat.id === chatId);
 
   const users = chat?.users;
-
-  const otherUsers = React.useMemo(() => {
-    if (!chat?.users || chat?.users?.length < 1) return;
-    return chat?.users?.filter(user => user.email !== currentUser?.email);
-  }, [chatId]);
-
-  const otherUser = React.useMemo(() => {
-    let parseUser: MinimalAccount | undefined = undefined;
-
-    if (!chat) return;
-
-    if ('userIds' in chat) {
-      const userIds = chat.userIds ?? [];
-
-      if (userIds.length === 2) {
-        parseUser = chat.users.find(user => user.email !== currentUser?.email);
-      }
-    }
-
-    parseUser = chat?.users.filter(user => user?.email !== currentUser?.email)?.[0];
-
-    return parseUser;
-  }, [currentUser?.email, chat?.users.length, chatId]);
 
   const initialMessages = chats?.find(c => c.id === chatId)?.messages ?? [];
 
@@ -155,8 +141,76 @@ export function ActiveChatProvider({ children, querys, chats }: ActiveChatProvid
     setMembers(ids);
   }, []);
 
+  const { lastMessage, dateKeys, byDate, ...groupMessages } = groupMessagesByDate(optimistic.messages, currentUser!!);
+
+  const getGroupMessagesByDate = React.useCallback(
+    (messages: OptimisticMessageLocal[] | undefined) => {
+      return groupMessagesByDate(messages ?? [], currentUser!!);
+    },
+    [currentUser]
+  );
+
+  const otherUsers = React.useMemo(() => {
+    if (!chat?.users || chat?.users?.length < 1) return;
+    return chat?.users?.filter(user => user.email !== currentUser?.email);
+  }, [chatId]);
+
+  const getUnseenMessages = React.useCallback(
+    (filter?: UnseenFilter, options: MessageFilterOptions = {}) => {
+      return dateKeys.flatMap(date =>
+        byDate[date].messages.filter((m, i) => {
+          if (!filter?.(m, i)) return false;
+          if (!options.includeOwnMessages && m.senderId === currentUser?.id) return false;
+          if (!options.includeSeen && m.seenIds.includes(currentUser?.id!)) return false;
+          return true;
+        })
+      );
+    },
+    [dateKeys, byDate, currentUser?.id]
+  );
+
+  const getOtherUser = React.useCallback(
+    (chat: OptimisticChat | undefined) => {
+      if (!chat) return;
+
+      if ('userIds' in chat) {
+        const userIds = chat.userIds ?? [];
+
+        if (userIds.length === 2) {
+          return chat.users.find(user => user.email !== currentUser?.email);
+        }
+      }
+
+      return chat.users.find(user => user?.email !== currentUser?.email);
+    },
+    [chat?.userIds.length, currentUser?.email]
+  );
+
   return (
-    <ActiveChatCtx.Provider value={{ currentUser, chats, chat, users, otherUsers, otherUser, members, add, querys, chatId, remove, set, ...optimistic, ...reload }}>
+    <ActiveChatCtx.Provider
+      value={{
+        currentUser,
+        chats,
+        chat,
+        users,
+        otherUsers,
+        getOtherUser,
+        members,
+        add,
+        querys,
+        chatId,
+        remove,
+        set,
+        getGroupMessagesByDate,
+        getUnseenMessages,
+        lastMessage,
+        dateKeys,
+        byDate,
+        ...groupMessages,
+        ...optimistic,
+        ...reload
+      }}
+    >
       {children}
     </ActiveChatCtx.Provider>
   );

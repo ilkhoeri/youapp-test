@@ -380,20 +380,20 @@ function useMenuMap(msg: EnrichedMessage, { onOpenChange }: UseMenuMapProps) {
     } catch (_e) {}
   }, [msg.status, retrySend]);
 
-  const opts = <T,>(params: T, obj: MenuMap) => (params ? [obj] : []);
+  const opt = <T,>(params: T, obj: MenuMap) => (params ? [obj] : []);
 
   const menuMap: MenuMap[] = [
-    ...opts(msg.status === 'FAILED', { label: 'Retry', onAction: handleRetry }),
+    ...opt(msg.status === 'FAILED', { label: 'Retry', onAction: handleRetry }),
     { label: 'Message info', shortcut: '⌘+I', disabled: true, onAction: () => {} },
-    ...opts(msg.mediaUrl, { label: 'Save Media', onAction: handleSaveMedia }),
+    ...opt(msg.mediaUrl, { label: 'Save Media', onAction: handleSaveMedia }),
     { label: 'Reply', shortcut: '⌘+R', disabled: true, onAction: () => {} },
-    ...opts(!!msg.body, { label: 'Copy', shortcut: '⌘+P', onAction: handleCopy }),
+    ...opt(!!msg.body, { label: 'Copy', shortcut: '⌘+P', onAction: handleCopy }),
     { label: 'React', shortcut: '⌘+E', disabled: true, onAction: () => {} },
     { label: 'Forward', shortcut: '⌘+F', disabled: true, onAction: () => {} },
     { label: 'Pin', shortcut: '', disabled: true, onAction: () => {} },
     { label: 'Star', shortcut: '', disabled: true, onAction: () => {} },
-    ...opts(msg.senderId === currentUser?.id, { label: 'Delete', variant: 'destructive', onAction: handleDelete }),
-    ...opts(false, {
+    ...opt(msg.senderId === currentUser?.id, { label: 'Delete', variant: 'destructive', separator: true, onAction: handleDelete }),
+    ...opt(false, {
       label: 'More',
       separator: true,
       sub: [

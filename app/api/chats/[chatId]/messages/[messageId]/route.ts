@@ -10,6 +10,17 @@ interface Params {
   messageId: string;
 }
 
+export const payloadMessage = {
+  id: true,
+  chatId: true,
+  status: true,
+  senderId: true,
+  body: true,
+  mediaUrl: true,
+  seenIds: true,
+  createdAt: true
+};
+
 export async function GET(req: Request, { params }: { params: Promise<Params> }) {
   try {
     const [currentUser, { messageId }] = await Promise.all([getCurrentUser(), params]);
@@ -64,7 +75,29 @@ export async function DELETE(req: Request, { params }: { params: Promise<Params>
       // }
     });
 
+    const remainingMessages = await db.chat.findUnique({
+      where: {
+        id: chatId,
+        userIds: {
+          hasSome: [currentUser.id]
+        }
+      },
+      select: {
+        messages: {
+          select: payloadMessage
+        }
+      }
+    });
+
+    const lastMessage = remainingMessages?.messages?.at(-1); // atau remainingMessages?.messages[remainingMessages.length - 1]
+
+    await pusherServer.trigger(currentUser.email, 'chat:update', {
+      id: chatId,
+      messages: lastMessage ? [lastMessage] : []
+    });
+
     // await pusherServer.trigger(`chat:${deletedMessage.chatId}`, 'message:remove', { id: deletedMessage.id });
+
     await pusherServer.trigger(deletedMessage.chatId, 'message:remove', { id: deletedMessage.id });
 
     return new NextResponse(`Deleted [${deletedMessage.id}] Successfully!`);
@@ -81,21 +114,33 @@ export async function PATCH(req: Request, { params }: { params: Promise<Params> 
 
     if (!messageId) return new NextResponse('Unauthorized', { status: 402 });
 
+    // type UpdateMessage = {
+    //   id: string;
+    //   chatId: string;
+    //   status: 'SENDING' | 'SENT' | 'FAILED' | 'SEEN';
+    //   senderId: string;
+    //   body: string | null;
+    //   mediaUrl: string | null;
+    //   seenIds: string[];
+    //   createdAt: Date;
+    // };
+
     const updatedMessage = await db.message.update({
       where: { id: messageId, chatId },
       data: {
         ...body,
         seenIds: { set: [currentUser.id] }
       },
-      include: {
-        seen: { select: pickFromOtherUser },
-        sender: { select: pickFromOtherUser }
-        // chat: {
-        //   include: {
-        //     users: { select: pickFromOtherUser }
-        //   }
-        // }
-      }
+      select: payloadMessage
+      // include: {
+      //   seen: { select: pickFromOtherUser },
+      //   sender: { select: pickFromOtherUser }
+      //   // chat: {
+      //   //   include: {
+      //   //     users: { select: pickFromOtherUser }
+      //   //   }
+      //   // }
+      // }
     });
 
     await db.user.update({
@@ -103,25 +148,25 @@ export async function PATCH(req: Request, { params }: { params: Promise<Params> 
       data: { lastSeen: new Date() }
     });
 
-    const resUpdateMessage = {
-      id: updatedMessage.id,
-      chatId: updatedMessage.chatId,
-      status: updatedMessage.status,
-      senderId: updatedMessage.senderId,
-      // sender: updatedMessage.sender as MinimalAccount,
-      body: updatedMessage.body,
-      mediaUrl: updatedMessage.mediaUrl,
-      seenIds: Array.from(new Set([...(updatedMessage.seenIds ?? [])])),
-      // seen: Array.from(new Set([...(updatedMessage.seen ?? [])])),
-      createdAt: updatedMessage.createdAt
-    };
+    // const resUpdateMessage = {
+    //   id: updatedMessage.id,
+    //   chatId: updatedMessage.chatId,
+    //   status: updatedMessage.status,
+    //   senderId: updatedMessage.senderId,
+    //   // sender: updatedMessage.sender as MinimalAccount,
+    //   body: updatedMessage.body,
+    //   mediaUrl: updatedMessage.mediaUrl,
+    //   seenIds: Array.from(new Set([...(updatedMessage.seenIds ?? [])])),
+    //   // seen: Array.from(new Set([...(updatedMessage.seen ?? [])])),
+    //   createdAt: updatedMessage.createdAt
+    // };
 
     await pusherServer.trigger(currentUser.email, 'chat:update', {
-      id: resUpdateMessage.chatId,
-      messages: [resUpdateMessage]
+      id: updatedMessage.chatId,
+      messages: [updatedMessage]
     });
 
-    await pusherServer.trigger(resUpdateMessage.chatId!, 'message:update', resUpdateMessage);
+    await pusherServer.trigger(updatedMessage.chatId!, 'message:update', updatedMessage);
 
     // const payload = JSON.stringify({ id: chatId, messages: [resUpdateMessage] });
     // console.log('Payload size:', Buffer.byteLength(payload, 'utf-8'), 'bytes');

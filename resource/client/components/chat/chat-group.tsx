@@ -12,6 +12,7 @@ import { ChatMultipleIcon } from '../icons-fill';
 import { Navigation } from '../actions';
 import { cn } from 'cn';
 import { SheetsBreakpoint } from '../sheets-breakpoint';
+import { MotionButton, MotionButtonModal } from '../motion/motion-button';
 
 const classes = styleForm().auth().focused();
 
@@ -46,7 +47,7 @@ export function ChatGroup(_props: GroupChatModalProps) {
         router.refresh();
         onOpenChange?.(false);
       })
-      .catch(error => toast.error('Something went wrong!', { description: String(error.message) }))
+      .catch(error => toast.error('Something went wrong!'))
       .finally(() => setLoading(false));
   }
 
@@ -63,12 +64,12 @@ export function ChatGroup(_props: GroupChatModalProps) {
             <Form.InputField
               label="Create a group chat"
               placeholder="Group name"
-              autoFocus
+              autoFocus={!field.value}
               required
               aria-required
               disabled={loading}
               {...field}
-              classNames={{ item: 'mb-6', label: classes.label, input: cn('min-h-[46px] ') }}
+              classNames={{ item: 'mb-6', label: classes.label, input: 'min-h-[46px]' }}
             />
           )}
         />
@@ -81,7 +82,7 @@ export function ChatGroup(_props: GroupChatModalProps) {
               disabled={loading}
               variant="chip"
               placeholder="Add members"
-              autoFocus
+              autoFocus={false}
               {...field}
               isMulti
               options={options}
@@ -117,7 +118,7 @@ export function ChatGroup(_props: GroupChatModalProps) {
 interface CreateChatGroupProps {
   accounts: MinimalAccount[];
 }
-export function CreateChatGroup({ accounts }: CreateChatGroupProps) {
+export function CreateChatGroupX({ accounts }: CreateChatGroupProps) {
   const [isModalOpen, setIsModalOpen] = React.useState(false);
   return (
     <SheetsBreakpoint
@@ -155,5 +156,48 @@ export function CreateChatGroup({ accounts }: CreateChatGroupProps) {
         </>
       }
     />
+  );
+}
+
+export function CreateChatGroup({ accounts }: CreateChatGroupProps) {
+  const [isModalOpen, setIsModalOpen] = React.useState(false);
+
+  return (
+    <>
+      <MotionButton name="chat-group" className="flex items-center justify-center border rounded-lg ml-auto p-0.5 size-9" onClick={() => setIsModalOpen(true)}>
+        <ChatMultipleIcon mark="plus" size={24} className="transition-colors" />
+        <span className="sr-only hidden">Create Chat Group</span>
+      </MotionButton>
+
+      <MotionButtonModal
+        name="chat-group"
+        open={isModalOpen}
+        onOpenChange={setIsModalOpen}
+        classNames={{
+          container: 'bg-gradient-theme flex items-center justify-center px-2.5 !mt-0 z-[150]',
+          root: 'mb-auto w-full max-h-[100dvh]',
+          content: '',
+          header: 'mb-6 mt-8 grid grid-cols-3 justify-items-center items-center',
+          body: 'mt-16 size-full'
+        }}
+        header={
+          <>
+            <Navigation instance="break" onClick={() => setIsModalOpen(false)} className="mr-auto" />
+            <p className="text-sm font-semibold"></p>
+            <Button
+              type="submit"
+              suppressHydrationWarning
+              form="create-chat-group"
+              className="w-max mr-4 rtl:mr-0 rtl:ml-4 text-sm font-semibold ml-auto py-0 rounded-none bg-clip-text group-[:not(:has(.item-value))]/content:opacity-50 group-[:not(:has(.item-value))]/content:pointer-events-none"
+              style={{ background: '40% 40% / 200% no-repeat text linear-gradient(134.86deg, #ABFFFD 2.64%, #4599DB 102.4%, #AADAFF 102.4%)' }}
+            >
+              Create
+            </Button>
+          </>
+        }
+      >
+        <ChatGroup users={accounts} open={isModalOpen} onOpenChange={setIsModalOpen} />
+      </MotionButtonModal>
+    </>
   );
 }

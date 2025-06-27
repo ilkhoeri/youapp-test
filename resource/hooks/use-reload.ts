@@ -23,7 +23,7 @@ export function useReload() {
   const onReload = useCallback(() => {
     setKey(prev => prev + 1);
     router.refresh();
-  }, [router]);
+  }, [router.refresh]);
 
   const onReloadWindow = useCallback(<T = Element, E = MouseEvent>(e?: React.MouseEvent<T, E>) => {
     window.location.reload();

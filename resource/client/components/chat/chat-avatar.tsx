@@ -4,30 +4,30 @@ import type { Chat } from '@prisma/client';
 import type { MinimalAccount } from '@/resource/types/user';
 
 interface ChatAvatarsProps extends React.ComponentProps<typeof Avatar> {
-  data: (Chat & { users: MinimalAccount[] }) | null;
+  chat: (Chat & { users: MinimalAccount[] }) | null | undefined;
   otherUser: MinimalAccount | null | undefined;
   grouping?: boolean;
 }
 
 const SIZEICON = 'calc(var(--avatar-size) * (87.5 / 100))';
 
-function fallbackMap(data: ChatAvatarsProps['data']) {
+function fallbackMap(chat: ChatAvatarsProps['chat']) {
   const iconMap = {
     BOT: <BotFillIcon size={SIZEICON} />,
     CHANNEL: <PersonSyncFillIcon size={SIZEICON} />,
     PRIVATE: <PersonFillIcon size={SIZEICON} />,
-    GROUP: data && (data?.userIds.length === 2 ? <User2FillIcon size={SIZEICON} /> : data?.userIds.length > 2 ? <User3FillIcon size={SIZEICON} /> : <UserFillIcon size={SIZEICON} />)
+    GROUP: chat && (chat?.userIds.length === 2 ? <User2FillIcon size={SIZEICON} /> : chat?.userIds.length > 2 ? <User3FillIcon size={SIZEICON} /> : <UserFillIcon size={SIZEICON} />)
   };
-  if (!data?.type) return '';
-  return iconMap[data?.type]!;
+  if (!chat?.type) return '';
+  return iconMap[chat?.type]!;
 }
 
-export function ChatAvatars({ data, otherUser, grouping, size = 32, src, fallback, alt, rootProps, ...avtProps }: ChatAvatarsProps) {
-  const imageUrl = data?.type === 'PRIVATE' ? otherUser?.image : data?.avatarUrl;
+export function ChatAvatars({ chat, otherUser, grouping, size = 32, src, fallback, alt, rootProps, ...avtProps }: ChatAvatarsProps) {
+  const imageUrl = chat?.type === 'PRIVATE' ? otherUser?.image : chat?.avatarUrl;
 
-  if (data?.type === 'GROUP' && grouping) {
+  if (chat?.type === 'GROUP' && grouping) {
     const MAX_VISIBLE = 3,
-      users = data.users ?? [],
+      users = chat.users ?? [],
       visibleUsers = users.slice(0, MAX_VISIBLE),
       remainingCount = users.length - MAX_VISIBLE;
 
@@ -46,7 +46,7 @@ export function ChatAvatars({ data, otherUser, grouping, size = 32, src, fallbac
     <Avatar
       {...avtProps}
       src={imageUrl}
-      fallback={fallbackMap(data)}
+      fallback={fallbackMap(chat)}
       alt={otherUser?.username}
       size={size}
       rootProps={{

@@ -7,11 +7,12 @@ import { OptimisticChat } from '@/resource/types/chats';
 import { ContextMenu as CtxMenu } from '@/resource/client/components/ui/context-menu';
 import { useDebounceSearch } from '@/resource/hooks/use-debounce-search';
 import { formatShortTime } from '@/resource/const/times-helper';
-import { getSafeInlineText } from '../inline-editor/helper';
-import { truncate } from '@/resource/utils/text-parser';
+import { SheetsBreakpoint } from '../sheets-breakpoint';
 import { ChatListItemSkeleton } from './chat-skeleton';
 import { useApp } from '../../contexts/app-provider';
 import { useSwitchChat } from './hooks/use-switcher';
+import { Account } from '@/resource/types/user';
+import { ChatProfile } from './chat-profile';
 import { classTabs } from './chat-container';
 import { ChatAvatars } from './chat-avatar';
 import { Input } from '../fields/input';
@@ -20,6 +21,7 @@ import { chattype } from './types';
 import { Tabs } from '../ui/tabs';
 import { find } from 'lodash';
 import { cn } from 'cn';
+import { ChatDeleteAlert } from './chat-alert';
 
 interface ChatListProps {
   items: OptimisticChat[];
@@ -59,6 +61,13 @@ export function ChatList(_props: ChatListProps) {
 
     pusherClient.subscribe(pusherKey);
 
+    const newHandler = (chat: OptimisticChat) => {
+      setItems(current => {
+        if (find(current, { id: chat.id })) return current;
+        return [chat, ...current];
+      });
+    };
+
     const updateHandler = (chat: OptimisticChat) => {
       setItems(current =>
         current?.map(currentChat => {
@@ -70,13 +79,6 @@ export function ChatList(_props: ChatListProps) {
       );
     };
 
-    const newHandler = (chat: OptimisticChat) => {
-      setItems(current => {
-        if (find(current, { id: chat.id })) return current;
-        return [chat, ...current];
-      });
-    };
-
     const removeHandler = (chat: OptimisticChat) => {
       setItems(current => {
         return [...current.filter(convo => convo.id !== chat.id)];
@@ -86,7 +88,7 @@ export function ChatList(_props: ChatListProps) {
     pusherClient.bind('chat:new', newHandler);
     pusherClient.bind('chat:update', updateHandler);
     pusherClient.bind('chat:remove', removeHandler);
-  }, [pusherKey, query]);
+  }, [pusherKey, query, items.length]);
 
   const newItems = React.useMemo(() => {
     return !!query && results ? results : items;
@@ -94,7 +96,7 @@ export function ChatList(_props: ChatListProps) {
 
   const groupItems = newItems.filter(item => item.type === 'GROUP');
 
-  const listItems = (chats: OptimisticChat[]) => (isSearching ? <ChatListItemSkeleton /> : chats?.map(item => <ChatListItem key={item.id} data={item} />));
+  const listItems = (chats: OptimisticChat[]) => (isSearching ? <ChatListItemSkeleton /> : chats?.map(item => <ChatListItem key={item.id} chat={item} />));
 
   return (
     <>
@@ -114,86 +116,94 @@ export function ChatList(_props: ChatListProps) {
       </Tabs.Panel>
     </>
   );
-  // return items?.map(item => <ChatListItem key={item.id} data={item} />);
+  // return items?.map(item => <ChatListItem key={item.id} chat={item} />);
 }
 
-interface ChatListItemProps {
-  data: OptimisticChat;
-}
-export function ChatListItem(_props: ChatListItemProps) {
-  const { data } = _props;
-  const { onSwitch, isSelect, otherUser, lastMessage, hasSeen, lastMessageText } = useSwitchChat(data);
+export function ChatListItem({ chat }: { chat: OptimisticChat }) {
+  const { onSwitch, isSelect, lastMessage, hasSeen, lastMessageText, otherUser, currentUser } = useSwitchChat(chat);
 
-  const query = data.type.toLowerCase() as chattype;
+  const [open, setOpen] = React.useState(false);
+  const [confirm, onConfirm] = React.useState(false);
 
-  const groupIndicator = data.type === 'GROUP' ? <span className="absolute left-1 bottom-1 rounded bg-muted/35 border-[0.5px] px-px py-[0.5px] text-[8px]">group</span> : null;
+  const query = chat?.type.toLowerCase() as chattype;
+
+  const groupIndicator = chat?.type === 'GROUP' ? <span className="absolute left-1 bottom-1 rounded bg-muted/35 border-[0.5px] px-px py-[0.5px] text-[8px]">group</span> : null;
 
   return (
-    <CtxMenu>
-      <CtxMenu.Trigger asChild>
-        <div
-          onClick={() => onSwitch(query, data.id)}
-          className={cn(
-            'w-full relative flex items-center space-x-3 py-3 px-4 rounded-lg transition cursor-pointer [--bg:#e4ebf1] dark:[--bg:#1c252e] hover:bg-[var(--bg)]',
-            isSelect && 'bg-[var(--bg)]'
-          )}
-        >
-          <ChatAvatars data={data} otherUser={otherUser} />
-          <div className="min-w-0 flex-1">
-            <div className="focus:outline-none">
-              <span className="absolute inset-0" aria-hidden="true" />
-              <div className="flex justify-between items-center mb-1">
-                <p className="text-md font-medium text-color">{data?.name || otherUser?.username}</p>
-                {lastMessage?.createdAt && <p className="text-xs text-muted-foreground font-light">{formatShortTime(new Date(lastMessage.createdAt))}</p>}
+    <>
+      <CtxMenu>
+        <CtxMenu.Trigger asChild>
+          <div
+            onClick={() => onSwitch(query, chat?.id)}
+            className={cn(
+              'w-full relative flex items-center space-x-3 py-3 px-4 rounded-lg transition cursor-pointer [--bg:#e4ebf1] dark:[--bg:#1c252e] hover:bg-[var(--bg)]',
+              isSelect && 'bg-[var(--bg)]'
+            )}
+          >
+            <ChatAvatars chat={chat} otherUser={otherUser} />
+            <div className="min-w-0 flex-1">
+              <div className="focus:outline-none">
+                <span className="absolute inset-0" aria-hidden="true" />
+                <div className="flex justify-between items-center mb-1">
+                  <p className="text-md font-medium text-color">{chat?.name || otherUser?.username}</p>
+                  {lastMessage?.createdAt && <p className="text-xs text-muted-foreground font-light">{formatShortTime(new Date(lastMessage.createdAt))}</p>}
+                </div>
+                {groupIndicator}
+                <p className={cn('truncate text-xs', hasSeen || !lastMessage?.body ? 'text-muted-foreground' : 'text-color')}>{lastMessageText}</p>
               </div>
-              {groupIndicator}
-              <p className={cn('truncate text-xs', hasSeen || !lastMessage?.body ? 'text-muted-foreground' : 'text-color')}>{truncate(escapeText(lastMessageText), 200)}</p>
             </div>
           </div>
-        </div>
-      </CtxMenu.Trigger>
+        </CtxMenu.Trigger>
 
-      {contextMenu(data)}
-    </CtxMenu>
+        {contextMenu(chat, { currentUser, onOpenChange: setOpen })}
+      </CtxMenu>
+
+      <ChatDeleteAlert url={`/api/chats/${chat.id}`} confirm={confirm} onConfirm={onConfirm} onOpenChange={setOpen} />
+      <SheetsBreakpoint openWith="drawer" open={open} onOpenChange={setOpen} trigger={null} content={<ChatProfile chat={chat} onConfirmChange={onConfirm} />} />
+    </>
   );
 }
 
-export function contextMenu(data: OptimisticChat) {
-  const menuMap = useMenuMap(data);
+export function contextMenu(chat: OptimisticChat | undefined, opts: MenuMapOptions = {}) {
+  const menuMap = useMenuMap(chat, opts);
   return <CtxMenu.Content className="w-48">{renderMenuItems(menuMap)}</CtxMenu.Content>;
 }
 
-function useMenuMap(data: OptimisticChat) {
+interface MenuMapOptions {
+  currentUser?: Account;
+  onOpenChange?: (prev: boolean) => void;
+}
+
+function useMenuMap(chat: OptimisticChat | undefined, options: MenuMapOptions = {}) {
+  const { onOpenChange, currentUser } = options;
   const router = useRouter();
 
+  const handleInfo = React.useCallback(() => {
+    onOpenChange?.(true);
+  }, [onOpenChange]);
+
   const handleDelete = React.useCallback(async () => {
-    const confirmDelete = window.confirm(`Apakah kamu yakin ingin menghapus Group ${data.name}?`);
+    const confirmDelete = window.confirm(`Apakah kamu yakin ingin menghapus Group ${chat?.name}?`);
     if (!confirmDelete) return;
 
     try {
-      await axios.delete(`/api/chats/${data.id}`);
+      await axios.delete(`/api/chats/${chat?.id}`);
       router.replace('/chat');
       router.refresh();
     } catch (_e) {
-      console.error(`Gagal menghapus GroupChat ${data.name}`, _e);
+      console.error(`Gagal menghapus GroupChat ${chat?.name}`, _e);
     }
-  }, [data.id, router]);
+  }, [chat?.id, router]);
+
+  const opt = <T,>(params: T, obj: MenuMap) => (params ? [obj] : []);
 
   const menuMap: MenuMap[] = [
-    { label: 'Group Info', onAction: () => {} },
-    { label: 'Group Media', onAction: () => {} },
+    { label: 'Group Info', onAction: handleInfo },
     { label: 'Back', onAction: () => router.back() },
     { label: 'Forward', disabled: true, onAction: () => {} },
     { label: 'Reload', onAction: () => {} },
-    { label: 'Pin', onAction: () => {} },
-    {
-      label: 'More',
-      separator: true,
-      sub: [
-        { label: 'Exit group', onAction: () => {} },
-        { label: 'Delete Group', separator: true, variant: 'destructive', onAction: handleDelete }
-      ]
-    }
+    ...opt(chat?.type === 'GROUP', { label: 'Exit group', onAction: () => {} }),
+    ...opt(currentUser && chat?.type === 'GROUP' && chat?.admins.includes(currentUser?.id!), { label: 'Delete Group', separator: true, variant: 'destructive', onAction: handleDelete })
   ];
 
   return menuMap;
@@ -221,7 +231,9 @@ function renderMenuItems(items: MenuMap[]) {
       elements.push(
         <CtxMenu.Sub key={item.label}>
           <CtxMenu.SubTrigger>{item.label}</CtxMenu.SubTrigger>
-          <CtxMenu.SubContent className="w-40">{renderMenuItems(item.sub)}</CtxMenu.SubContent>
+          <CtxMenu.SubContent side="bottom" className="w-40">
+            {renderMenuItems(item.sub)}
+          </CtxMenu.SubContent>
         </CtxMenu.Sub>
       );
     } else {
@@ -235,49 +247,4 @@ function renderMenuItems(items: MenuMap[]) {
 
     return elements;
   });
-}
-
-export function escapeText(text: string | null | undefined): string {
-  if (!text) return '';
-
-  const parseText = getSafeInlineText(text);
-
-  return (
-    parseText
-      // Inline formatting: _, *, ~
-      .replace(/___/g, '')
-      .replace(/---/g, '')
-      .replace(/_(.*?)_/g, '$1')
-      .replace(/~(.*?)~/g, '$1')
-      .replace(/\*(.*?)\*/g, '$1')
-      .replace(/```([\s\S]*?)```/g, '$1') // block code (multiline)
-      .replace(/`([^`]+)`/g, '$1') // inline code
-
-      // Headings (remove markdown symbols only)
-      .replace(/^###### (.*)$/gim, '$1')
-      .replace(/^##### (.*)$/gim, '$1')
-      .replace(/^#### (.*)$/gim, '$1')
-      .replace(/^### (.*)$/gim, '$1')
-      .replace(/^## (.*)$/gim, '$1')
-      .replace(/^# (.*)$/gim, '$1')
-
-      // Blockquote and pseudo block elements
-      .replace(/^> (.*)$/gim, '$1')
-      .replace(/^< (.*)$/gim, '$1')
-
-      // Ordered and unordered list items
-      .replace(/^\d+\.\s+(.*)$/gm, '$1')
-      .replace(/^- (.*)$/gm, '$1')
-      .replace(/^\* (.*)$/gm, '$1')
-
-      // HTML cleanup (list artifacts, if any)
-      .replace(/(<li>(.*?)<\/li>)/gim, '$2')
-      .replace(/<\/?(ul|ol)>/gim, '')
-      .replace(/<\/li>\s*<li>/gim, '\n')
-
-      // Remove extra line breaks or trim spaces
-      // .replace(/\n{3,}/g, '\n\n') // reduce 3+ newlines to 2
-      .replace(/\n+/g, ' ')
-      .trim()
-  );
 }

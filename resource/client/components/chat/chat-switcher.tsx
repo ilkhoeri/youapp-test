@@ -83,7 +83,7 @@ interface SwitcherProps {
 export function ChatSwitcher(_props: SwitcherProps) {
   const { accounts, chats, isCollapsed } = _props;
 
-  const { loading, onSwitch, slug } = useSwitcher(chats);
+  const { loading, onSwitch, chatId } = useSwitcher(chats);
 
   const { onlineUsers } = useOnlinePresence();
 
@@ -95,7 +95,7 @@ export function ChatSwitcher(_props: SwitcherProps) {
     <GenericSwitcher
       loading={loading}
       items={chats}
-      selectedId={slug}
+      selectedId={chatId}
       isCollapsed={true}
       icon={<PersonChatFillIcon size={24} rules="regular" />}
       onSelect={id => onSwitch('group', id)}
@@ -112,7 +112,7 @@ export function ChatSwitcher(_props: SwitcherProps) {
 export function UserSwitcher(_props: SwitcherProps) {
   const { accounts, chats, isCollapsed, currentUser } = _props;
 
-  const { loading, onSwitch, slug, setLoading, router } = useSwitcher(accounts);
+  const { loading, onSwitch, chatId, setLoading, router } = useSwitcher(accounts);
 
   if (!currentUser) return null;
 
@@ -158,7 +158,7 @@ export function UserSwitcher(_props: SwitcherProps) {
     <GenericSwitcher
       loading={loading}
       items={accounts}
-      selectedId={slug}
+      selectedId={chatId}
       isCollapsed={isCollapsed}
       onSelect={setValueChange}
       getLabel={user => x.cnx(user.username)}
