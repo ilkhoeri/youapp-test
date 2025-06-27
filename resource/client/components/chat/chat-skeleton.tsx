@@ -22,7 +22,7 @@ export function ContainerSkeleton(props: ContainerSkeletonProps) {
     <div className={cn('flex w-full flex-col xl:flex-row overflow-hidden cursor-not-allowed', classes, className)}>
       {layouts?.map((grow, idx) => (
         <React.Fragment key={idx}>
-          <div className="animate-pulse bg-muted/30" style={{ flex: `${grow} 1 0`, overflow: 'hidden', animationDelay: `${(idx + 1) * 1000}ms` }}></div>
+          <div className="animate-pulse bg-muted/30" style={{ flex: `${grow} 1 0`, overflow: 'hidden' }}></div>
           {idx < layouts.length - 1 && handle}
         </React.Fragment>
       ))}

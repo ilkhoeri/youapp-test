@@ -4,6 +4,7 @@ import { urlBase64ToUint8Array } from './base64String';
 import { sendNotification, subscribeUser, unsubscribeUser } from './actions';
 import { beamsClient } from '@/resource/configs/pusher/beams';
 import { toast } from 'sonner';
+import { Button } from '../components/ui/button';
 
 export function PushNotificationManager() {
   const [isSupported, setIsSupported] = React.useState(false);
@@ -54,7 +55,7 @@ export function PushNotificationManager() {
     // if (typeof window === 'undefined') return;
     beamsClient
       .start()
-      .then(() => beamsClient.addDeviceInterest('notification'))
+      .then(() => beamsClient.addDeviceInterest('HELLO WORLD!'))
       .then(() => {
         console.log('Successfully registered and subscribed!');
         toast('Successfully registered and subscribed!');
@@ -92,5 +93,25 @@ export function PushNotificationManager() {
         </>
       )}
     </div>
+  );
+}
+
+export function PushBeams() {
+  const pushBeams = React.useCallback(() => {
+    // if (typeof window === 'undefined') return;
+    beamsClient
+      .start()
+      .then(() => beamsClient.addDeviceInterest('HELLO WORLD!'))
+      .then(() => {
+        console.log('Successfully registered and subscribed!');
+        toast('Successfully registered and subscribed!');
+      })
+      .catch(console.error);
+  }, []);
+
+  return (
+    <Button variant="blue" size="lg" onClick={pushBeams}>
+      Push Beams
+    </Button>
   );
 }

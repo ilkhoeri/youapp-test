@@ -19,9 +19,11 @@ import { CreateChatGroup } from './chat-group';
 import { Tag2DuotoneIcon } from '../icons-duotone';
 import { useApp } from '../../contexts/app-provider';
 import { useDeviceQuery } from '@/resource/hooks/use-device-query';
-import { AllChatProps, Message, MinimalAccount } from '@/resource/types/user';
+import { MinimalAccount } from '@/resource/types/user';
+import { OptimisticChat } from '@/resource/types/chats';
 import { ArchiveFillIcon, ArchiveJunkFillIcon, CartShoppingFillIcon, FileDraftFillIcon, InboxFillIcon, MailFillIcon, SendFillIcon, TrashFillIcon, RefreshFillIcon } from '../icons-fill';
 import { ChatClient } from './chat-client';
+import { useActiveChat } from './chat-context';
 
 export const classTabs = {
   list: 'inline-flex h-9 items-center justify-center rounded-lg bg-background-theme border p-1 aria-disabled:opacity-50',
@@ -31,14 +33,12 @@ export const classTabs = {
 
 interface ChatContainerProps {
   accounts: MinimalAccount[];
-  chats: AllChatProps[];
   defaultLayout?: number[] | undefined;
   defaultCollapsed?: boolean;
   navCollapsedSize?: number;
-  messages: Message[];
 }
 
-type ContainerActionsProps = Pick<ChatContainerProps, 'accounts' | 'chats'>;
+type ContainerActionsProps = { accounts: MinimalAccount[]; chats: OptimisticChat[] };
 
 function useContainerActions(props: ContainerActionsProps) {
   const { accounts, chats: allChat } = props;
@@ -134,13 +134,17 @@ function useContainerActions(props: ContainerActionsProps) {
 
 export function ChatContainer(_props: ChatContainerProps) {
   const desktopQuery = useDeviceQuery('xl');
-  const { accounts, messages, chats: allChat, defaultLayout = desktopQuery ? [20, 32, 48] : [19, 31, 50], defaultCollapsed = false, navCollapsedSize } = _props;
+  const { accounts, defaultLayout = desktopQuery ? [20, 32, 48] : [19, 31, 50], defaultCollapsed = false, navCollapsedSize } = _props;
+
+  const { chats: allChat, currentUser } = useActiveChat();
+
+  const mount = useMount();
+
+  const links = useContainerActions({ accounts, chats: allChat });
+
   const [isCollapsed, setIsCollapsed] = React.useState(defaultCollapsed);
 
   const chatsIsDefined = allChat && allChat.length > 0;
-
-  const links = useContainerActions({ accounts, chats: allChat });
-  const mount = useMount();
 
   if (!mount) return <Skeleton.Container layouts={defaultLayout} />;
 
@@ -169,7 +173,7 @@ export function ChatContainer(_props: ChatContainerProps) {
         className={cn('max-xl:grid max-xl:grid-cols-2 relative', isCollapsed && 'min-w-[50px] transition-all duration-300 ease-in-out')}
       >
         <div className={cn('max-xl:col-span-full flex h-[52px] items-center justify-center', isCollapsed ? 'h-[52px]' : 'px-2')}>
-          <UserSwitcher isCollapsed={isCollapsed} accounts={accounts} chats={allChat} />
+          <UserSwitcher currentUser={currentUser} isCollapsed={isCollapsed} accounts={accounts} chats={allChat} />
         </div>
         <Separator className="max-xl:absolute max-xl:top-[52px] max-xl:w-full max-xl:inset-x-0" />
         <ChatNav isCollapsed={isCollapsed} links={links[1]} className="max-xl:border-r overflow-y-auto" />
@@ -195,14 +199,14 @@ export function ChatContainer(_props: ChatContainerProps) {
             </Tabs.List>
           </div>
           <Separator />
-          <ChatList accounts={accounts} items={allChat} />
+          <ChatList items={allChat} />
         </Tabs>
       </Resizable.Panel>
 
       <Resizable.Handle withHandle />
 
       <Resizable.Panel defaultSize={defaultLayout[2]} minSize={desktopQuery ? 55 : 30} className="relative">
-        <ChatClient chats={allChat} messages={messages} />
+        <ChatClient />
       </Resizable.Panel>
     </Resizable>
   );

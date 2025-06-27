@@ -3,13 +3,13 @@ import { UserFillIcon, User3FillIcon, User2FillIcon, BotFillIcon, PersonSyncFill
 import type { Chat } from '@prisma/client';
 import type { MinimalAccount } from '@/resource/types/user';
 
-interface ChatAvatarsProps {
+interface ChatAvatarsProps extends React.ComponentProps<typeof Avatar> {
   data: (Chat & { users: MinimalAccount[] }) | null;
   otherUser: MinimalAccount | null | undefined;
   grouping?: boolean;
 }
 
-const SIZEICON = 28;
+const SIZEICON = 'calc(var(--avatar-size) * (87.5 / 100))';
 
 function fallbackMap(data: ChatAvatarsProps['data']) {
   const iconMap = {
@@ -22,7 +22,7 @@ function fallbackMap(data: ChatAvatarsProps['data']) {
   return iconMap[data?.type]!;
 }
 
-export function ChatAvatars({ data, otherUser, grouping }: ChatAvatarsProps) {
+export function ChatAvatars({ data, otherUser, grouping, size = 32, src, fallback, alt, rootProps, ...avtProps }: ChatAvatarsProps) {
   const imageUrl = data?.type === 'PRIVATE' ? otherUser?.image : data?.avatarUrl;
 
   if (data?.type === 'GROUP' && grouping) {
@@ -32,11 +32,11 @@ export function ChatAvatars({ data, otherUser, grouping }: ChatAvatarsProps) {
       remainingCount = users.length - MAX_VISIBLE;
 
     return (
-      <Avatar.Group size={32}>
+      <Avatar.Group size={size}>
         {visibleUsers.map(user => (
-          <Avatar key={user?.refId} src={user?.image} fallback={user?.name} alt={user?.username} />
+          <Avatar {...avtProps} key={user?.id} src={user?.image} fallback={user?.username} alt={user?.username} />
         ))}
-        {remainingCount > 0 && <Avatar initialLimit={4} fallback={`+${remainingCount}`} />}
+        {remainingCount > 0 && <Avatar {...avtProps} initialLimit={4} fallback={`+${remainingCount}`} />}
       </Avatar.Group>
     );
   }
@@ -44,14 +44,15 @@ export function ChatAvatars({ data, otherUser, grouping }: ChatAvatarsProps) {
   // 1-on-1 avatar
   return (
     <Avatar
+      {...avtProps}
       src={imageUrl}
       fallback={fallbackMap(data)}
       alt={otherUser?.username}
-      size={32}
+      size={size}
       rootProps={{
         role: 'button',
         tabIndex: 0,
-        'aria-label': otherUser?.firstName,
+        'aria-label': otherUser?.username,
         className: 'rounded-full bg-muted/35 text-color/50'
       }}
     />

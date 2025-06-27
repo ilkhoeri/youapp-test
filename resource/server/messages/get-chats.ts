@@ -1,6 +1,6 @@
 import db from '@/resource/db/user';
 import { getCurrentUser } from '@/resource/db/user/get-accounts';
-import { Message, pickFromOtherUser } from '@/resource/types/user';
+import { OptimisticMessage, pickFromOtherUser } from '@/resource/types/chats';
 
 export async function getChats() {
   const currentUser = await getCurrentUser();
@@ -46,7 +46,13 @@ export async function getChatById(chatId: string | null | undefined) {
         id: chatId
       },
       include: {
-        users: true
+        users: { select: pickFromOtherUser },
+        messages: {
+          include: {
+            sender: { select: pickFromOtherUser },
+            seen: { select: pickFromOtherUser }
+          }
+        }
       }
     });
 
@@ -61,7 +67,7 @@ export async function getMessages(chatId: string | null | undefined) {
   try {
     if (!chatId) return [];
 
-    const messages: Array<Message> = await db.message.findMany({
+    const messages: Array<OptimisticMessage> = await db.message.findMany({
       where: {
         chatId: chatId
       },

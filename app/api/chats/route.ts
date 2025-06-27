@@ -3,7 +3,7 @@ import { NextResponse } from 'next/server';
 import { pusherServer } from '@/resource/configs/pusher/pusher';
 import { getCurrentUser } from '@/resource/db/user/get-accounts';
 import { CreateChatTypes } from '@/resource/schemas/chat';
-import { AllChatProps, pickFromOtherUser } from '@/resource/types/user';
+import { OptimisticChat, pickFromOtherUser } from '@/resource/types/chats';
 
 const getResponse = (body: BodyInit, status: number) => new NextResponse(body, { status });
 
@@ -67,7 +67,7 @@ export async function GET(req: Request) {
 
     if (!currentUser?.id || !currentUser?.email) return getResponse('Unauthorized', 401);
 
-    const allChat: Array<AllChatProps> = await db.chat.findMany({
+    const allChat: Array<OptimisticChat> = await db.chat.findMany({
       orderBy: {
         lastMessageAt: 'desc'
       },

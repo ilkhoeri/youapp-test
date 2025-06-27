@@ -3,15 +3,18 @@ import * as React from 'react';
 import axios from 'axios';
 import { PersonChatFillIcon, User3FillIcon } from '../icons-fill';
 import { Select, SelectItemProps } from '../ui/select';
-import { AllChatProps, MinimalAccount } from '@/resource/types/user';
-import { getMatchingAccounts, useOnlinePresence, useSwitcher } from './chat-hooks';
+import { Account, MinimalAccount } from '@/resource/types/user';
+import { OptimisticChat } from '@/resource/types/chats';
+import { useSwitcher } from './hooks/use-switcher';
 import { CreateChatTypes } from '@/resource/schemas/chat';
 import { useApp } from '../../contexts/app-provider';
-import { isSameUserSet } from './messages/helper';
+import { isSameUserSet } from './messages/message-helper';
 import { ID, SwitchData } from './types';
 import { toast } from 'sonner';
 import { x } from 'xuxi';
 import { cn } from 'cn';
+import { useOnlinePresence } from './hooks/use-online-presence';
+import { getMatchingAccounts } from './chat-helper';
 
 interface GenericSwitcherProps<TData extends ID> {
   items: SwitchData<TData>;
@@ -72,9 +75,10 @@ export function GenericSwitcher<TData extends ID>({
 }
 
 interface SwitcherProps {
-  chats: AllChatProps[] | null;
+  chats: OptimisticChat[] | null;
   isCollapsed: boolean;
   accounts: MinimalAccount[];
+  currentUser?: Account;
 }
 export function ChatSwitcher(_props: SwitcherProps) {
   const { accounts, chats, isCollapsed } = _props;
@@ -106,9 +110,7 @@ export function ChatSwitcher(_props: SwitcherProps) {
 }
 
 export function UserSwitcher(_props: SwitcherProps) {
-  const { accounts, chats, isCollapsed } = _props;
-
-  const { user: currentUser } = useApp();
+  const { accounts, chats, isCollapsed, currentUser } = _props;
 
   const { loading, onSwitch, slug, setLoading, router } = useSwitcher(accounts);
 
@@ -153,7 +155,15 @@ export function UserSwitcher(_props: SwitcherProps) {
   );
 
   return (
-    <GenericSwitcher loading={loading} items={accounts} selectedId={slug} isCollapsed={isCollapsed} onSelect={setValueChange} getLabel={user => x.cnx(user.name)} placeholder="Contact" />
+    <GenericSwitcher
+      loading={loading}
+      items={accounts}
+      selectedId={slug}
+      isCollapsed={isCollapsed}
+      onSelect={setValueChange}
+      getLabel={user => x.cnx(user.username)}
+      placeholder="Contact"
+    />
   );
 }
 

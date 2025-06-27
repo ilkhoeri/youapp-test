@@ -1,42 +1,35 @@
 'use client';
 import * as React from 'react';
 import Image from 'next/image';
-import axios from 'axios';
-import { PaperPlaneFillIcon, PhotoPlusFillIcon } from '../icons-fill';
-import { Message as MessageProp, MinimalAccount } from '@/resource/types/user';
-import { ChatSchema, ChatValues } from '@/resource/schemas/chat';
-import { InlineEditor } from '../inline-editor/inline-editor';
 import { Form, useForm } from '../fields/form';
 import { useActiveChat } from './chat-context';
-import { ChatScrollBotton } from './chat-components';
+import { SendMessage } from '@/resource/schemas/chat';
+import { MinimalAccount } from '@/resource/types/user';
+import { InlineEditor } from '../inline-editor/inline-editor';
+import { PaperPlaneFillIcon, PhotoPlusFillIcon } from '../icons-fill';
 
-interface ChatFormProps {
-  messages: MessageProp[];
-  members?: (MinimalAccount | null)[] | null | undefined;
-}
-export function ChatForm({ messages, members: initialMembers }: ChatFormProps) {
-  const { scrollIntoView, isInView, onReload, slug: chatId } = useActiveChat();
+export function ChatForm() {
+  const { sendMessage, otherUsers, onReload } = useActiveChat();
 
-  const { form } = useForm<ChatValues>({
-    schema: ChatSchema,
+  const { form } = useForm<SendMessage>({
+    schema: SendMessage,
     defaultValues: {
-      message: '',
+      body: '',
       mediaUrl: undefined,
-      chatId: ''
+      type: 'TEXT'
     }
   });
 
-  const isMessages = messages && messages?.length > 0;
+  const isMessage = (form.watch('body') === undefined && form.watch('body')?.trim() === '') || (form.watch('mediaUrl') === undefined && form.watch('mediaUrl')?.trim() === '');
 
-  const isMessage = (form.watch('message') === undefined && form.watch('message')?.trim() === '') || (form.watch('mediaUrl') === undefined && form.watch('mediaUrl')?.trim() === '');
-
-  function onSubmit(data: ChatValues) {
-    if ((!data.message && !data.mediaUrl) || (data.message && data.message?.trim() === '') || (data.mediaUrl && data.mediaUrl?.trim() === '')) return;
+  function onSubmit(data: SendMessage) {
+    if ((!data.body && !data.mediaUrl) || (data.body && data.body?.trim() === '') || (data.mediaUrl && data.mediaUrl?.trim() === '')) return;
     try {
-      axios.post('/api/chats/messages', {
-        ...data,
-        chatId: chatId
-      });
+      // axios.post(`/api/chats/${chatId}/messages`, {
+      //   ...data,
+      //   chatId: chatId
+      // });
+      sendMessage({ body: data.body, mediaUrl: data.mediaUrl });
       form.reset();
       onReload();
     } catch (error: any) {
@@ -44,13 +37,11 @@ export function ChatForm({ messages, members: initialMembers }: ChatFormProps) {
     }
   }
 
-  const members = React.useMemo(() => (initialMembers ?? [])?.map(member => ({ id: member?.refId!, name: member?.username!, image: member?.image })), [initialMembers]);
+  const users = React.useMemo(() => (otherUsers ?? [])?.map(user => ({ id: user?.id!, name: user?.username!, image: user?.image })), [otherUsers?.length]);
 
   return (
     <Form.Provider {...form}>
-      <Form onSubmit={form.handleSubmit(onSubmit)} className="bg-background-theme flex flex-col max-h-[35%] w-full border-t [--inset-x:0.75rem] [--inset-b:0.75rem]">
-        {isMessages && <ChatScrollBotton visible={!isInView} onClick={() => scrollIntoView()} />}
-
+      <Form onSubmit={form.handleSubmit(onSubmit)} id="inline-message" className="bg-background-theme flex flex-col max-h-[35%] w-full border-t [--inset-x:0.75rem] [--inset-b:0.75rem]">
         <Form.Field
           control={form.control}
           name="mediaUrl"
@@ -66,23 +57,23 @@ export function ChatForm({ messages, members: initialMembers }: ChatFormProps) {
 
         <Form.Field
           control={form.control}
-          name="message"
+          name="body"
           render={({ field }) => {
             return (
               <InlineEditor
                 dir="ltr"
                 placeholder="Type a message"
-                users={members}
+                users={users}
                 {...field}
-                // value={`_text italic_ *text bold* _*italic and bold*_\n\`\`\`\nconstructor(props) {\n  super(props)\n\n  this.state = {\n\n  }\n\n  this.handleEvent = this.handleEvent.bind(this)\n  }\n\`\`\`\n> blockQuotes\u200B> xxx\n\n\n`}
-                onChange={i => {
-                  // console.log('[VALUE]:', JSON.stringify(i));
-                  field.onChange(i);
-                }}
                 classNames={{
                   root: 'px-3 mt-2 overflow-y-auto min-h-20 max-h-[calc(100%-(0.5rem+3.5rem))]',
                   editor: 'my-0 w-full max-w-full text-sm md:text-[15px] bg-transparent h-auto resize-none leading-normal rounded-none border-0'
                 }}
+                // value={`_text italic_ *text bold* _*italic and bold*_\n\`\`\`\nconstructor(props) {\n  super(props)\n\n  this.state = {\n\n  }\n\n  this.handleEvent = this.handleEvent.bind(this)\n  }\n\`\`\`\n> blockQuotes\u200B> xxx\n\n\n`}
+                // onChange={i => {
+                // console.log('[VALUE]:', JSON.stringify(i));
+                // field.onChange(i);
+                // }}
               />
             );
           }}

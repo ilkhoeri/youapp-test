@@ -66,6 +66,7 @@ export interface InlineEditorProps<TUser = User> extends InlineEditorConfig<TUse
   onChange?: (value: string) => void;
   autoFocus?: boolean;
   placeholder?: string;
+  name?: string;
 }
 
 interface UndoRedoStack {
@@ -92,14 +93,18 @@ export function InlineEditor<TUser extends User = User>(_props: InlineEditorProp
     placeholder,
     role = 'textbox',
     dir = 'ltr',
+    name,
     value,
     defaultValue,
     disabled,
     'aria-disabled': arDisabled,
+    'aria-label': arLabel,
     onSubmit,
     onKeyDown,
     onBeforeInput,
     onChange,
+    onFocus,
+    onBlur,
     onInput,
     className,
     style,
@@ -124,6 +129,8 @@ export function InlineEditor<TUser extends User = User>(_props: InlineEditorProp
   const isControlled = value !== undefined || value !== null || value === '';
   const [internalValue, setInternalValue] = React.useState(defaultValue ?? '');
 
+  const [isFocused, setIsFocused] = React.useState(false);
+
   const rawText = isControlled ? (value ?? '') : internalValue;
 
   const [mentionActive, setMentionActive] = React.useState(false);
@@ -131,9 +138,9 @@ export function InlineEditor<TUser extends User = User>(_props: InlineEditorProp
   const [filteredUsers, setFilteredUsers] = React.useState<typeof users>([]);
 
   const rootRef = React.useRef<HTMLDivElement>(null);
-  const contentRef = React.useRef<HTMLUListElement>(null);
+  const contentRef = React.useRef<HTMLDivElement>(null);
   const root = useElementRect<HTMLDivElement>(rootRef?.current);
-  const content = useElementRect<HTMLUListElement>(contentRef?.current);
+  const content = useElementRect<HTMLDivElement>(contentRef?.current);
 
   const { newAlign, newSide } = useUpdatedPositions({
     triggerRect: root.rect,
@@ -230,7 +237,6 @@ export function InlineEditor<TUser extends User = User>(_props: InlineEditorProp
       setSelectedIndex(0); // optional reset
     }
   }
-
 
   const undoStack: UndoRedoStack[] = [];
   const redoStack: UndoRedoStack[] = [];
@@ -371,6 +377,24 @@ export function InlineEditor<TUser extends User = User>(_props: InlineEditorProp
     [onKeyDown]
   );
 
+  const handleFocus = React.useCallback(
+    (e: React.FocusEvent<HTMLDivElement, Element>) => {
+      e.preventDefault();
+      setIsFocused(true);
+      onFocus?.(e);
+    },
+    [onFocus]
+  );
+
+  const handleBlur = React.useCallback(
+    (e: React.FocusEvent<HTMLDivElement, Element>) => {
+      e.preventDefault();
+      setIsFocused(false);
+      onBlur?.(e);
+    },
+    [onBlur]
+  );
+
   const handleBeforeInput = React.useCallback(
     (e: React.InputEvent<HTMLDivElement>) => {
       onBeforeInput?.(e);
@@ -408,7 +432,7 @@ export function InlineEditor<TUser extends User = User>(_props: InlineEditorProp
 
   const stylesApi = { unstyled, classNames, styles };
 
-  const isMentions = users && users.length > 0 && mentionActive && filteredUsers;
+  const isOpenMentions = (mentionActive && filteredUsers && isFocused && value !== '') ?? false;
 
   return (
     <>
@@ -417,9 +441,11 @@ export function InlineEditor<TUser extends User = User>(_props: InlineEditorProp
           {...{
             ...props,
             role,
+            name,
             contentEditable,
             suppressHydrationWarning,
             suppressContentEditableWarning,
+            'aria-label': arLabel || name,
             'aria-disabled': arDisabled || disabled,
             disabled,
             dir
@@ -433,12 +459,23 @@ export function InlineEditor<TUser extends User = User>(_props: InlineEditorProp
           onInput={handleInput}
           onKeyDown={handleKeyDown}
           onBeforeInput={handleBeforeInput}
+          onFocus={handleFocus}
+          onBlur={handleBlur}
           data-placeholder={placeholder}
           {...getStyles('editor', stylesApi)}
         />
       </div>
 
-      <InlineMention<TUser> users={users} open={mentionActive} onOpenChange={setMentionActive} selectUser={selectedIndex} onSelectUser={user => insertMention(user)} />
+      <InlineMention<TUser>
+        users={users}
+        open={isOpenMentions}
+        onOpenChange={setMentionActive}
+        selectedUser={selectedIndex}
+        onSelectUser={user => insertMention(user)}
+        ref={contentRef}
+        classNames={{ list: isOpenMentions ? 'u-list' : undefined, items: 'u-item' }}
+        style={isOpenMentions ? { top: 'var(--top)', left: 'var(--left)', width: 'var(--measure-trigger-w)', ...vars.triggerSize, ...vars.triggerInset, ...vars.contentSize } : undefined}
+      />
 
       {/* {createPortal(
         <ul
@@ -480,7 +517,7 @@ InlineEditor.displayName = 'InlineEditor';
 
 type ItemsProps<TUser, T> = T | ((user: TUser, index: number) => T);
 
-export interface InlineMentionProps<TUser extends User = User> extends React.ComponentProps<'ul'> {
+export interface InlineMentionProps<TUser extends User = User> extends React.ComponentPropsWithRef<'div'> {
   users?: UsersType<TUser>;
   open: boolean;
   onOpenChange: (prev: boolean | ((prev: boolean) => boolean)) => void;
@@ -492,29 +529,30 @@ export interface InlineMentionProps<TUser extends User = User> extends React.Com
     list?: CSSProperties;
     items?: ItemsProps<TUser, CSSProperties>;
   };
-  itemsProps?: ItemsProps<TUser, React.ComponentProps<'li'>>;
-  selectUser?: number;
+  itemsProps?: ItemsProps<TUser, React.ComponentPropsWithRef<'div'>>;
+  selectedUser?: number;
   onSelectUser?: (user: TUser) => void;
+  fallbackEmpty?: React.ReactNode;
 }
 export function InlineMention<TUser extends User = User>(_props: InlineMentionProps<TUser>) {
-  const { users, role = 'listbox', open, onOpenChange, className, classNames, style, styles, itemsProps, selectUser, onSelectUser, ...props } = _props;
+  const { users, role = 'listbox', open, onOpenChange, className, classNames, style, styles, itemsProps, selectedUser, onSelectUser, fallbackEmpty, ...props } = _props;
 
   const [mount, setMount] = React.useState(false);
 
   React.useEffect(() => setMount(true), []);
 
-  if (!mount) return null;
+  if (!mount || !users) return null;
 
-  const isOpened = users && users.length > 0 && open;
+  const isOpened = users.length > 0 && open;
 
   return createPortal(
-    <ul
+    <div
       {...props}
       {...{
         role,
         'data-portal-ie': '',
         className: cn(classNames?.list, className),
-        style: { ...styles?.list, ...styles }
+        style: { ...styles?.list, ...style }
       }}
     >
       {isOpened &&
@@ -524,17 +562,34 @@ export function InlineMention<TUser extends User = User>(_props: InlineMentionPr
           const style = typeof styles?.items === 'function' ? styles?.items(user, i + 1) : styles?.items;
           const itemRef = itemProps?.ref;
 
+          if (!user && fallbackEmpty) {
+            return (
+              <div
+                key={`empty-${i}`}
+                {...{
+                  ...itemProps,
+                  dir: itemProps?.dir ?? 'auto',
+                  role: itemProps?.role ?? 'listitem',
+                  className: cn(className, itemProps?.className),
+                  style: { ...style, ...itemProps?.style }
+                }}
+              >
+                {fallbackEmpty}
+              </div>
+            );
+          }
+
           return (
-            <li
-              {...itemProps}
+            <div
               key={user.id}
               data-index={i + 1}
-              data-focused={i === selectUser}
+              data-focused={i === selectedUser}
+              {...itemProps}
               {...{
                 dir: itemProps?.dir ?? 'auto',
                 role: itemProps?.role ?? 'listitem',
                 className: cn(className, itemProps?.className),
-                style: { ...style, ...itemProps }
+                style: { ...style, ...itemProps?.style }
               }}
               onMouseDown={e => {
                 e.preventDefault();
@@ -543,22 +598,18 @@ export function InlineMention<TUser extends User = User>(_props: InlineMentionPr
                 itemProps?.onMouseDown?.(e);
               }}
               ref={el => {
-                if (i === selectUser && el) {
-                  el.scrollIntoView({ block: 'nearest' });
-                }
+                if (i === selectedUser && el) el.scrollIntoView({ block: 'nearest' });
                 if (typeof itemRef === 'function') itemRef(el);
-                else if (itemRef) (itemRef as React.MutableRefObject<HTMLLIElement | null>).current = el;
+                else if (itemRef) (itemRef as React.MutableRefObject<HTMLDivElement | null>).current = el;
               }}
             >
-              <i className="i-avatar" style={{ '--user-avatar': user?.image && `url("${user?.image}")` } as React.CSSProperties} />
+              <i key={user.id} className="i-avatar" style={{ '--user-avatar': user?.image && `url("${user?.image}")` } as React.CSSProperties} />
               <span dir="ltr">{user?.name}</span>
-            </li>
+            </div>
           );
         })}
-      {/* {filteredUsers?.length === 0 && <li style={{ color: '#999' }}>No users</li>} */}
-    </ul>,
-    document.body,
-    users?.length
+    </div>,
+    document.body
   );
 }
 
@@ -705,7 +756,7 @@ function getPlainTextFromDOMX<T extends HTMLElement = HTMLElement>(el: T): strin
   return result;
 }
 
-function placeCaretAtEnd<T extends HTMLElement = HTMLElement>(el: T) {
+export function placeCaretAtEnd<T extends HTMLElement = HTMLElement>(el: T) {
   el.focus();
   // Tempatkan caret di akhir
   const range = document.createRange();

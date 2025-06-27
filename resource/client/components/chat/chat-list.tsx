@@ -3,14 +3,15 @@ import * as React from 'react';
 import axios from 'axios';
 import { useRouter } from 'next/navigation';
 import { pusherClient } from '@/resource/configs/pusher/pusher';
-import { AllChatProps, MinimalAccount } from '@/resource/types/user';
+import { OptimisticChat } from '@/resource/types/chats';
 import { ContextMenu as CtxMenu } from '@/resource/client/components/ui/context-menu';
 import { useDebounceSearch } from '@/resource/hooks/use-debounce-search';
 import { formatShortTime } from '@/resource/const/times-helper';
+import { getSafeInlineText } from '../inline-editor/helper';
 import { truncate } from '@/resource/utils/text-parser';
 import { ChatListItemSkeleton } from './chat-skeleton';
 import { useApp } from '../../contexts/app-provider';
-import { useSwitchChat } from './chat-hooks';
+import { useSwitchChat } from './hooks/use-switcher';
 import { classTabs } from './chat-container';
 import { ChatAvatars } from './chat-avatar';
 import { Input } from '../fields/input';
@@ -19,18 +20,16 @@ import { chattype } from './types';
 import { Tabs } from '../ui/tabs';
 import { find } from 'lodash';
 import { cn } from 'cn';
-import { getSafeInlineText } from '../inline-editor/helper';
 
 interface ChatListProps {
-  items: AllChatProps[];
-  accounts: MinimalAccount[];
+  items: OptimisticChat[];
   title?: string;
 }
 
 export function ChatList(_props: ChatListProps) {
-  const { items: initialItems, accounts: users } = _props;
+  const { items: initialItems } = _props;
 
-  const mockApiSearch = async (query: string): Promise<AllChatProps[]> => {
+  const mockApiSearch = async (query: string): Promise<OptimisticChat[]> => {
     const normalizedData = initialItems.filter(c => {
       const data = {
         ...c,
@@ -41,7 +40,7 @@ export function ChatList(_props: ChatListProps) {
     return new Promise(resolve => setTimeout(() => resolve(normalizedData), 1000));
   };
 
-  const { query, setQuery, isSearching, results, error } = useDebounceSearch<AllChatProps[]>({
+  const { query, setQuery, isSearching, results, error } = useDebounceSearch<OptimisticChat[]>({
     delay: 400,
     minLength: 2,
     onSearch: mockApiSearch
@@ -60,7 +59,7 @@ export function ChatList(_props: ChatListProps) {
 
     pusherClient.subscribe(pusherKey);
 
-    const updateHandler = (chat: AllChatProps) => {
+    const updateHandler = (chat: OptimisticChat) => {
       setItems(current =>
         current?.map(currentChat => {
           if (currentChat.id === chat.id) {
@@ -71,14 +70,14 @@ export function ChatList(_props: ChatListProps) {
       );
     };
 
-    const newHandler = (chat: AllChatProps) => {
+    const newHandler = (chat: OptimisticChat) => {
       setItems(current => {
         if (find(current, { id: chat.id })) return current;
         return [chat, ...current];
       });
     };
 
-    const removeHandler = (chat: AllChatProps) => {
+    const removeHandler = (chat: OptimisticChat) => {
       setItems(current => {
         return [...current.filter(convo => convo.id !== chat.id)];
       });
@@ -89,10 +88,13 @@ export function ChatList(_props: ChatListProps) {
     pusherClient.bind('chat:remove', removeHandler);
   }, [pusherKey, query]);
 
-  const newItems = !!query && results ? results : items;
+  const newItems = React.useMemo(() => {
+    return !!query && results ? results : items;
+  }, [query, results, items]);
+
   const groupItems = newItems.filter(item => item.type === 'GROUP');
 
-  const listItems = (chats: AllChatProps[]) => (isSearching ? <ChatListItemSkeleton /> : chats?.map(item => <ChatListItem key={item.id} data={item} />));
+  const listItems = (chats: OptimisticChat[]) => (isSearching ? <ChatListItemSkeleton /> : chats?.map(item => <ChatListItem key={item.id} data={item} />));
 
   return (
     <>
@@ -116,14 +118,15 @@ export function ChatList(_props: ChatListProps) {
 }
 
 interface ChatListItemProps {
-  data: AllChatProps;
-  // selected?: boolean;
+  data: OptimisticChat;
 }
 export function ChatListItem(_props: ChatListItemProps) {
   const { data } = _props;
   const { onSwitch, isSelect, otherUser, lastMessage, hasSeen, lastMessageText } = useSwitchChat(data);
 
   const query = data.type.toLowerCase() as chattype;
+
+  const groupIndicator = data.type === 'GROUP' ? <span className="absolute left-1 bottom-1 rounded bg-muted/35 border-[0.5px] px-px py-[0.5px] text-[8px]">group</span> : null;
 
   return (
     <CtxMenu>
@@ -140,9 +143,10 @@ export function ChatListItem(_props: ChatListItemProps) {
             <div className="focus:outline-none">
               <span className="absolute inset-0" aria-hidden="true" />
               <div className="flex justify-between items-center mb-1">
-                <p className="text-md font-medium text-color">{data?.name || otherUser?.name}</p>
+                <p className="text-md font-medium text-color">{data?.name || otherUser?.username}</p>
                 {lastMessage?.createdAt && <p className="text-xs text-muted-foreground font-light">{formatShortTime(new Date(lastMessage.createdAt))}</p>}
               </div>
+              {groupIndicator}
               <p className={cn('truncate text-xs', hasSeen || !lastMessage?.body ? 'text-muted-foreground' : 'text-color')}>{truncate(escapeText(lastMessageText), 200)}</p>
             </div>
           </div>
@@ -154,12 +158,12 @@ export function ChatListItem(_props: ChatListItemProps) {
   );
 }
 
-export function contextMenu(data: AllChatProps) {
+export function contextMenu(data: OptimisticChat) {
   const menuMap = useMenuMap(data);
   return <CtxMenu.Content className="w-48">{renderMenuItems(menuMap)}</CtxMenu.Content>;
 }
 
-function useMenuMap(data: AllChatProps) {
+function useMenuMap(data: OptimisticChat) {
   const router = useRouter();
 
   const handleDelete = React.useCallback(async () => {

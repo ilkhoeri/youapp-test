@@ -90,6 +90,8 @@
   white-space: pre-wrap;
   word-break: break-word;
   -ms-word-break: break-word;
+  min-height: 100%;
+  cursor: text;
 }
 .ie-editor[data-placeholder]:empty::before,
 .ie-editor[data-placeholder].empty::before {
@@ -107,19 +109,21 @@
 }
 
 /* Dropdown */
+.u-list:where(:empty) {
+  display: none;
+}
+
 .u-list {
   border-radius: 0.75rem;
   border-width: 1px;
   background-color: hsl(var(--background-theme));
   padding: 0.25rem;
   position: absolute;
-  /* inset: auto 0px calc(100% + 8px); */
   list-style: none;
   margin: 0px;
   z-index: 99;
   max-height: 120px;
   overflow-y: auto;
-  width: 100%;
   border-bottom-width: 0px;
   border-bottom-left-radius: 0px;
   border-bottom-right-radius: 0px;
@@ -164,15 +168,20 @@
 }
 
 .i-avatar {
-  position: relative;
-  display: flex;
-  width: 20px;
-  height: 20px;
+  position: var(--user-avatar-position, relative);
+  display: var(--user-avatar-display, flex);
+  width: var(--sz-dummy);
+  height: var(--sz-dummy);
+  min-width: var(--user-avatar-min-w, var(--user-avatar-min-size, var(--sz-dummy)));
+  min-height: var(--user-avatar-min-h, var(--user-avatar-min-size, var(--sz-dummy)));
+  max-width: var(--user-avatar-max-w, var(--user-avatar-max-size, var(--sz-dummy)));
+  max-height: var(--user-avatar-max-h, var(--user-avatar-max-size, var(--sz-dummy)));
   -webkit-user-select: none;
   user-select: none;
-  margin-right: 8px;
+  margin-right: var(--user-avatar-mr, 8px);
   line-height: 16px;
-  border-radius: 9999px;
+  border-radius: var(--user-avatar-round, 9999px);
   background: white center center/contain var(--user-avatar, var(--i-dummy));
+  --sz-dummy: var(--user-avatar-size, 20px);
   --i-dummy: url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyNCIgaGVpZ2h0PSIyNCIgdmlld0JveD0iMCAwIDI0IDI0Ij48cGF0aCBmaWxsPSJjdXJyZW50Q29sb3IiIGQ9Ik0xNy43NTUgMTRhMi4yNSAyLjI1IDAgMCAxIDIuMjQ4IDIuMjV2LjkxOGEyLjc1IDIuNzUgMCAwIDEtLjUxMiAxLjU5OGMtMS41NDYgMi4xNjQtNC4wNyAzLjIzNS03LjQ5IDMuMjM1Yy0zLjQyMiAwLTUuOTQ1LTEuMDcyLTcuNDg3LTMuMjM2YTIuNzUgMi43NSAwIDAgMS0uNTEtMS41OTZ2LS45MkEyLjI1IDIuMjUgMCAwIDEgNi4yNTMgMTR6TTEyIDIuMDA1YTUgNSAwIDEgMSAwIDEwYTUgNSAwIDAgMSAwLTEwIi8+PC9zdmc+');
 }

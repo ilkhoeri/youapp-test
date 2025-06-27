@@ -1,9 +1,8 @@
 import axios from 'axios';
-import type { Message } from '@/resource/types/user';
+// import type { OptimisticMessage } from '@/resource/types/chats';
+import { EnrichedMessage } from '../messages/message-helper';
 
-export async function markMessagesAsSeenSequentially(chatId: string, messages: Message[], currentUserId: string) {
-  const unseenMessages = messages.filter(m => !m.seenIds.includes(currentUserId));
-
+export async function markMessagesAsSeenSequentially(chatId: string | undefined, unseenMessages: EnrichedMessage[]) {
   for (const message of unseenMessages) {
     try {
       await axios.post(`/api/chats/${chatId}/seen`, { messageId: message.id });

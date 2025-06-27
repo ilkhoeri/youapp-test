@@ -282,9 +282,10 @@ function Emoji({ name, emoji = allowedEmoji }: { name: string; emoji?: ReadValue
   return <React.Fragment>{emoji[name]}</React.Fragment>;
 }
 function Mention<TUser extends User = User>({ username, users, ...rest }: BaseProps<{ username: string; users?: UsersType<TUser> }>) {
-  const user = users && users?.find(user => user?.name === username);
+  const user = users?.find(user => user?.name === username);
+
   return (
-    <span data-mention={user ? `@${username}` : undefined} {...rest}>
+    <span data-mention={user ? `@${user.name}` : undefined} {...rest}>
       @<span dir="ltr">{username}</span>
     </span>
   );
@@ -309,7 +310,8 @@ const parsedPatterns = [
   ...allowedPatterns,
   {
     tag: 'mention',
-    regex: /@([a-zA-Z0-9_.]+)/,
+    // regex: /@([a-zA-Z0-9_.]+)/,
+    regex: /@(\w+)/,
     open: '@',
     close: ''
   },

@@ -1,12 +1,12 @@
 'use client';
 import * as React from 'react';
 import { useParams, useSearchParams } from 'next/navigation';
-import { Account, AllChatProps, MinimalAccount } from '@/resource/types/user';
-import { useSession } from 'next-auth/react';
-import { ScrollIntoViewAnimation, useScrollIntoView } from '@/resource/hooks/use-scroll-into-view';
+import { Account, MinimalAccount } from '@/resource/types/user';
+import { OptimisticChat } from '@/resource/types/chats';
 import { useReload } from '@/resource/hooks/use-reload';
-import { ChatQuerys, slugQuerys } from './types';
+import { ChatQuerys } from './types';
 import { useApp } from '../../contexts/app-provider';
+import { useOptimisticMessages } from './hooks/use-optimistic';
 
 interface getChatId {
   searchQuery: string;
@@ -43,9 +43,9 @@ export function useChat(opts: UseChatOptions = {}): UseChat {
   );
 }
 
-type UseOtherUserProps = (AllChatProps | { users: MinimalAccount[] }) | null | undefined;
+type UseOtherUserProps = (OptimisticChat | { users: MinimalAccount[] }) | null | undefined;
 
-export function useOtherUser(chats: (AllChatProps | { users: MinimalAccount[] }) | null | undefined): MinimalAccount | null {
+export function useOtherUser(chats: (OptimisticChat | { users: MinimalAccount[] }) | null | undefined): MinimalAccount | null {
   // const session = useSession();
   const { user: session } = useApp();
 
@@ -80,43 +80,68 @@ export function useOtherUser(chats: (AllChatProps | { users: MinimalAccount[] })
   }
 }
 
-export type ExpandedState = string | string[] | null | boolean;
-export type ExpandedOptions = { multiple?: boolean | undefined };
+type ExpandedStore = { querys: ChatQuerys; chats: OptimisticChat[] };
 
-interface ActiveChatStore extends UseChat, InferType<typeof useScrollIntoView>, InferType<typeof useReload> {
+interface ActiveChatStore extends ExpandedStore, InferType<typeof useReload>, InferType<typeof useOptimisticMessages> {
   members: string[];
   add: (id: string) => void;
   remove: (id: string) => void;
   set: (ids: string[]) => void;
-  scrollableRef: React.RefObject<HTMLDivElement>;
-  targetRef: React.RefObject<HTMLDivElement>;
-  loading: boolean;
-  setLoading: (prev: boolean | ((prev: boolean) => boolean)) => void;
-  expanded: (targetId?: string) => boolean;
-  setExpanded: (value: string | null | boolean | undefined, opts?: ExpandedOptions) => void;
   querys: ChatQuerys;
-  slug: string | undefined;
+  chatId: string | undefined;
+  currentUser: Account;
+  chat: OptimisticChat | undefined;
+  users: MinimalAccount[] | undefined;
+  otherUsers: MinimalAccount[] | undefined;
+  otherUser: MinimalAccount | undefined;
 }
 
-const ActiveListContext = React.createContext<ActiveChatStore | undefined>(undefined);
+const ActiveChatCtx = React.createContext<ActiveChatStore | undefined>(undefined);
 
-interface ActiveChatProviderProps {
+interface ActiveChatProviderProps extends ExpandedStore {
   children: React.ReactNode;
-  querys: ChatQuerys;
 }
 
-export function ActiveChatProvider({ children, querys }: ActiveChatProviderProps) {
-  const [members, setMembers] = React.useState<string[]>([]);
-  // const [loading, setLoading] = React.useState<boolean>(false);
-  const [_expanded, _setExpanded] = React.useState<ExpandedState>(false);
-
-  const scrollIntoView = useScrollIntoView<HTMLDivElement, HTMLDivElement>();
-
+export function ActiveChatProvider({ children, querys, chats }: ActiveChatProviderProps) {
+  const app = useApp();
   const reload = useReload();
 
-  const slug = querys.private || querys.group || querys.channel || querys.bot;
+  const chatId = querys?.private || querys?.group || querys?.channel || querys?.bot;
 
-  const getChat = useChat({ searchQuery: slug });
+  const currentUser = app.user;
+
+  const chat = chats?.find(chat => chat.id === chatId);
+
+  const users = chat?.users;
+
+  const otherUsers = React.useMemo(() => {
+    if (!chat?.users || chat?.users?.length < 1) return;
+    return chat?.users?.filter(user => user.email !== currentUser?.email);
+  }, [chatId]);
+
+  const otherUser = React.useMemo(() => {
+    let parseUser: MinimalAccount | undefined = undefined;
+
+    if (!chat) return;
+
+    if ('userIds' in chat) {
+      const userIds = chat.userIds ?? [];
+
+      if (userIds.length === 2) {
+        parseUser = chat.users.find(user => user.email !== currentUser?.email);
+      }
+    }
+
+    parseUser = chat?.users.filter(user => user?.email !== currentUser?.email)?.[0];
+
+    return parseUser;
+  }, [currentUser?.email, chat?.users.length, chatId]);
+
+  const initialMessages = chats?.find(c => c.id === chatId)?.messages ?? [];
+
+  const optimistic = useOptimisticMessages(chatId, initialMessages, currentUser);
+
+  const [members, setMembers] = React.useState<string[]>(chat?.userIds ?? []);
 
   const add = React.useCallback((id: string) => {
     setMembers(prev => [...prev, id]);
@@ -130,68 +155,10 @@ export function ActiveChatProvider({ children, querys }: ActiveChatProviderProps
     setMembers(ids);
   }, []);
 
-  const expanded = React.useCallback(
-    (targetId?: string) => {
-      if (typeof _expanded === 'boolean') {
-        return _expanded;
-      }
-      if (typeof _expanded === 'string') {
-        return _expanded === targetId;
-      }
-      if (Array.isArray(_expanded) && targetId) {
-        return _expanded.includes(targetId);
-      }
-      return false;
-    },
-    [_expanded]
-  );
-
-  const setExpanded = React.useCallback(
-    (value: string | null | boolean = !_expanded, opts: ExpandedOptions = {}) => {
-      const { multiple = true } = opts;
-      _setExpanded(prev => {
-        // if (typeof prev === 'boolean' && prev === true && allIds) {
-        //   // Kalau masih true (global open), ubah jadi semua ID terbuka
-        //   return allIds;
-        // }
-
-        if (typeof value === 'boolean' || value === null) {
-          return value;
-        }
-
-        if (multiple) {
-          // Multiple mode: array of ids
-          if (Array.isArray(prev)) {
-            // Sudah array, toggle id
-            if (prev.includes(value)) {
-              return prev.filter(id => id !== value);
-            } else {
-              return [...prev, value];
-            }
-          } else if (typeof prev === 'string') {
-            // Sebelumnya single string → jadikan array
-            return prev === value ? [] : [prev, value];
-          } else {
-            // Sebelumnya null atau boolean
-            return [value];
-          }
-        } else {
-          // Single mode
-          if (typeof value === 'string' && prev === value) {
-            // Kalau klik ID yang sama → tutup
-            return null;
-          }
-          return value;
-        }
-      });
-    },
-    [_expanded]
-  );
-
   return (
-    <ActiveListContext.Provider value={{ members, add, querys, slug, remove, set, expanded, setExpanded, ...getChat, ...scrollIntoView, ...reload }}>
+    <ActiveChatCtx.Provider value={{ currentUser, chats, chat, users, otherUsers, otherUser, members, add, querys, chatId, remove, set, ...optimistic, ...reload }}>
       {children}
-    </ActiveListContext.Provider>
+    </ActiveChatCtx.Provider>
   );
 }
 
@@ -210,7 +177,7 @@ export function ActiveChatProvider({ children, querys }: ActiveChatProviderProps
  * };
  */
 export function useActiveChat(): ActiveChatStore {
-  const context = React.useContext(ActiveListContext);
+  const context = React.useContext(ActiveChatCtx);
   if (!context) throw new Error('useActiveChat must be used within an ActiveChatProvider');
 
   return context;

@@ -556,41 +556,48 @@ enum MessageType {
   STICKER
   SYSTEM
 }
+enum MessageStatus {
+  SENDING
+  SENT
+  FAILED
+  SEEN
+}
 
 model Message {
-  id              String       @id @default(auto()) @map("_id") @db.ObjectId
-  type            MessageType  @default(TEXT)
+  id              String        @id @default(auto()) @map("_id") @db.ObjectId
+  type            MessageType   @default(TEXT)
+  status          MessageStatus @default(SENT)
   body            String?
   mediaUrl        String?
-  mediaType       String?      // e.g., "image/png", "audio/mpeg"
-  createdAt       DateTime     @default(now())
-  editedAt        DateTime     @updatedAt
+  mediaType       String?       // e.g., "image/png", "audio/mpeg"
+  createdAt       DateTime      @default(now())
+  editedAt        DateTime      @updatedAt
   // Relasi ke Chat (many-to-one)
-  chatId          String       @db.ObjectId
-  chat            Chat         @relation(fields: [chatId], references: [id], onDelete: Cascade)
+  chatId          String        @db.ObjectId
+  chat            Chat          @relation(fields: [chatId], references: [id], onDelete: Cascade)
   // Relasi ke User (many-to-one)
-  senderId        String       @db.ObjectId
-  sender          User         @relation(fields: [senderId], references: [id], onDelete: Cascade)
+  senderId        String        @db.ObjectId
+  sender          User          @relation(fields: [senderId], references: [id], onDelete: Cascade)
   // Relasi seen (many-to-many)
-  seenIds         String[]     @db.ObjectId
-  seen            User[]       @relation("Seen", fields: [seenIds], references: [id])
+  seenIds         String[]      @db.ObjectId
+  seen            User[]        @relation("Seen", fields: [seenIds], references: [id])
   // Relasi ke Reaction (one-to-many)
   reactions       Reaction[]
   // Reply to (self-relation, optional)
-  replyToId       String?      @db.ObjectId
-  replyTo         Message?     @relation("Reply", fields: [replyToId], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  replies         Message[]    @relation("Reply")
+  replyToId       String?       @db.ObjectId
+  replyTo         Message?      @relation("Reply", fields: [replyToId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  replies         Message[]     @relation("Reply")
   // Pinned by Chat (reverse dari pinnedMessage)
-  pinnedByChat    Chat[]       @relation("PinnedMessage")
-  isDeleted                    Boolean   @default(false)
-  forwardedFromMessageId       String?   @db.ObjectId
+  pinnedByChat    Chat[]        @relation("PinnedMessage")
+  isDeleted                     Boolean   @default(false)
+  forwardedFromMessageId        String?   @db.ObjectId
 
-  deletedForUserIds String[]   @db.ObjectId
-  forwardedFromId   String?    @db.ObjectId
-  forwardedFrom     Message?   @relation("Forward", fields: [forwardedFromId], references: [id], onDelete:NoAction, onUpdate:NoAction)
-  forwardedMessages Message[]  @relation("Forward")
-  isEdited          Boolean    @default(false)
-  isSystemMessage   Boolean    @default(false)
+  deletedForUserIds String[]    @db.ObjectId
+  forwardedFromId   String?     @db.ObjectId
+  forwardedFrom     Message?    @relation("Forward", fields: [forwardedFromId], references: [id], onDelete:NoAction, onUpdate:NoAction)
+  forwardedMessages Message[]   @relation("Forward")
+  isEdited          Boolean     @default(false)
+  isSystemMessage   Boolean     @default(false)
 }
 
 model Reaction {

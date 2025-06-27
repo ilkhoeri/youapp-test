@@ -107,81 +107,43 @@ export function useHover<T extends HTMLElement | null>(targets?: Array<Target<T>
   return { ref, hovered, setHovered };
 }
 
-export function useMouseEnter<T extends HTMLElement | null>(elements?: Array<T | null>, { open, onOpenChange }: { open?: boolean; onOpenChange?: (v: boolean) => void } = {}) {
+export function useMouseEnter<T extends HTMLElement | null>({ open, onOpenChange }: { open?: boolean; onOpenChange?: (prev: boolean | ((prev: boolean) => boolean)) => void } = {}) {
   const [opened, setOpened] = useState(false);
+
   const hovered = open !== undefined ? open : opened;
   const setHovered = onOpenChange !== undefined ? onOpenChange : setOpened;
-  const ref = useRef<T>(null);
 
-  const onMouseEnter = useCallback((e: React.MouseEvent<T, MouseEvent>) => {
-    e.preventDefault();
-    setHovered(true);
-  }, []);
-
-  const onMouseLeave = useCallback((e: React.MouseEvent<T, MouseEvent>) => {
-    e.preventDefault();
-    setHovered(false);
-  }, []);
-
-  const onTouchStart = useCallback((e: React.TouchEvent<T>) => {
-    e.preventDefault();
-    setHovered(true);
-  }, []);
-
-  const onTouchEnd = useCallback((e: React.TouchEvent<T>) => {
-    e.preventDefault();
-    setHovered(false);
-  }, []);
-
-  /**
-  useEffect(() => {
-    const current = ref.current;
-
-    const onMouseEnter = () => {
+  const onMouseEnter = useCallback(
+    (e: React.MouseEvent<T, MouseEvent>) => {
+      e.preventDefault();
       setHovered(true);
-    };
+    },
+    [setHovered]
+  );
 
-    const onMouseLeave = () => {
+  const onMouseLeave = useCallback(
+    (e: React.MouseEvent<T, MouseEvent>) => {
+      e.preventDefault();
       setHovered(false);
-    };
+    },
+    [setHovered]
+  );
 
-    const onTouchStart = () => {
+  const onTouchStart = useCallback(
+    (e: React.TouchEvent<T>) => {
+      e.preventDefault();
       setHovered(true);
-    };
+    },
+    [setHovered]
+  );
 
-    const onTouchEnd = () => {
+  const onTouchEnd = useCallback(
+    (e: React.TouchEvent<T>) => {
+      e.preventDefault();
       setHovered(false);
-    };
+    },
+    [setHovered]
+  );
 
-    const attachListeners = (el: T | null) => {
-      if (!el) return;
-      el.addEventListener('mouseenter', onMouseEnter);
-      el.addEventListener('mouseleave', onMouseLeave);
-
-      el.addEventListener('touchstart', onTouchStart);
-      el.addEventListener('touchend', onTouchEnd);
-    };
-
-    const detachListeners = (el: T | null) => {
-      if (!el) return;
-      el.removeEventListener('mouseenter', onMouseEnter);
-      el.removeEventListener('mouseleave', onMouseLeave);
-
-      el.removeEventListener('touchstart', onTouchStart);
-      el.removeEventListener('touchend', onTouchEnd);
-    };
-
-    if (elements) elements.forEach(el => attachListeners(el));
-
-    if (current) attachListeners(current);
-
-    return () => {
-      if (elements) elements.forEach(el => detachListeners(el));
-
-      if (current) detachListeners(current);
-    };
-  }, [elements]);
- */
-
-  return { ref, hovered, setHovered, onMouseEnter, onMouseLeave, onTouchStart, onTouchEnd };
+  return { hovered, setHovered, onMouseEnter, onMouseLeave, onTouchStart, onTouchEnd };
 }

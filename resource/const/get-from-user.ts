@@ -39,13 +39,13 @@ export class SecureUser {
   }
 
   public name(name?: string, opts: Options = {}) {
-    const resolve = this.resolveName('name', name, opts.message);
+    const resolve = this.resolveName('username', name, opts.message);
     return this.normalizeName(resolve);
   }
 
   public refId(opts: Options = {}) {
     const { message = 'user arg is required' } = opts;
-    const refId = this.user?.refId;
+    const refId = this.user?.id;
     if (!refId) throw new Error(message);
     return refId;
   }

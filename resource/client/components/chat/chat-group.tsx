@@ -50,7 +50,7 @@ export function ChatGroup(_props: GroupChatModalProps) {
       .finally(() => setLoading(false));
   }
 
-  const options = users.map(user => ({ value: user?.id!, label: user?.name! }));
+  const options = users.map(user => ({ value: user?.id!, label: user?.username! }));
 
   return (
     <Form.Provider {...form}>

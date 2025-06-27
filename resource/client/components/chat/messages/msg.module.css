@@ -137,7 +137,7 @@
 /* Box */
 ._bxin,
 ._bxout {
-  @apply rounded-lg relative z-[4];
+  @apply rounded-lg relative z-[4] min-h-0;
 }
 ._bxin {
   @apply rounded-tl-none;
@@ -198,11 +198,11 @@
 ._msgbd {
   @apply min-h-0 visible select-none xl:select-text [display:unset];
 
-  & ._mention,
-  & a {
+  & a,
+  & ._mention[data-mention] {
     color: #53bdeb;
   }
-  & ._mention {
+  & ._mention[data-mention] {
     @apply cursor-pointer visible;
   }
   & a {
@@ -223,32 +223,32 @@
   }
   & h1 {
     font-size: clamp(18px, 0.75rem + 4vw, 1.5rem);
-    line-height: 2.5rem;
+    line-height: 1;
     font-weight: 800;
   }
   & h2 {
     font-size: clamp(16px, 11px + 3.5vw, 1.25rem);
-    line-height: 2.25rem;
+    line-height: 1;
     font-weight: 700;
   }
   & h3 {
     font-size: clamp(15px, 14px + 3vw, 1rem);
-    line-height: 2rem;
+    line-height: 1;
     font-weight: 700;
   }
   & h4 {
     font-size: clamp(14px, 0.75rem + 2vw, 1rem);
-    line-height: 1.75rem;
+    line-height: 1;
     font-weight: 600;
   }
   & h5 {
     font-size: clamp(13px, 0.85rem + 2vw, 0.9875rem);
-    line-height: 1.5;
+    line-height: 1;
     font-weight: 600;
   }
   & h6 {
     font-size: clamp(13px, 0.75rem + 1vw, 0.875rem);
-    line-height: 1.5;
+    line-height: 1;
     font-weight: 600;
   }
   & u {

@@ -1,28 +1,20 @@
 'use client';
 import * as React from 'react';
+import { ChatForm } from './chat-form';
+import { EmptyChat } from './chat-room';
 import { ChatSkeleton } from './chat-skeleton';
 import { useActiveChat } from './chat-context';
-import { AllChatProps, Message as MessageProp } from '@/resource/types/user';
-import { ChatHeader } from '@/resource/client/components/chat/chat-header';
-import { ChatBody } from '@/resource/client/components/chat/chat-body';
-import { ChatForm } from './chat-form';
 import { ChatBackground } from './chat-background';
-import { useApp } from '../../contexts/app-provider';
-import { EmptyChat } from './chat-room';
+import { ChatBody } from '@/resource/client/components/chat/chat-body';
+import { ChatHeader } from '@/resource/client/components/chat/chat-header';
 
-interface ChatClientProps {
-  messages: Array<MessageProp>;
-  chats: Array<AllChatProps> | null;
-}
-
-export function ChatClient({ chats, messages }: ChatClientProps) {
-  const { user } = useApp();
-  const { slug: chatId, loading, setLoading, onReload } = useActiveChat();
-
-  const [_, setMessages] = React.useState<Array<MessageProp> | null>(null);
+export function ChatClient() {
+  const { chatId, loading, setLoading, onReload, chats } = useActiveChat();
   const [error, setError] = React.useState<string | null>(null);
 
   /**
+  const [_, setMessages] = React.useState<Array<OptimisticMessage> | null>(null);
+
   React.useEffect(() => {
     if (!chatId) {
       setMessages(null);
@@ -51,16 +43,17 @@ export function ChatClient({ chats, messages }: ChatClientProps) {
   }, [chatId]);
 */
 
+  const messages = React.useMemo(() => {
+    const data = chats?.find(c => c.id === chatId)?.messages;
+    return data ?? [];
+  }, [chats, chatId]);
+
   React.useEffect(() => {
-    if (!chatId) {
-      setMessages(null);
-      return;
-    }
+    if (!chatId) return;
     setLoading(true);
     setError(null);
     const cleanupTimeout = setTimeout(() => {
       setLoading(false);
-      setMessages(messages);
       onReload();
     }, 0);
     return () => clearTimeout(cleanupTimeout);
@@ -84,7 +77,7 @@ export function ChatClient({ chats, messages }: ChatClientProps) {
     );
   }
 
-  if (((!chats && messages.length < 1) || !chats?.some(c => c.id === chatId)) && !loading) {
+  if (((!chats && messages?.length < 1) || !chats?.some(c => c.id === chatId)) && !loading) {
     return (
       <div className="flex h-full flex-col py-8">
         <EmptyChat content="Chat group tidak ditemukan" className="text-red-500 dark:text-red-600" />
@@ -92,16 +85,13 @@ export function ChatClient({ chats, messages }: ChatClientProps) {
     );
   }
 
-  const chat = chats?.find(chat => chat.id === chatId);
-  const membersForm = chat?.users?.filter(find => find.email !== user?.email!);
-
   return (
     <React.Suspense fallback={<ChatSkeleton />}>
       <div className="flex h-full flex-col">
         <div className="h-full flex flex-col relative z-[9]">
-          <ChatHeader chat={chat} />
-          <ChatBody members={chat?.users} messages={messages!} />
-          <ChatForm members={membersForm} messages={messages!} />
+          <ChatHeader />
+          <ChatBody />
+          <ChatForm />
         </div>
         <ChatBackground />
       </div>

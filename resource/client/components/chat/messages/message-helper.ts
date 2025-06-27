@@ -1,8 +1,9 @@
-import type { Message, MinimalAccount } from '@/resource/types/user';
+import type { MinimalAccount } from '@/resource/types/user';
+import type { OptimisticMessage } from '@/resource/types/chats';
 
-type GroupPosition = 'only' | 'top' | 'middle' | 'bottom';
+export type GroupPosition = 'only' | 'top' | 'middle' | 'bottom';
 
-export interface EnrichedMessage extends Message {
+export interface EnrichedMessage extends OptimisticMessage {
   isFirst: boolean;
   isLast: boolean;
   isFirstInDay: boolean;
@@ -16,7 +17,7 @@ export interface EnrichedMessage extends Message {
   totalCount: number;
 }
 
-export function getGroupPosition(prev: Message | undefined, next: Message | undefined, current: Message): GroupPosition {
+export function getGroupPosition(prev: OptimisticMessage | undefined, next: OptimisticMessage | undefined, current: OptimisticMessage): GroupPosition {
   const currentDay = getDayKey(new Date(current.createdAt));
   const sameAsPrev = prev && prev.senderId === current.senderId && getDayKey(new Date(prev.createdAt)) === currentDay;
   const sameAsNext = next && next.senderId === current.senderId && getDayKey(new Date(next.createdAt)) === currentDay;
@@ -36,7 +37,7 @@ function getDayKey(date: Date): string {
   return date.toLocaleDateString('sv-SE'); // "2025-06-11"
 }
 
-export function enrichMessages(messages: Message[], user: MinimalAccount): EnrichedMessage[] {
+export function enrichMessages(messages: OptimisticMessage[], user: MinimalAccount): EnrichedMessage[] {
   return messages.map((message, index, arr) => {
     const currentDate = new Date(message.createdAt);
     const currentDayKey = getDayKey(currentDate);
@@ -91,7 +92,7 @@ export function enrichMessages(messages: Message[], user: MinimalAccount): Enric
   });
 }
 
-type MessagesByDate = Record<
+export type MessagesByDate = Record<
   string,
   {
     messages: EnrichedMessage[];
@@ -107,7 +108,7 @@ export type GroupedMessages = {
   lastMessage: EnrichedMessage | undefined;
 };
 
-export function groupMessagesByDate(messages: Message[], user: MinimalAccount): GroupedMessages {
+export function groupMessagesByDate(messages: OptimisticMessage[], user: MinimalAccount): GroupedMessages {
   const enriched = enrichMessages(messages, user);
 
   const byDate: MessagesByDate = {};
@@ -164,7 +165,7 @@ export function getLastMessage(grouped: LastMessage): EnrichedMessage | undefine
  * @param user MinimalAccount
  * @returns
  */
-export function groupMessagesByDay(messages: Message[], user: MinimalAccount) {
+export function groupMessagesByDay(messages: OptimisticMessage[], user: MinimalAccount) {
   const enriched = enrichMessages(messages, user);
 
   const groupedMessagesByDay: Record<string, EnrichedMessage[]> = {};

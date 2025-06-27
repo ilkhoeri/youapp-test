@@ -1,32 +1,31 @@
 'use client';
 import * as React from 'react';
-import axios from 'axios';
 import * as x from 'xuxi';
 import * as motion from 'motion/react-client';
 import { MotionImage } from '../../motion/motion-image';
-import { CheckIcon, DoubleCheckIcon } from '../../icons';
+import { CheckIcon, DoubleCheckIcon, XIcon } from '../../icons';
 import { ChevronFillIcon, StickerSmileFillIcon } from '../../icons-fill';
 import { formatPrettyDate, formatShortTime } from '@/resource/const/times-helper';
-import { MessageReaction, MinimalAccount } from '@/resource/types/user';
 import { ContextMenu as CtxMenu } from '@/resource/client/components/ui/context-menu';
+import { MinimalAccount } from '@/resource/types/user';
+import { MessageReaction } from '@/resource/types/chats';
 import { Avatar, getInitialsColor } from '../../ui/avatar-oeri';
-import { useMouseEnter } from '@/resource/hooks/use-hover';
 import { getEmoji } from '../emoji/config';
 
-import { EnrichedMessage } from './helper';
+import { EnrichedMessage } from './message-helper';
 import { SafeInlineRenderer } from '../../inline-editor/inline-display';
+import { useOnlinePresence } from '../hooks/use-online-presence';
 import { useIsMobile } from '@/resource/hooks/use-device-query';
+import { mergeRefs } from '@/resource/hooks/use-merged-ref';
+import { useMouseEnter } from '@/resource/hooks/use-hover';
 import { SheetsBreakpoint } from '../../sheets-breakpoint';
 import { Svg, SvgProps } from '../../ui/svg';
 import { Popover } from '../../ui/popover';
 
 import { cn } from 'cn';
 import { toast } from 'sonner';
-import { mergeRefs } from '@/resource/hooks/use-merged-ref';
-import { useApp } from '@/resource/client/contexts/app-provider';
+import { useActiveChat } from '../chat-context';
 import { getSafeInlineText } from '../../inline-editor/helper';
-import { useOnlinePresence } from '../chat-hooks';
-import { useRouter } from 'next/navigation';
 
 import css from './msg.module.css';
 
@@ -38,55 +37,51 @@ const reactions: MessageReaction[] = [
 
 function onPrevent<TEvent extends React.MouseEvent<HTMLElement, MouseEvent>>(e: TEvent) {
   e.preventDefault();
-  e.stopPropagation();
 }
 
-interface InOut<T> {
-  in: T;
-  out: T;
-}
+type InOut<T> = { in: T; out: T };
 
-// type MCTrees = 'container' | 'root' | 'wrapper' | 'box' | 'icon';
 interface MessageBubbleProps extends React.ComponentPropsWithRef<'div'> {
-  data: EnrichedMessage;
+  message: EnrichedMessage;
   lastMessage: EnrichedMessage | undefined;
   members?: MinimalAccount[] | null | undefined;
   targetRef?: React.RefObject<HTMLElement> | null;
-  // classNames?: Partial<Record<MCTrees, string>>;
   isInView?: boolean;
 }
 
 export function MessageBubble(_props: MessageBubbleProps) {
-  const { ref, data, className, members, lastMessage, targetRef, isInView, ...props } = _props;
+  const { ref, message: msg, className, members, lastMessage, targetRef, isInView, ...props } = _props;
 
   const [openMenu, setOpenMenu] = React.useState<boolean>(false);
   const [openCtx, setOpenCtx] = React.useState<boolean>(false);
 
+  const users = React.useMemo(() => (members ?? [])?.map(user => ({ id: user?.id!, name: user?.username!, image: user?.image })), [members]);
+
   const isMediaQuery = useIsMobile();
 
-  const { isOnline } = useOnlinePresence();
+  const presence = useOnlinePresence();
 
-  const dateTime = formatShortTime(new Date(data.createdAt));
+  const dateTime = formatShortTime(new Date(msg.createdAt));
 
-  const colorByInitial = getInitialsColor(data?.sender.name);
+  const colorByInitial = getInitialsColor(msg?.sender?.username ?? '');
 
-  const { hovered: hoveredMenu, ref: _, setHovered: __, ...onHoveredMenu } = useMouseEnter<HTMLDivElement>();
-  const { hovered: hoveredReacts, ref: ___, setHovered: ____, ...onHoveredReacts } = useMouseEnter<HTMLDivElement>();
-
-  const isMQ = <T,>(x: T) => (!isMediaQuery ? x : undefined);
-
-  const isOwn = data.isFromCurrentUser;
-
-  const seenList = (data.seen || []).filter(user => user.email !== data?.sender?.email).map(user => user.name);
-
-  const seenBy = JSON.stringify(`Seen by: [${seenList}]`, null, 2);
-  const dateMessage = formatPrettyDate(new Date(data.createdAt), { locale: 'en-US', year: 'numeric', month: '2-digit' });
-  const plaintext = x.cnx(`[${dateTime}, ${dateMessage}]`, `${data.sender.name}:`);
-  const isSend = seenList.length > 0;
+  const { hovered: hoveredMenu, setHovered: __, ...onHoveredMenu } = useMouseEnter<HTMLDivElement>();
+  const { hovered: hoveredReacts, setHovered: _, ...onHoveredReacts } = useMouseEnter<HTMLDivElement>();
 
   const inOut = <T,>(x: InOut<T>): T => (isOwn ? x.out : x.in);
 
-  const container = cn(css._ctr, data.isFirst ? 'my-3' : data.isLast ? 'mb-6' : 'mb-3', data.isRepeatInDay && '-mt-2.5', className),
+  const isMQ = <T,>(x: T) => (!isMediaQuery ? x : undefined);
+
+  const isOwn = msg.isFromCurrentUser;
+
+  const seenList = msg.seenIds.filter(id => id !== msg?.senderId);
+
+  const seenBy = JSON.stringify(`Seen by: [${seenList}]`, null, 2);
+  const dateMessage = formatPrettyDate(new Date(msg.createdAt), { locale: 'en-US', year: 'numeric', month: '2-digit' });
+  const plaintext = x.cnx(`[${dateTime}, ${dateMessage}]`, `${msg?.sender?.username}:`);
+  const isSeen = seenList.length > 0 || msg.status === 'SEEN';
+
+  const container = cn(css._ctr, msg.isFirst ? 'my-3' : msg.isLast ? 'mb-6' : 'mb-3', msg.isRepeatInDay && '-mt-2.5', className),
     root = inOut({ in: css._rpin, out: css._rpout }),
     arrow = inOut({ in: css._arin, out: css._arout }),
     reaction = inOut({ in: css._rctin, out: css._rctout }),
@@ -98,59 +93,63 @@ export function MessageBubble(_props: MessageBubbleProps) {
 
   return (
     <CtxMenu onOpenChange={setOpenCtx}>
-      <article key={data?.id} {...{ ...props, role: 'row', suppressHydrationWarning: true, tabIndex: -1 }} ref={mergeRefs(ref, targetRef)}>
+      <article key={msg?.id} {...{ ...props, role: 'row', suppressHydrationWarning: true, tabIndex: -1 }} ref={mergeRefs(ref, targetRef)}>
         <div {...{ role: 'cell', tabIndex: -1 }} className={container} data-focused={isMQ(openCtx || openMenu)}>
           <div className={root} {...onHoveredReacts}>
             <div
               suppressHydrationWarning
               {...{
                 className: inOut({ in: css._wrpI, out: css._wrpO }),
-                style: { '--color-themes': 'var(--color-themes)' } as React.CSSProperties
+                style: { '--color-themes': 'var(--color-themes)', opacity: msg?.isDeleted && 0.3 } as React.CSSProperties
               }}
             >
-              {!data.isRepeatInDay && (
+              <span className="text-[10px] text-gray-500">
+                {JSON.stringify(msg.seenIds)} <br /> {msg.status} | {String(seenList)}
+              </span>
+
+              {!msg.isRepeatInDay && (
                 <span aria-hidden className={arrow}>
                   <ArrowMessageBubble bubble={isOwn ? 'out' : 'in'} style={{ color: 'var(--bg-themes)' }} />
                 </span>
               )}
 
-              {!data.isRepeatInDay && !isOwn && (
+              {!msg.isRepeatInDay && !isOwn && (
                 <Avatar
                   unstyled={{ root: true, fallback: true }}
                   size={28}
-                  src={data.sender?.image}
-                  fallback={data.sender.name}
+                  src={msg.sender?.image}
+                  fallback={msg.sender?.username}
                   className={avatar}
                   rootProps={{ ...onHoveredMenu, tabIndex: 0, onContextMenu: onPrevent }}
                 >
-                  {() => isOnline(data.senderId) && <span aria-hidden className={css._dot} />}
+                  {() => presence.isOnline(msg.senderId) && <span aria-hidden className={css._dot} />}
                 </Avatar>
               )}
               <CtxMenu.Trigger asChild>
                 <div className={box} {...{ ...onHoveredMenu, style: { backgroundColor: 'var(--bg-themes)', boxShadow: '0 1px .5px var(--shadow)' } }}>
-                  <span aria-label={inOut({ in: data.sender.name, out: 'You:' })} />
+                  <span aria-label={inOut({ in: msg.sender?.username, out: 'You:' })} />
 
                   <div>
                     <div className={css._ctn}>
-                      {!data.isRepeatInDay && !isOwn && (
+                      {!msg.isRepeatInDay && !isOwn && (
                         <div className={header}>
                           <span dir="auto" className={css._snd} {...{ style: { color: colorByInitial } }}>
-                            {data.sender.name}
+                            {msg.sender?.username}
                           </span>
                         </div>
                       )}
 
                       <div data-pre-plain-text={plaintext}>
                         <div className={css._msg}>
-                          {data?.mediaUrl && <MotionImage src={data.mediaUrl} name={data.id} modal unstyled={{ container: true, image: true }} className={cntpict} />}
+                          {msg?.mediaUrl && <MotionImage src={msg.mediaUrl} name={msg.id} modal unstyled={{ container: true, image: true }} className={cntpict} />}
 
                           <SafeInlineRenderer
                             dir="ltr"
-                            value={data?.body}
-                            users={members}
+                            value={msg?.body}
+                            users={users}
                             classNames={{ root: css._msgbd, mention: css._mention, expand: 'text-[#53bdeb] hover:underline text-sm font-system' }}
                           />
-                          {data.body && <SpacerMessageBody dateTime={dateTime} />}
+                          {(msg.body || (!msg.body && !msg.mediaUrl)) && <SpacerMessageBody dateTime={dateTime} />}
                         </div>
                       </div>
 
@@ -163,15 +162,17 @@ export function MessageBubble(_props: MessageBubbleProps) {
                             </time>
                           )}
 
-                          {isOwn && (
-                            <div aria-label={isSend ? 'Sent' : 'Unread'} className={css._ftch}>
-                              {isSend ? (
+                          {msg.status !== 'SENDING' && isOwn && (
+                            <div aria-label={isSeen ? 'Sent' : 'Unread'} className={css._ftch}>
+                              {isSeen ? (
                                 <>
                                   <DoubleCheckIcon size={17} style={{ color: '#53bdeb' }} />
                                   <span className="hidden sr-only" style={{ display: 'none' }}>
                                     {seenBy}
                                   </span>
                                 </>
+                              ) : msg.status === 'FAILED' ? (
+                                <XIcon size={17} />
                               ) : (
                                 <CheckIcon size={17} />
                               )}
@@ -191,7 +192,7 @@ export function MessageBubble(_props: MessageBubbleProps) {
                         trigger={
                           <ActionOnHovered
                             aria-label="Context menu"
-                            withShadow={!data?.mediaUrl}
+                            withShadow={!msg?.mediaUrl}
                             onContextMenu={onPrevent}
                             visibleFrom={isOwn ? 'left' : 'right'}
                             hovered={hoveredMenu || openMenu}
@@ -202,7 +203,7 @@ export function MessageBubble(_props: MessageBubbleProps) {
                             </span>
                           </ActionOnHovered>
                         }
-                        content={<MessageMenu event="click" data={data} onOpenChange={setOpenMenu} />}
+                        content={<MessageMenu event="click" msg={msg} onOpenChange={setOpenMenu} />}
                         classNames={{ content: 'p-1 h-fit w-48' }}
                       />
                     )}
@@ -229,20 +230,15 @@ export function MessageBubble(_props: MessageBubbleProps) {
               )}
             </div>
 
-            <Reactions reactions={data?.reactions} classNames={{ root: reaction }} />
+            <Reactions reactions={msg?.reactions} classNames={{ root: reaction }} />
           </div>
           {(openCtx || openMenu) && <span data-focused />}
         </div>
       </article>
 
-      <MessageMenu event="contextmenu" data={data} />
+      <MessageMenu event="contextmenu" msg={msg} />
     </CtxMenu>
   );
-}
-
-interface ExpandableMessageProps extends React.ComponentProps<'div'> {
-  text: string | null | undefined;
-  members?: (MinimalAccount | null)[] | null | undefined;
 }
 
 interface SpacerMessageBodyProps {
@@ -312,35 +308,32 @@ interface UseMenuMapProps {
   onOpenChange?: (prev: React.SetStateAction<boolean>) => void;
 }
 
-function useMenuMap(data: EnrichedMessage, { onOpenChange }: UseMenuMapProps) {
-  const app = useApp();
-  const isMediaQuery = useIsMobile();
-  const router = useRouter();
+function useMenuMap(msg: EnrichedMessage, { onOpenChange }: UseMenuMapProps) {
+  const { currentUser, deleteMessage, onReload } = useActiveChat();
 
   const handleCopy = React.useCallback(() => {
-    if (data.body) {
+    if (msg.body) {
       navigator.clipboard
-        .writeText(getSafeInlineText(data.body))
+        .writeText(getSafeInlineText(msg.body))
         .then(() => {
           toast('Text copied to clipboard');
-
           setTimeout(() => onOpenChange?.(false), 300);
         })
         .catch(err => {
           console.error('Failed to copy: ', err);
         });
     }
-  }, [data.body]);
+  }, [msg.body]);
 
   const handleSaveMedia = React.useCallback(async () => {
-    if (!data.mediaUrl) return;
+    if (!msg.mediaUrl) return;
 
     try {
-      const response = await fetch(data.mediaUrl, { mode: 'cors' }); // Pastikan server mendukung CORS
+      const response = await fetch(msg.mediaUrl, { mode: 'cors' }); // Pastikan server mendukung CORS
       const blob = await response.blob();
 
-      const fileExtension = data.mediaUrl.split('.').pop()?.split('?')[0] || 'jpg';
-      const fileName = `media-${data.sender.username}-${data.id}-${Date.now()}.${fileExtension}`;
+      const fileExtension = msg.mediaUrl.split('.').pop()?.split('?')[0] || 'jpg';
+      const fileName = `media-${msg.sender?.username}-${msg.id}-${Date.now()}.${fileExtension}`;
 
       const blobUrl = URL.createObjectURL(blob);
       const link = document.createElement('a');
@@ -357,7 +350,7 @@ function useMenuMap(data: EnrichedMessage, { onOpenChange }: UseMenuMapProps) {
       console.error('Gagal menyimpan media:', error);
       alert('Gagal menyimpan media. Coba lagi.');
     }
-  }, [data.mediaUrl]);
+  }, [msg.mediaUrl]);
 
   const handleSavePage = React.useCallback(() => {
     const blob = new Blob([document.documentElement.outerHTML], { type: 'text/html' });
@@ -372,35 +365,34 @@ function useMenuMap(data: EnrichedMessage, { onOpenChange }: UseMenuMapProps) {
   }, []);
 
   const handleDelete = React.useCallback(async () => {
+    if (msg.senderId !== currentUser?.id) return;
+
     const confirmDelete = window.confirm('Are you sure you want to delete this message?');
     if (!confirmDelete) return;
 
-    onOpenChange?.(false);
-
     try {
-      await axios.delete(`/api/chats/messages/${data.id}`);
-      router.refresh();
+      setTimeout(() => onOpenChange?.(false), 300);
+      // await axios.delete(`/api/chats/${chatId}/messages/${msg.id}`);
+      deleteMessage(msg.id);
+      onReload();
     } catch (_e) {
       console.error('Failed to delete Message', _e);
-    } finally {
-      router.refresh();
-      toast('Message has been deleted', { classNames: { toast: 'max-w-max animate-width-scale' } });
     }
-  }, [data.id]);
+  }, [msg.id, msg.senderId, currentUser?.id]);
 
   const opts = <T,>(params: T, obj: MenuMap) => (params ? [obj] : []);
 
   const menuMap: MenuMap[] = [
     { label: 'Message info', shortcut: '⌘+I', disabled: true, onAction: () => {} },
-    ...opts(data.mediaUrl, { label: 'Save Media', onAction: handleSaveMedia }),
+    ...opts(msg.mediaUrl, { label: 'Save Media', onAction: handleSaveMedia }),
     { label: 'Reply', shortcut: '⌘+R', disabled: true, onAction: () => {} },
-    ...opts(!!data.body, { label: 'Copy', shortcut: '⌘+P', onAction: handleCopy }),
+    ...opts(!!msg.body, { label: 'Copy', shortcut: '⌘+P', onAction: handleCopy }),
     { label: 'React', shortcut: '⌘+E', disabled: true, onAction: () => {} },
     { label: 'Forward', shortcut: '⌘+F', disabled: true, onAction: () => {} },
     { label: 'Pin', shortcut: '', disabled: true, onAction: () => {} },
     { label: 'Star', shortcut: '', disabled: true, onAction: () => {} },
-    ...opts(data.senderId === app.user?.id, { label: 'Delete', variant: 'destructive', onAction: handleDelete }),
-    ...opts(!isMediaQuery, {
+    ...opts(msg.senderId === currentUser?.id, { label: 'Delete', variant: 'destructive', onAction: handleDelete }),
+    ...opts(false, {
       label: 'More',
       separator: true,
       sub: [
@@ -506,10 +498,10 @@ function renderMenuItems(items: MenuMap[], props: MenuItemsProps) {
 }
 
 interface MessageMenuProps extends UseMenuMapProps, MenuItemsProps {
-  data: EnrichedMessage;
+  msg: EnrichedMessage;
 }
-function MessageMenu({ data, event, onOpenChange }: MessageMenuProps) {
-  const menuMap = useMenuMap(data, { onOpenChange });
+function MessageMenu({ msg, event, onOpenChange }: MessageMenuProps) {
+  const menuMap = useMenuMap(msg, { onOpenChange });
 
   switch (event) {
     case 'click':
@@ -530,13 +522,9 @@ interface ReactionsProps {
 function Reactions(_props: ReactionsProps) {
   const { reactions, classNames } = _props;
 
-  const onContextMenu = React.useCallback(<TEvent extends React.MouseEvent<HTMLElement, MouseEvent>>(e: TEvent) => {
-    e.preventDefault();
-  }, []);
-
-  const popup = x.cnx(css._rct__pu);
-  const emjwr = x.cnx(css._rct__emj_wr);
-  const emjitttl = x.cnx(css._rct__emj_it_ttl);
+  const popup = css._rct__pu;
+  const emjwr = css._rct__emj_wr;
+  const emjitttl = css._rct__emj_it_ttl;
 
   const reactionIsDefined = reactions !== null && reactions && reactions?.length > 1;
 
@@ -572,10 +560,9 @@ interface ReactionItemProps extends ImageStyleProps {
 }
 function ReactionItem(_props: ReactionItemProps) {
   const { alt = '', src, position } = _props;
-
-  const emjit = x.cnx(css._rct__emj_it);
-  const emjtr = x.cnx(css._rct__emj_tr);
-  const emjim = x.cnx(css._rct__emj_im);
+  const emjit = css._rct__emj_it;
+  const emjtr = css._rct__emj_tr;
+  const emjim = css._rct__emj_im;
 
   return (
     <motion.div whileHover={{ scale: 1.2 }} className={emjit}>

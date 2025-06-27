@@ -1,11 +1,8 @@
 'use client';
 import * as React from 'react';
-import { useChat } from './chat-context';
 import { cn } from 'cn';
 
-export function EmptyRoomChat() {
-  const { isOpen } = useChat();
-
+export function EmptyRoomChat({ isOpen }: { isOpen?: boolean }) {
   return (
     <div className={cn('lg:pl-80 lg:block h-full', isOpen ? 'block' : 'hidden')}>
       <div className="px-4 py-10 sm:px-6 lg:px-8 lg:py-6 h-full flex justify-center items-center bg-background-theme">

@@ -1,5 +1,4 @@
 import { EmptyChat } from '@/resource/client/components/chat/chat-room';
-import { currentUser } from '@/resource/db/user/get-accounts';
 import { getChatById, getMessages } from '@/resource/server/messages/get-chats';
 import { ChatForm } from '@/resource/client/components/chat/chat-form';
 import { ChatHeader } from '@/resource/client/components/chat/chat-header';
@@ -47,8 +46,8 @@ export async function generateMetadata({ params }: Params, parent: ResolvingMeta
 }
 
 export default async function ChatIdPage({ params }: Params) {
-  const [{ chatId }] = await Promise.all([params]);
-  const [chat, messages] = await Promise.all([getChatById(chatId), getMessages(chatId)]);
+  const { chatId } = await params;
+  const chat = await getChatById(chatId);
 
   if (!chat) {
     return (
@@ -61,12 +60,12 @@ export default async function ChatIdPage({ params }: Params) {
   }
 
   return (
-    <ActiveChatProvider querys={queryEntries(chatId)}>
+    <ActiveChatProvider chats={[chat]} querys={queryEntries(chatId)}>
       <section className="absolute mt-[84px] top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 h-full w-[calc(100%+(var(--x)*2))] max-w-5xl mx-auto">
         <div className="size-full flex flex-col relative z-[2]">
-          <ChatHeader chat={chat} />
-          <ChatBody messages={messages} />
-          <ChatForm messages={messages} />
+          <ChatHeader />
+          <ChatBody />
+          <ChatForm />
         </div>
         <ChatBackground />
         <div className="hidden max-lg:block max-lg:min-h-80 max-lg:h-80" />

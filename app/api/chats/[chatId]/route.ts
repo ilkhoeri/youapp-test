@@ -1,14 +1,14 @@
 import db from '@/resource/db/user';
 import { getCurrentUser } from '@/resource/db/user/get-accounts';
 import { pusherServer } from '@/resource/configs/pusher/pusher';
-import { Message, pickFromOtherUser } from '@/resource/types/user';
+import { OptimisticMessage, pickFromOtherUser } from '@/resource/types/chats';
 import { NextResponse } from 'next/server';
 
 interface Params {
   chatId?: string;
 }
 
-export async function DELETE(request: Request, { params }: { params: Promise<Params> }) {
+export async function DELETE(req: Request, { params }: { params: Promise<Params> }) {
   try {
     const [currentUser, { chatId }] = await Promise.all([getCurrentUser(), params]);
 
@@ -57,7 +57,7 @@ export async function GET(req: Request, { params }: { params: Promise<Params> })
 
     if (!currentUser?.id || !currentUser?.email || !chatId) return new NextResponse('Unauthorized', { status: 401 });
 
-    const chatGroup: Array<Message> = await db.message.findMany({
+    const chatGroup: OptimisticMessage[] = await db.message.findMany({
       where: {
         chatId: chatId
       },
@@ -89,5 +89,45 @@ export async function GET(req: Request, { params }: { params: Promise<Params> })
   } catch (error) {
     console.error('Error fetching chat group:', error);
     return new NextResponse('Internal server error', { status: 500 });
+  }
+}
+
+export async function PATCH(req: Request, { params }: { params: Promise<Params> }) {
+  try {
+    const [currentUser, { chatId }, body] = await Promise.all([getCurrentUser(), params, req.json()]);
+
+    if (!currentUser?.id || !currentUser?.email || !body) return new NextResponse('Unauthorized', { status: 401 });
+
+    const { avatarUrl, name } = body;
+
+    // Find existing chat
+    const chat = await db.chat.findUnique({
+      where: { id: chatId }
+    });
+
+    if (!chat) return new NextResponse('Invalid ID', { status: 400 });
+
+    // Update seen of last message
+    const updatedMessage = await db.chat.update({
+      where: { id: chatId },
+      data: {
+        avatarUrl: avatarUrl ?? undefined,
+        name: name ?? undefined
+      }
+    });
+
+    // Update all connections with new seen
+    await pusherServer.trigger(currentUser.email, 'chat:update', {
+      id: chatId,
+      messages: [updatedMessage]
+    });
+
+    // Update last message seen
+    await pusherServer.trigger(chatId!, 'message:update', updatedMessage);
+
+    return new NextResponse('Success');
+  } catch (error) {
+    console.log(error, 'ERROR_MESSAGES_SEEN');
+    return new NextResponse('Error', { status: 500 });
   }
 }

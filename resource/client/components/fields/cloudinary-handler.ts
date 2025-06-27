@@ -52,11 +52,27 @@ export type Options = {
 /**
  * @example
  * // 📌 input:
- * function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
- *   const file = e.target.files?.[0];
- *   if (!file) return;
- *   cloudinaryUpload(file).then(console.log);
- * }
+ *   const handleFileChange = React.useCallback(
+ *     async (e: React.ChangeEvent<HTMLInputElement>) => {
+ *       if (!isGroup) return;
+ *       setLoading(true);
+ *       const file = e.target.files?.[0];
+ *       if (!file) return;
+ *       const res = await cloudinaryUpload(file);
+ *       if (res.data) {
+ *         try {
+ *           await axios.patch(`/api/chats/${chat.id}`, { avatarUrl: res.data.secure_url });
+ *           onReload();
+ *         } catch (error) {
+ *           console.error('Upload to DB failed', error);
+ *         }
+ *       } else {
+ *         console.error('Cloudinary error:', res?.error?.message);
+ *       }
+ *       setLoading(false);
+ *     },
+ *     [chat.id, isGroup]
+ *   );
  * // full
  * <input
  *   type="file"
