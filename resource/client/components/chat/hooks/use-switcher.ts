@@ -102,5 +102,5 @@ export function useSwitchChat(data: ChatProps) {
     [data, isSelect]
   );
 
-  return { onSwitch, isSelect, otherUser, lastMessage, hasSeen, lastMessageText, setLoading, slug: chatId, onReload, router, ...rest };
+  return { onSwitch, isSelect, lastMessage, hasSeen, lastMessageText, setLoading, slug: chatId, onReload, router, ...rest };
 }

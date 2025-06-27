@@ -123,8 +123,8 @@ export async function PATCH(req: Request, { params }: { params: Promise<Params> 
 
     await pusherServer.trigger(resUpdateMessage.chatId!, 'message:update', resUpdateMessage);
 
-    const payload = JSON.stringify({ id: chatId, messages: [resUpdateMessage] });
-    console.log('Payload size:', Buffer.byteLength(payload, 'utf-8'), 'bytes');
+    // const payload = JSON.stringify({ id: chatId, messages: [resUpdateMessage] });
+    // console.log('Payload size:', Buffer.byteLength(payload, 'utf-8'), 'bytes');
 
     // If user has already seen the message, no need to go further
     if (updatedMessage.seenIds.indexOf(currentUser.id) !== -1) return new NextResponse('Rest');
