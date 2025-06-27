@@ -20,6 +20,7 @@ export function ChatScrollBotton(_props: ScrollToBottomProps) {
       role="button"
       whileHover={unvisible ? { scale: 1.15 } : {}}
       animate={unvisible ? { scale: 1 } : { scale: 0 }}
+      initial={{ scale: 0 }}
       aria-label="Scroll To Bottom"
       className={cn(
         'absolute rounded-full centered',

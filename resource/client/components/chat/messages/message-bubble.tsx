@@ -103,9 +103,9 @@ export function MessageBubble(_props: MessageBubbleProps) {
                 style: { '--color-themes': 'var(--color-themes)', opacity: msg?.isDeleted && 0.3 } as React.CSSProperties
               }}
             >
-              <span className="text-[10px] text-gray-500">
+              {/* <span className="text-[10px] text-gray-500">
                 {JSON.stringify(msg.seenIds)} <br /> {msg.status} | {String(seenList)}
-              </span>
+              </span> */}
 
               {!msg.isRepeatInDay && (
                 <span aria-hidden className={arrow}>
@@ -163,19 +163,12 @@ export function MessageBubble(_props: MessageBubbleProps) {
                           )}
 
                           {msg.status !== 'SENDING' && isOwn && (
-                            <div aria-label={isSeen ? 'Sent' : 'Unread'} className={css._ftch}>
-                              {isSeen ? (
-                                <>
-                                  <DoubleCheckIcon size={17} style={{ color: '#53bdeb' }} />
-                                  <span className="hidden sr-only" style={{ display: 'none' }}>
-                                    {seenBy}
-                                  </span>
-                                </>
-                              ) : msg.status === 'FAILED' ? (
-                                <XIcon size={17} />
-                              ) : (
-                                <CheckIcon size={17} />
-                              )}
+                            <div
+                              aria-label={isSeen ? 'Sent' : 'Unread'}
+                              className={css._ftch}
+                              // aria-description={isSeen ? seenBy : undefined}
+                            >
+                              {isSeen ? <DoubleCheckIcon size={17} color="#53bdeb" /> : msg.status === 'FAILED' ? <XIcon size={17} color="red" /> : <CheckIcon size={17} />}
                             </div>
                           )}
                         </div>
@@ -189,6 +182,7 @@ export function MessageBubble(_props: MessageBubbleProps) {
                         openWith="popover"
                         open={openMenu}
                         onOpenChange={setOpenMenu}
+                        classNames={{ content: 'p-1 h-fit w-48' }}
                         trigger={
                           <ActionOnHovered
                             aria-label="Context menu"
@@ -204,7 +198,6 @@ export function MessageBubble(_props: MessageBubbleProps) {
                           </ActionOnHovered>
                         }
                         content={<MessageMenu event="click" msg={msg} onOpenChange={setOpenMenu} />}
-                        classNames={{ content: 'p-1 h-fit w-48' }}
                       />
                     )}
                   </div>
@@ -309,7 +302,7 @@ interface UseMenuMapProps {
 }
 
 function useMenuMap(msg: EnrichedMessage, { onOpenChange }: UseMenuMapProps) {
-  const { currentUser, deleteMessage, onReload } = useActiveChat();
+  const { currentUser, deleteMessage, onReload, retrySend } = useActiveChat();
 
   const handleCopy = React.useCallback(() => {
     if (msg.body) {
@@ -380,9 +373,17 @@ function useMenuMap(msg: EnrichedMessage, { onOpenChange }: UseMenuMapProps) {
     }
   }, [msg.id, msg.senderId, currentUser?.id]);
 
+  const handleRetry = React.useCallback(() => {
+    if (msg.status !== 'FAILED') return;
+    try {
+      retrySend(msg);
+    } catch (_e) {}
+  }, [msg.status, retrySend]);
+
   const opts = <T,>(params: T, obj: MenuMap) => (params ? [obj] : []);
 
   const menuMap: MenuMap[] = [
+    ...opts(msg.status === 'FAILED', { label: 'Retry', onAction: handleRetry }),
     { label: 'Message info', shortcut: '⌘+I', disabled: true, onAction: () => {} },
     ...opts(msg.mediaUrl, { label: 'Save Media', onAction: handleSaveMedia }),
     { label: 'Reply', shortcut: '⌘+R', disabled: true, onAction: () => {} },

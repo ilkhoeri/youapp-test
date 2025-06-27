@@ -9,7 +9,6 @@ import { OptimisticMessageLocal } from './hooks/use-optimistic';
 import { MessageBubble } from './messages/message-bubble';
 import { DateDivider } from './messages/date-divider';
 import { useActiveChat } from './chat-context';
-import { debounce } from 'lodash';
 import { ChatScrollBotton } from './chat-components';
 import { createPortal } from 'react-dom';
 
