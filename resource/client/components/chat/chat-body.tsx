@@ -94,13 +94,13 @@ function useMarkMessagesAsSeenSequentially() {
     observer.observe(target);
 
     return () => observer.disconnect();
-  }, [messages.length, lastMessage?.id]);
+  }, [messages.length, chatId, lastMessage?.id]);
 
   const scrollIntoView = React.useCallback(() => {
     if (!lastMessageRef.current) return;
 
     lastMessageRef.current.scrollIntoView({ behavior: 'auto', block: 'center', inline: 'nearest' });
-  }, [messages.length, lastMessage?.id]);
+  }, [messages.length, chatId, lastMessage?.id]);
 
   const previousLastMessageId = React.useRef<string | null>(null);
 
@@ -117,7 +117,7 @@ function useMarkMessagesAsSeenSequentially() {
     }
 
     previousLastMessageId.current = last.id;
-  }, [messages.length, isLastView, , lastMessage?.id]);
+  }, [messages.length, chatId, isLastView, , lastMessage?.id]);
 
   React.useEffect(() => {
     if (!chatId) return;

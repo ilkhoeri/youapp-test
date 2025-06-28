@@ -129,17 +129,26 @@ export function ActiveChatProvider({ children, querys, chats }: ActiveChatProvid
 
   const [members, setMembers] = React.useState<string[]>(chat?.userIds ?? []);
 
-  const add = React.useCallback((id: string) => {
-    setMembers(prev => [...prev, id]);
-  }, []);
+  const add = React.useCallback(
+    (id: string) => {
+      setMembers(prev => [...prev, id]);
+    },
+    [chatId]
+  );
 
-  const remove = React.useCallback((id: string) => {
-    setMembers(prev => prev.filter(memberId => memberId !== id));
-  }, []);
+  const remove = React.useCallback(
+    (id: string) => {
+      setMembers(prev => prev.filter(memberId => memberId !== id));
+    },
+    [chatId]
+  );
 
-  const set = React.useCallback((ids: string[]) => {
-    setMembers(ids);
-  }, []);
+  const set = React.useCallback(
+    (ids: string[]) => {
+      setMembers(ids);
+    },
+    [chatId]
+  );
 
   const { lastMessage, dateKeys, byDate, ...groupMessages } = groupMessagesByDate(optimistic.messages, currentUser!!);
 
@@ -147,7 +156,7 @@ export function ActiveChatProvider({ children, querys, chats }: ActiveChatProvid
     (messages: OptimisticMessageLocal[] | undefined) => {
       return groupMessagesByDate(messages ?? [], currentUser!!);
     },
-    [currentUser]
+    [chatId, currentUser]
   );
 
   const otherUsers = React.useMemo(() => {
@@ -183,7 +192,7 @@ export function ActiveChatProvider({ children, querys, chats }: ActiveChatProvid
 
       return chat.users.find(user => user?.email !== currentUser?.email);
     },
-    [chat?.userIds.length, currentUser?.email]
+    [chat?.userIds.length, chatId, currentUser?.email]
   );
 
   return (
