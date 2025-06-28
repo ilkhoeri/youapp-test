@@ -2,15 +2,14 @@
 import * as React from 'react';
 import axios from 'axios';
 import { PersonChatFillIcon, User3FillIcon } from '../icons-fill';
-import { Select, SelectItemProps } from '../ui/select';
 import { Account, MinimalAccount } from '@/resource/types/user';
-import { OptimisticChat } from '@/resource/types/chats';
-import { useSwitcher } from './hooks/use-switcher';
 import { CreateChatTypes } from '@/resource/schemas/chat';
-import { useApp } from '../../contexts/app-provider';
 import { isSameUserSet } from './messages/message-helper';
+import { OptimisticChat } from '@/resource/types/chats';
+import { Select, SelectItemProps } from '../ui/select';
+import { useSwitcher } from './hooks/use-switcher';
 import { ID, SwitchData } from './types';
-import { toast } from 'sonner';
+import { ObjectId } from 'bson';
 import { x } from 'xuxi';
 import { cn } from 'cn';
 import { useOnlinePresence } from './hooks/use-online-presence';
@@ -81,7 +80,7 @@ interface SwitcherProps {
   currentUser?: Account;
 }
 export function ChatSwitcher(_props: SwitcherProps) {
-  const { accounts, chats, isCollapsed } = _props;
+  const { accounts, chats, isCollapsed: _ } = _props;
 
   const { loading, onSwitch, chatId } = useSwitcher(chats);
 
@@ -112,42 +111,34 @@ export function ChatSwitcher(_props: SwitcherProps) {
 export function UserSwitcher(_props: SwitcherProps) {
   const { accounts, chats, isCollapsed, currentUser } = _props;
 
-  const { loading, onSwitch, chatId, setLoading, router } = useSwitcher(accounts);
+  const users = accounts.filter(user => user.id !== currentUser?.id);
+
+  const { loading, onSwitch, chatId, setLoading, router } = useSwitcher(users);
 
   if (!currentUser) return null;
-
-  const [roomChat, setRoomChat] = React.useState<boolean | undefined>(false);
 
   const setValueChange = React.useCallback(
     (id: string) => {
       const members = [currentUser?.id, id];
       const chat = chats?.find(c => isSameUserSet(c.userIds, members));
       const isRoom = chat && isSameUserSet(chat?.userIds, members);
-      setRoomChat(isRoom);
 
       if (isRoom) {
-        try {
-          onSwitch('private', chat.id);
-        } catch (_e) {
-        } finally {
-          return;
-        }
+        onSwitch('private', chat.id);
+        return;
       }
 
       if (!isRoom) {
+        const token = new ObjectId().toHexString();
         try {
           setLoading(true);
-          axios.post('/api/chats', { type: 'PRIVATE', userId: id, members: members } as CreateChatTypes);
+          axios.post('/api/chats', { id: token, type: 'PRIVATE', userId: id, members: members } as CreateChatTypes);
         } catch (_e) {
         } finally {
-          // setRoomChat will not be available here unless you refetch chats, or handle the new chat
+          const route = `/chat?private=${token}`;
+          router.push(route, { scroll: false });
           router.refresh();
-          setTimeout(() => {
-            const route = `/chat?private=${chat?.id}`;
-            router.push(route, { scroll: false });
-          }, 500);
-          setLoading(false);
-          toast.success('Success!');
+          setTimeout(() => setLoading(false), 1000);
         }
       }
     },
@@ -157,7 +148,7 @@ export function UserSwitcher(_props: SwitcherProps) {
   return (
     <GenericSwitcher
       loading={loading}
-      items={accounts}
+      items={users}
       selectedId={chatId}
       isCollapsed={isCollapsed}
       onSelect={setValueChange}

@@ -1,7 +1,7 @@
 import db from '@/resource/db/user';
 import { getCurrentUser } from '@/resource/db/user/get-accounts';
 import { pusherServer } from '@/resource/configs/pusher/pusher';
-import { OptimisticMessage } from '@/resource/types/chats';
+import { OptimisticMessage, payloadMessage } from '@/resource/types/chats';
 import { pickFromOtherUser } from '@/resource/types/user';
 import { NextResponse } from 'next/server';
 
@@ -20,7 +20,7 @@ export async function DELETE(req: Request, { params }: { params: Promise<Params>
         id: chatId
       },
       include: {
-        users: true
+        users: { select: pickFromOtherUser }
       }
     });
 
@@ -109,22 +109,26 @@ export async function PATCH(req: Request, { params }: { params: Promise<Params> 
     if (!chat) return new NextResponse('Invalid ID', { status: 400 });
 
     // Update seen of last message
-    const updatedMessage = await db.chat.update({
+    const updatedChat = await db.chat.update({
       where: { id: chatId },
       data: {
         avatarUrl: avatarUrl ?? undefined,
         name: name ?? undefined
+      },
+      include: {
+        users: { select: pickFromOtherUser },
+        messages: {
+          select: payloadMessage
+        }
       }
     });
 
-    // Update all connections with new seen
-    await pusherServer.trigger(currentUser.email, 'chat:update', {
-      id: chatId,
-      messages: [updatedMessage]
-    });
+    const lastMessage = updatedChat?.messages?.at(-1);
 
-    // Update last message seen
-    await pusherServer.trigger(chatId!, 'message:update', updatedMessage);
+    // Update all connections with new seen
+    await pusherServer.trigger(currentUser.email, 'chat:update', updatedChat);
+
+    await pusherServer.trigger(chatId!, 'message:update', lastMessage);
 
     return new NextResponse('Success');
   } catch (error) {

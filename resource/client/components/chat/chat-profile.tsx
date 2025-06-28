@@ -38,7 +38,7 @@ export function ChatProfile({ chat, onConfirmChange }: ChatProfileProps) {
     return 'Offline';
   }, [chat, otherUser?.id, isOnline, isActive]);
 
-  const shared = { chat, otherUser };
+  const shared = { chat, otherUser, loading };
 
   const isDeleted = onConfirmChange && chat?.admins.includes(currentUser?.id!) && !['CHANNEL', 'BOT'].includes(chat?.type!);
 
@@ -53,7 +53,11 @@ export function ChatProfile({ chat, onConfirmChange }: ChatProfileProps) {
           <div className="text-sm text-muted-foreground">{statusText}</div>
           <div className="flex gap-10 py-8">
             {isDeleted && (
-              <div onClick={() => onConfirmChange?.(true)} className="flex flex-col gap-1 items-center cursor-pointer hover:opacity-75 rounded-full text-white">
+              <div
+                onClick={() => onConfirmChange?.(true)}
+                {...{ 'aria-disabled': loading ? 'true' : undefined }}
+                className="flex flex-col gap-1 items-center cursor-pointer hover:opacity-75 rounded-full text-color"
+              >
                 <TrashFillIcon size={20} />
                 <span className="text-xs font-light text-muted-foreground">Delete</span>
               </div>
@@ -73,8 +77,9 @@ function ProfileAvatar({
   chat,
   otherUser,
   onReload,
+  loading,
   onLoadingChange
-}: Pick<ChatProfileProps, 'chat'> & { otherUser: MinimalAccount | undefined; onReload: () => void; onLoadingChange: (prev: boolean) => void }) {
+}: Pick<ChatProfileProps, 'chat'> & { otherUser: MinimalAccount | undefined; onReload: () => void; loading: boolean; onLoadingChange: (prev: boolean) => void }) {
   if (!chat) return null;
 
   const handleChange = React.useCallback(
@@ -106,16 +111,16 @@ function ProfileAvatar({
     <div className="pt-4 pb-2 relative">
       <ChatAvatars size={84} chat={chat} otherUser={otherUser} />
       {chat?.type === 'GROUP' && (
-        <label htmlFor="change-avatar" className="absolute -right-1 bottom-1 p-[5px] bg-muted/20 hover:bg-muted/35 cursor-pointer rounded-full">
+        <label hidden={loading} htmlFor="change-avatar" className="absolute -right-1 bottom-1 p-[5px] bg-muted/20 hover:bg-muted/35 cursor-pointer rounded-full">
           <PencilFillIcon size={20} />
-          <input type="file" accept="image/*" id="change-avatar" name="change-avatar" aria-label="change-avatar" hidden className="sr-only" onChange={handleChange} />
+          <input type="file" disabled={loading} accept="image/*" id="change-avatar" name="change-avatar" aria-label="change-avatar" hidden className="sr-only" onChange={handleChange} />
         </label>
       )}
     </div>
   );
 }
 
-function ProfileName({ chat, otherUser, onReload }: Pick<ChatProfileProps, 'chat'> & { otherUser: MinimalAccount | undefined; onReload: () => void }) {
+function ProfileName({ chat, otherUser, loading, onReload }: Pick<ChatProfileProps, 'chat'> & { loading: boolean; otherUser: MinimalAccount | undefined; onReload: () => void }) {
   if (!chat) return null;
 
   const title = React.useMemo(() => {
@@ -134,6 +139,7 @@ function ProfileName({ chat, otherUser, onReload }: Pick<ChatProfileProps, 'chat
   return (
     <InlineEditable
       className="font-semibold cursor-text w-max flex items-center justify-center"
+      disabled={loading}
       defaultValue={title}
       onBlurOrSubmit={async ({ value, defaultValue, onChange }) => {
         if (chat.type === 'GROUP' && value !== defaultValue) {
@@ -167,6 +173,7 @@ function ProfileName({ chat, otherUser, onReload }: Pick<ChatProfileProps, 'chat
             type="text"
             name="change-name"
             id="change-name"
+            disabled={loading}
             aria-label="change-name"
             value={value as string}
             className="bg-transparent w-max max-w-fit text-center border-0 outline-0 focus-visible:ring-0 focus-visible:outline-0"
@@ -180,10 +187,16 @@ function ProfileName({ chat, otherUser, onReload }: Pick<ChatProfileProps, 'chat
 
 function ProfileList({
   chat,
+  loading,
   currentUser,
   otherUser,
   isOnline
-}: Pick<ChatProfileProps, 'chat'> & { currentUser: Account | undefined; otherUser: MinimalAccount | undefined; isOnline: (userId: string | null | undefined) => boolean }) {
+}: Pick<ChatProfileProps, 'chat'> & {
+  loading: boolean;
+  currentUser: Account | undefined;
+  otherUser: MinimalAccount | undefined;
+  isOnline: (userId: string | null | undefined) => boolean;
+}) {
   if (!chat) return null;
 
   const isGroup = chat?.type === 'GROUP';
@@ -194,11 +207,12 @@ function ProfileList({
   }, [otherUser?.lastSeen]);
 
   return (
-    <dl className="grid grid-flow-row overflow-y-auto max-h-full">
+    <dl {...{ 'aria-disabled': loading ? 'true' : undefined }} className="grid grid-flow-row overflow-y-auto max-h-full">
       {isGroup &&
         chat?.users?.map(user => {
           const online = isOnline(user.id);
-          const username = user?.id === currentUser?.id ? `${user?.username} (You)` : user?.username;
+          const isOwn = user?.id === currentUser?.id;
+          const username = isOwn ? `${user?.username} (You)` : user?.username;
 
           return (
             <div key={user.id} className="flex flex-row items-center gap-4 p-4 rounded-lg cursor-pointer transition-colors max-md:active:bg-muted/60 md:hover:bg-muted/60">
@@ -217,8 +231,8 @@ function ProfileList({
                 <span className="mr-auto">{username}</span>
                 {(online || lastSeen) && (
                   <span className="text-[80%]">
-                    {online ? 'Online' : lastSeen && 'Last '}
-                    {lastSeen && <time dateTime={lastSeen}>{lastSeen}</time>}
+                    {online ? 'Online' : lastSeen && 'Last, '}
+                    {lastSeen && !online && <time dateTime={lastSeen}>{lastSeen}</time>}
                   </span>
                 )}
               </dd>

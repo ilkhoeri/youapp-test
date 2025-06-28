@@ -28,9 +28,7 @@ interface ChatListProps {
   title?: string;
 }
 
-export function ChatList(_props: ChatListProps) {
-  const { items: initialItems } = _props;
-
+export function ChatList({ items: initialItems }: ChatListProps) {
   const mockApiSearch = async (query: string): Promise<OptimisticChat[]> => {
     const normalizedData = initialItems.filter(c => {
       const data = {
@@ -52,11 +50,9 @@ export function ChatList(_props: ChatListProps) {
 
   const { user } = useApp();
 
-  const pusherKey = React.useMemo(() => {
-    return user?.email;
-  }, [user?.email]);
-
   React.useEffect(() => {
+    const pusherKey = user?.email;
+
     if (!pusherKey) return;
 
     pusherClient.subscribe(pusherKey);
@@ -88,11 +84,11 @@ export function ChatList(_props: ChatListProps) {
     pusherClient.bind('chat:new', newHandler);
     pusherClient.bind('chat:update', updateHandler);
     pusherClient.bind('chat:remove', removeHandler);
-  }, [pusherKey, query, items.length]);
+  }, [user?.email, query, initialItems]);
 
   const newItems = React.useMemo(() => {
-    return !!query && results ? results : items;
-  }, [query, results, items]);
+    return !!query && results ? results : initialItems;
+  }, [query, results, initialItems]);
 
   const groupItems = newItems.filter(item => item.type === 'GROUP');
 

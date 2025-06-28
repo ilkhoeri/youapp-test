@@ -25,6 +25,7 @@ interface InlineEditableProps<T = Element> extends Partial<OnActionsProps<T>>, O
   debounceMs?: number;
   placeholder?: string;
   children?: React.ReactNode | ((v: VParams) => React.ReactNode);
+  disabled?: boolean;
 }
 
 export function InlineEditable<T = Element>({
@@ -44,6 +45,8 @@ export function InlineEditable<T = Element>({
   debounceMs = 0,
   placeholder = '',
   children,
+  disabled,
+  'aria-disabled': arDisabled,
   ...props
 }: InlineEditableProps<T>) {
   const editableRef = React.useRef<HTMLElement>(null);
@@ -167,7 +170,12 @@ export function InlineEditable<T = Element>({
     );
 
   return (
-    <div ref={mergeRefs(ref, editableRef)} suppressHydrationWarning={suppressHydrationWarning} onDoubleClick={handleDoubleClick} {...props}>
+    <div
+      ref={mergeRefs(ref, editableRef)}
+      suppressHydrationWarning={suppressHydrationWarning}
+      onDoubleClick={handleDoubleClick}
+      {...{ ...props, 'aria-disabled': arDisabled ?? (disabled ? 'true' : undefined), 'data-disabled': disabled ? 'true' : undefined }}
+    >
       {clonedChild}
     </div>
   );

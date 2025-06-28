@@ -29,7 +29,7 @@ export function ChatForm() {
       //   ...data,
       //   chatId: chatId
       // });
-      sendMessage({ body: data.body, mediaUrl: data.mediaUrl });
+      sendMessage({ body: data.body?.replace(/\u200B/g, '')?.trim(), mediaUrl: data.mediaUrl });
       form.reset();
       onReload();
     } catch (error: any) {

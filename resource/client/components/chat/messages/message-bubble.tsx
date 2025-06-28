@@ -122,7 +122,7 @@ export function MessageBubble(_props: MessageBubbleProps) {
                   className={avatar}
                   rootProps={{ ...onHoveredMenu, tabIndex: 0, onContextMenu: onPrevent }}
                 >
-                  {() => presence.isOnline(msg.senderId) && <span aria-hidden className={css._dot} />}
+                  {presence.isOnline(msg.senderId) ? <span aria-hidden className={css._dot} /> : null}
                 </Avatar>
               )}
               <CtxMenu.Trigger asChild>

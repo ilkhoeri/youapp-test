@@ -10,10 +10,10 @@ const getResponse = (body: BodyInit, status: number) => new NextResponse(body, {
 
 type ID = { id: string };
 
-type ConnectProps = Omit<CreateChatTypes, 'type'> & { currentUser: ID };
+type ConnectProps = Omit<CreateChatTypes, 'type'> & Partial<ID> & { currentUser: ID };
 
 function getConnect(type: CreateChatTypes['type'], props: ConnectProps) {
-  const { currentUser, userId, members, name } = props;
+  const { id, currentUser, userId, members, name } = props;
   const isGroupValue = <T>(v: T) => (type === 'GROUP' ? v : undefined);
   const self = { id: currentUser.id };
   const memberIds = members.map(m => ({ id: m.value! }));
@@ -26,6 +26,7 @@ function getConnect(type: CreateChatTypes['type'], props: ConnectProps) {
   };
 
   return {
+    id: id ?? undefined,
     type,
     name: isGroupValue(name),
     users: { connect: connectMap[type] },
@@ -35,9 +36,9 @@ function getConnect(type: CreateChatTypes['type'], props: ConnectProps) {
 
 export async function POST(req: Request) {
   try {
-    const [currentUser, data] = await Promise.all([getCurrentUser(), req.json()]);
+    const [currentUser, body] = await Promise.all([getCurrentUser(), req.json()]);
 
-    const { userId, type, members, name } = data as CreateChatTypes;
+    const { id, userId, type, members, name } = body as CreateChatTypes & Partial<ID>;
 
     if (!currentUser || !currentUser?.email) return getResponse('Unauthorized', 401);
 
@@ -46,7 +47,7 @@ export async function POST(req: Request) {
     if (type === 'PRIVATE' && !userId && (!members || members.length !== 2)) return getResponse('Invalid Private Fields', 402);
 
     const newChat = await db.chat.create({
-      data: getConnect(type, { currentUser, userId, members, name }),
+      data: getConnect(type, { id, currentUser, userId, members, name }),
       include: { users: { select: pickFromOtherUser } }
     });
 
