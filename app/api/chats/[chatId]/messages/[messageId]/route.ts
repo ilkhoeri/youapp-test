@@ -2,24 +2,13 @@ import db from '@/resource/db/user';
 import { getCurrentUser } from '@/resource/db/user/get-accounts';
 import { pusherServer } from '@/resource/configs/pusher/pusher';
 import { NextResponse } from 'next/server';
-import { Message } from '@prisma/client';
-import { pickFromOtherUser } from '@/resource/types/chats';
+import { pickFromOtherUser } from '@/resource/types/user';
+import { payloadMessage } from '@/resource/types/chats';
 
 interface Params {
   chatId: string;
   messageId: string;
 }
-
-export const payloadMessage = {
-  id: true,
-  chatId: true,
-  status: true,
-  senderId: true,
-  body: true,
-  mediaUrl: true,
-  seenIds: true,
-  createdAt: true
-};
 
 export async function GET(req: Request, { params }: { params: Promise<Params> }) {
   try {

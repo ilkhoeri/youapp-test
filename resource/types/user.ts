@@ -1,6 +1,5 @@
 import * as db from '@prisma/client';
 import { UserGender } from '../schemas/user';
-import { pickFromOtherUser } from './chats';
 
 export type ElaboratedUserX = {
   id: string;
@@ -146,3 +145,18 @@ export type AddressProps = {
 type SecureFromOtherUser = keyof typeof pickFromOtherUser;
 
 export type MinimalAccount = Pick<NonNullable<Account>, SecureFromOtherUser>;
+
+export const pickFromOtherUser = {
+  id: true,
+  // refId: true,
+  email: true,
+  image: true,
+  // name: true,
+  username: true,
+  // firstName: true,
+  // lastName: true,
+  // lastOnline: true,
+  lastSeen: true
+  // chatIds: true,
+  // createdAt: true
+}; // as db.Prisma.UserSelect;

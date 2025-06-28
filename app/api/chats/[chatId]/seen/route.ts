@@ -3,7 +3,7 @@ import { NextResponse } from 'next/server';
 import { getCurrentUser } from '@/resource/db/user/get-accounts';
 import { pusherServer } from '@/resource/configs/pusher/pusher';
 import { MinimalAccount } from '@/resource/types/user';
-import { pickFromOtherUser } from '@/resource/types/chats';
+import { pickFromOtherUser } from '@/resource/types/user';
 
 interface Params {
   chatId?: string;

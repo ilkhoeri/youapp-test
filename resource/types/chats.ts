@@ -16,17 +16,13 @@ export type OptimisticChat = db.Chat & {
   messages: OptimisticMessage[];
 };
 
-export const pickFromOtherUser = {
+export const payloadMessage = {
   id: true,
-  // refId: true,
-  email: true,
-  image: true,
-  // name: true,
-  username: true,
-  // firstName: true,
-  // lastName: true,
-  // lastOnline: true,
-  lastSeen: true
-  // chatIds: true,
-  // createdAt: true
-}; // as db.Prisma.UserSelect;
+  chatId: true,
+  status: true,
+  senderId: true,
+  body: true,
+  mediaUrl: true,
+  seenIds: true,
+  createdAt: true
+};

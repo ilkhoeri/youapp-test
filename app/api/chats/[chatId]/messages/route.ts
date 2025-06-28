@@ -2,7 +2,7 @@ import db from '@/resource/db/user';
 import { NextResponse } from 'next/server';
 import { pusherServer } from '@/resource/configs/pusher/pusher';
 import { getCurrentUser } from '@/resource/db/user/get-accounts';
-import { pickFromOtherUser } from '@/resource/types/chats';
+import { pickFromOtherUser } from '@/resource/types/user';
 
 interface Params {
   chatId?: string;

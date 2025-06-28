@@ -1,6 +1,7 @@
 import db from '@/resource/db/user';
 import { getCurrentUser } from '@/resource/db/user/get-accounts';
-import { OptimisticMessage, pickFromOtherUser } from '@/resource/types/chats';
+import { OptimisticMessage } from '@/resource/types/chats';
+import { pickFromOtherUser } from '@/resource/types/user';
 
 export async function getChats() {
   const currentUser = await getCurrentUser();

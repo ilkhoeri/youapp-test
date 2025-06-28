@@ -1,7 +1,8 @@
 import db from '@/resource/db/user';
 import { getCurrentUser } from '@/resource/db/user/get-accounts';
 import { pusherServer } from '@/resource/configs/pusher/pusher';
-import { OptimisticMessage, pickFromOtherUser } from '@/resource/types/chats';
+import { OptimisticMessage } from '@/resource/types/chats';
+import { pickFromOtherUser } from '@/resource/types/user';
 import { NextResponse } from 'next/server';
 
 interface Params {
