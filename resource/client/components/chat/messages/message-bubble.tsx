@@ -120,10 +120,13 @@ export function MessageBubble(_props: MessageBubbleProps) {
                   src={msg.sender?.image}
                   fallback={msg.sender?.username}
                   className={avatar}
-                  rootProps={{ ...onHoveredMenu, tabIndex: 0, onContextMenu: onPrevent }}
-                >
-                  {presence.isOnline(msg.senderId) ? <span aria-hidden className={css._dot} /> : null}
-                </Avatar>
+                  rootProps={{
+                    ...onHoveredMenu,
+                    'data-user-online': presence.isOnline(msg.senderId) ? 'true' : undefined,
+                    tabIndex: 0,
+                    onContextMenu: onPrevent
+                  }}
+                />
               )}
               <CtxMenu.Trigger asChild>
                 <div className={box} {...{ ...onHoveredMenu, style: { backgroundColor: 'var(--bg-themes)', boxShadow: '0 1px .5px var(--shadow)' } }}>

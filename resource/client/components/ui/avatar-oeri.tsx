@@ -174,7 +174,7 @@ interface __AvatarProps {
   initialLimit?: 1 | 2 | 3 | `${number}` | number;
 }
 interface AvatarProps extends __AvatarProps, Omit<ImageProps, Exclude>, StylesNames<Selector> {
-  rootProps?: React.ComponentPropsWithRef<'div'> & { style?: CSSProperties };
+  rootProps?: React.ComponentPropsWithRef<'div'> & { style?: CSSProperties; [key: `data-${string}`]: string | Booleanish | boolean | null | undefined };
   rootRef?: React.ComponentPropsWithRef<'div'>['ref'];
   children?: React.ReactNode | ((state: StateProps) => React.ReactNode);
 }

@@ -126,12 +126,12 @@
 }
 ._avtin {
   @apply left-[-38px];
+  &[data-user-online='true'] {
+    @apply after:content-[''] after:absolute after:-left-px after:-top-px after:size-2.5 after:z-[50] after:rounded-full after:bg-green-600;
+  }
 }
 ._avtout {
   @apply right-[-38px];
-}
-._dot {
-  @apply absolute -left-px -top-px size-2.5 z-[50] rounded-full bg-green-600;
 }
 
 /* Box */
